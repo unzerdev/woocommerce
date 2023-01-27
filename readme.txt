@@ -33,6 +33,12 @@ Use Unzer plugin for WooCommerce to provide an easy-to-install and use payment g
 • PayPal
 • SOFORT
 
+== Known issues ==
+
+• Credit card details cannot be saved for a registered customer account
+• PayPal details cannot be saved for a registered customer account
+• For chargeback, the transaction is currently not displayed in Unzer Transactions
+
 == Support ==
 
 Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
