@@ -5,6 +5,7 @@ namespace UnzerPayments\Gateways;
 
 use Exception;
 use UnzerPayments\Services\PaymentService;
+use UnzerPayments\Traits\SavePaymentInstrumentTrait;
 use WC_Order;
 
 if (!defined('ABSPATH')) {
@@ -13,7 +14,10 @@ if (!defined('ABSPATH')) {
 
 class Card extends AbstractGateway
 {
+    use SavePaymentInstrumentTrait;
+
     const GATEWAY_ID = 'unzer_card';
+    public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Card::class;
     public $method_title = 'Unzer Credit Card';
     public $method_description;
     public $title = 'Credit Card';
@@ -41,9 +45,9 @@ class Card extends AbstractGateway
     {
         $description = $this->get_description();
         if ($description) {
-            echo wpautop(wptexturize($description));
+            echo esc_html(wpautop(wptexturize($description)));
         }
-        ?>
+        $form = '
         <div id="unzer-card-form" class="unzerUI form">
             <input type="hidden" id="unzer-card-id" name="unzer-card-id" value=""/>
             <div class="field">
@@ -69,7 +73,8 @@ class Card extends AbstractGateway
                 </div>
             </div>
         </div>
-        <?php
+        ';
+        echo $this->renderSavedInstrumentsSelection($form);
     }
 
     public function payment_scripts()
@@ -81,17 +86,7 @@ class Card extends AbstractGateway
         if (!$this->is_enabled()) {
             return;
         }
-
-        wp_enqueue_script('unzer_js', 'https://static.unzer.com/v1/unzer.js');
-        wp_enqueue_style('unzer_css', 'https://static.unzer.com/v1/unzer.css');
-        wp_register_script('woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', ['unzer_js', 'jquery']);
-
-        // in most payment processors you have to use PUBLIC KEY to obtain a token
-        wp_localize_script('woocommerce_unzer', 'unzer_parameters', [
-            'publicKey' => $this->get_public_key(),
-        ]);
-        wp_enqueue_script('woocommerce_unzer');
-
+        $this->addCheckoutAssets();
     }
 
     public function get_form_fields()
@@ -101,41 +96,48 @@ class Card extends AbstractGateway
             [
 
                 'enabled' => [
-                    'title' => __('Enable/Disable', UNZER_PLUGIN_NAME),
-                    'label' => __('Enable Unzer Card Payments', UNZER_PLUGIN_NAME),
+                    'title' => __('Enable/Disable', 'unzer-payments'),
+                    'label' => __('Enable Unzer Card Payments', 'unzer-payments'),
                     'type' => 'checkbox',
                     'description' => '',
                     'default' => 'no',
                 ],
                 'title' => [
-                    'title' => __('Title', UNZER_PLUGIN_NAME),
+                    'title' => __('Title', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the title which the user sees during checkout.', UNZER_PLUGIN_NAME),
-                    'default' => __('Credit Card', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the title which the user sees during checkout.', 'unzer-payments'),
+                    'default' => __('Credit Card', 'unzer-payments'),
                 ],
                 'description' => [
-                    'title' => __('Description', UNZER_PLUGIN_NAME),
+                    'title' => __('Description', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the description which the user sees during checkout.', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
                     'default' => '',
                 ],
                 'transaction_type' => [
-                    'title' => __('Charge or Authorize', UNZER_PLUGIN_NAME),
+                    'title' => __('Charge or Authorize', 'unzer-payments'),
                     'label' => '',
                     'type' => 'select',
-                    'description' => __('Choose "authorize", if you you want to charge the shopper at a later point of time', UNZER_PLUGIN_NAME),
+                    'description' => __('Choose "authorize", if you you want to charge the shopper at a later point of time', 'unzer-payments'),
                     'options' => [
-                        AbstractGateway::TRANSACTION_TYPE_AUTHORIZE => __('authorize', UNZER_PLUGIN_NAME),
-                        AbstractGateway::TRANSACTION_TYPE_CHARGE => __('charge', UNZER_PLUGIN_NAME),
+                        AbstractGateway::TRANSACTION_TYPE_AUTHORIZE => __('authorize', 'unzer-payments'),
+                        AbstractGateway::TRANSACTION_TYPE_CHARGE => __('charge', 'unzer-payments'),
                     ],
                     'default' => 'charge',
                 ],
+//                AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => [
+//                    'title' => __('Save card for registered customers', 'unzer-payments'),
+//                    'label' => __('&nbsp;', 'unzer-payments'),
+//                    'type' => 'checkbox',
+//                    'description' => '',
+//                    'default' => 'no',
+//                ],
                 /*
                 'capture_trigger_order_status' => [
-                    'title' => __('Capture status', UNZER_PLUGIN_NAME),
+                    'title' => __('Capture status', 'unzer-payments'),
                     'label' => '',
                     'type' => 'select',
-                    'description' => __('When this status is assigned to an order, the funds will be captured', UNZER_PLUGIN_NAME),
+                    'description' => __('When this status is assigned to an order, the funds will be captured', 'unzer-payments'),
                     'options' => array_merge(['' => ''], wc_get_order_statuses()),
                 ],
                 */
@@ -149,13 +151,21 @@ class Card extends AbstractGateway
         $return = [
             'result' => 'success',
         ];
+
+        // for saved payment instruments
+        $cardId = !empty($_POST[static::GATEWAY_ID.'_payment_instrument'])?$_POST[static::GATEWAY_ID.'_payment_instrument']:$_POST['unzer-card-id'];
+
+
         if ($this->get_option('transaction_type') === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE) {
-            $transaction = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $_POST['unzer-card-id']);
+            $transaction = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $cardId);
         } else {
-            $transaction = (new PaymentService())->performChargeForOrder($order_id, $this, $_POST['unzer-card-id']);
+            $transaction = (new PaymentService())->performChargeForOrder($order_id, $this, $cardId);
         }
+
         if ($transaction->getPayment()->getRedirectUrl()) {
             $return['redirect'] = $transaction->getPayment()->getRedirectUrl();
+        }elseif ($transaction->isSuccess()){
+            $return['redirect'] = $this->get_confirm_url();
         }
         return $return;
     }

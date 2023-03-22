@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) {
 class WeChatPay extends AbstractGateway
 {
     const GATEWAY_ID = 'unzer_wechatpay';
+    public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Wechatpay::class;
     public $method_title = 'Unzer WeChat Pay';
     public $method_description;
     public $title = 'WeChat Pay';
@@ -30,38 +31,25 @@ class WeChatPay extends AbstractGateway
             [
 
                 'enabled' => [
-                    'title' => __('Enable/Disable', UNZER_PLUGIN_NAME),
-                    'label' => __('Enable Unzer WeChat Pay', UNZER_PLUGIN_NAME),
+                    'title' => __('Enable/Disable', 'unzer-payments'),
+                    'label' => __('Enable Unzer WeChat Pay', 'unzer-payments'),
                     'type' => 'checkbox',
                     'description' => '',
                     'default' => 'no',
                 ],
                 'title' => [
-                    'title' => __('Title', UNZER_PLUGIN_NAME),
+                    'title' => __('Title', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the title which the user sees during checkout.', UNZER_PLUGIN_NAME),
-                    'default' => __('WeChat Pay', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the title which the user sees during checkout.', 'unzer-payments'),
+                    'default' => __('WeChat Pay', 'unzer-payments'),
                 ],
                 'description' => [
-                    'title' => __('Description', UNZER_PLUGIN_NAME),
+                    'title' => __('Description', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the description which the user sees during checkout.', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
                     'default' => '',
                 ],
             ]
         );
-    }
-
-    public function process_payment($order_id)
-    {
-        $return = [
-            'result' => 'success',
-        ];
-        $charge = (new PaymentService())->performChargeForOrder($order_id, $this, \UnzerSDK\Resources\PaymentTypes\Wechatpay::class);
-
-        if ($charge->getPayment()->getRedirectUrl()) {
-            $return['redirect'] = $charge->getPayment()->getRedirectUrl();
-        }
-        return $return;
     }
 }

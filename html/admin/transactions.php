@@ -6,26 +6,26 @@ $paymentInstructions = get_post_meta($_GET['post'], \UnzerPayments\Main::ORDER_M
 
 if ($paymentInstructions) {
     ?>
-    <h3><?php echo __('Payment Instructions', UNZER_PLUGIN_NAME); ?></h3>
+    <h3><?php echo esc_html(__('Payment Instructions', 'unzer-payments')); ?></h3>
     <div><?php echo $paymentInstructions; ?></div>
     <?php
 }
 ?>
-<h3><?php echo __('Totals', UNZER_PLUGIN_NAME); ?></h3>
+<h3><?php echo esc_html(__('Totals', 'unzer-payments')); ?></h3>
 <table id="unzer-sums">
     <tbody id="unzer-sums-body">
 
     </tbody>
 </table>
-<h3><?php echo __('Detailed Transactions', UNZER_PLUGIN_NAME); ?></h3>
+<h3><?php echo esc_html(__('Detailed Transactions', 'unzer-payments')); ?></h3>
 <table id="unzer-transactions" style="width: 100%;">
     <thead style="text-align: left;">
     <tr>
-        <th><?php echo __('Time', UNZER_PLUGIN_NAME); ?></th>
-        <th><?php echo __('Type', UNZER_PLUGIN_NAME); ?></th>
+        <th><?php echo esc_html(__('Time', 'unzer-payments')); ?></th>
+        <th><?php echo esc_html(__('Type', 'unzer-payments')); ?></th>
         <th>ID</th>
-        <th><?php echo __('Amount', UNZER_PLUGIN_NAME); ?></th>
-        <th><?php echo __('Status', UNZER_PLUGIN_NAME); ?></th>
+        <th><?php echo esc_html(__('Amount', 'unzer-payments')); ?></th>
+        <th><?php echo esc_html(__('Status', 'unzer-payments')); ?></th>
     </tr>
     </thead>
     <tbody id="unzer-transactions-body">
@@ -34,7 +34,7 @@ if ($paymentInstructions) {
 </table>
 <div style="margin-top:20px;">
     <a href="#" onclick="document.getElementById('unzer-debug').style.display = 'block'; return false;" class="button">
-        <?php echo __('Show Debug Information', UNZER_PLUGIN_NAME); ?>
+        <?php echo esc_html(__('Show Debug Information', 'unzer-payments')); ?>
     </a>
     <pre id="unzer-debug" style="display: none; font-size:10px;">
 
@@ -50,7 +50,7 @@ $chargeUrl = WC()->api_request_url(AdminController::CHARGE_ROUTE_SLUG);
     const unzerOrderId = <?php echo (int)$_GET['post']; ?>;
 
     function unzerRefreshData() {
-        fetch('<?php echo $ajaxUrl;?>')
+        fetch('<?php echo esc_url($ajaxUrl);?>')
             .then(response => response.json())
             .then(data => {
 
@@ -75,15 +75,15 @@ $chargeUrl = WC()->api_request_url(AdminController::CHARGE_ROUTE_SLUG);
                 let captureAction = '';
                 if (data.remainingPlain) {
                     captureAction = '<div><input type="number" step="0.01" min="0.01"  max="'+data.remainingPlain+'" value="'+data.remainingPlain+'" id="unzer-capture-amount-input" /></div> ' +
-                        '<a href="#" onclick="unzerCaptureOrder(unzerOrderId, document.getElementById(\'unzer-capture-amount-input\').value); return false;" class="button button-small" style="width:100%; text-align: center;"><?php echo __('Capture Amount', UNZER_PLUGIN_NAME); ?></a>'
+                        '<a href="#" onclick="unzerCaptureOrder(unzerOrderId, document.getElementById(\'unzer-capture-amount-input\').value); return false;" class="button button-small" style="width:100%; text-align: center;"><?php echo esc_html(__('Capture Amount', 'unzer-payments')); ?></a>'
 
                 }
 
                 let amountHtml = `
-                <tr><th style="text-align: left;"><?php echo __('Total amount', UNZER_PLUGIN_NAME); ?>: </th><td style="text-align: right;">${data.amount}</td></tr>
-                <tr><th style="text-align: left;"><?php echo __('Charged amount', UNZER_PLUGIN_NAME); ?>: </th><td style="text-align: right;">${data.charged}</td></tr>
-                <tr><th style="text-align: left;"><?php echo __('Cancelled amount', UNZER_PLUGIN_NAME); ?>: </th><td style="text-align: right;">${data.cancelled}</td></tr>
-                <tr><th style="text-align: left;"><?php echo __('Remaining amount', UNZER_PLUGIN_NAME); ?>: </th><td style="text-align: right;">${data.remaining}</td></tr>
+                <tr><th style="text-align: left;"><?php echo esc_html(__('Total amount', 'unzer-payments')); ?>: </th><td style="text-align: right;">${data.amount}</td></tr>
+                <tr><th style="text-align: left;"><?php echo esc_html(__('Charged amount', 'unzer-payments')); ?>: </th><td style="text-align: right;">${data.charged}</td></tr>
+                <tr><th style="text-align: left;"><?php echo esc_html(__('Cancelled amount', 'unzer-payments')); ?>: </th><td style="text-align: right;">${data.cancelled}</td></tr>
+                <tr><th style="text-align: left;"><?php echo esc_html(__('Remaining amount', 'unzer-payments')); ?>: </th><td style="text-align: right;">${data.remaining}</td></tr>
                 <tr><td colspan="2">${captureAction}</td></tr>
             `;
 
@@ -104,7 +104,7 @@ $chargeUrl = WC()->api_request_url(AdminController::CHARGE_ROUTE_SLUG);
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('amount', amount);
-        fetch('<?php echo $chargeUrl;?>', {
+        fetch('<?php echo esc_url($chargeUrl);?>', {
             method: 'POST',
             body: formData
         }).then(response => response.json())

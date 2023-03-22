@@ -5,15 +5,19 @@ namespace UnzerPayments\Services;
 
 use Exception;
 use UnzerPayments\Main;
+use UnzerPayments\Util;
 use UnzerSDK\Constants\BasketItemTypes;
+use UnzerSDK\Constants\CompanyRegistrationTypes;
 use UnzerSDK\Constants\ShippingTypes;
 use UnzerSDK\Resources\Basket;
 use UnzerSDK\Resources\Customer;
 use UnzerSDK\Resources\EmbeddedResources\Address;
 use UnzerSDK\Resources\EmbeddedResources\BasketItem;
+use UnzerSDK\Resources\EmbeddedResources\CompanyInfo;
 use UnzerSDK\Resources\Payment;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
 use UnzerSDK\Resources\TransactionTypes\Cancellation;
+use WC_Abstract_Order;
 use WC_Order;
 use WC_Order_Item_Coupon;
 use WC_Order_Refund;
@@ -26,9 +30,11 @@ class OrderService
      */
     protected $logger;
 
-    public function __construct(){
+    public function __construct()
+    {
         $this->logger = new LogService();
     }
+
     /**
      * @param int|WC_Order $order
      * @return Basket
@@ -61,9 +67,8 @@ class OrderService
                 $totalLeft -= $price * $orderItem->get_quantity();
             }
             if ($discount = $this->getDiscountFromOrderItem($orderItem)) {
-                $grossDiscount = $discount * (1 + $vatRate / 100);
-                $basketItem->setAmountDiscountPerUnitGross($grossDiscount);
-                $price += $grossDiscount;
+                $basketItem->setAmountDiscountPerUnitGross($discount);
+                $price += $discount;
             }
             if ($price != 0) {
                 $basketItem
@@ -103,12 +108,22 @@ class OrderService
         }
 
         if (number_format($totalLeft, 2) !== '0.00') {
-            $basketItem = (new BasketItem())
-                ->setTitle('---')
-                ->setQuantity(1)
-                ->setType(BasketItemTypes::GOODS)
-                ->setAmountPerUnitGross($totalLeft);
-            $basketItems[] = $basketItem;
+            if ($totalLeft < 0) {
+                $basketItem = (new BasketItem())
+                    ->setTitle('Rounding fix')
+                    ->setQuantity(1)
+                    ->setType(BasketItemTypes::VOUCHER)
+                    ->setAmountDiscountPerUnitGross(round($totalLeft*-1, 2))
+                    ->setVat(0);
+                $basketItems[] = $basketItem;
+            } else {
+                $basketItem = (new BasketItem())
+                    ->setTitle('---')
+                    ->setQuantity(1)
+                    ->setType(BasketItemTypes::GOODS)
+                    ->setAmountPerUnitGross($totalLeft);
+                $basketItems[] = $basketItem;
+            }
         }
         $basket->setBasketItems($basketItems);
 
@@ -129,10 +144,10 @@ class OrderService
         if (!is_callable([$orderItem, 'get_product']) || !$orderItem->get_product() || !$orderItem->get_product()->get_regular_price()) {
             return 0;
         }
-        $singlePrice = $orderItem->get_subtotal() / ($orderItem->get_quantity() ?: 1);
+        $totalLinePrice = (float)$orderItem->get_subtotal() + (float)$orderItem->get_subtotal_tax();
+        $singlePrice = $totalLinePrice / ($orderItem->get_quantity() ?: 1);
         $regularSinglePrice = $orderItem->get_product()->get_regular_price();
-
-        if (number_format($singlePrice, 2) !== number_format($regularSinglePrice, 2)) {
+        if (!Util::safeCompareAmount($singlePrice, $regularSinglePrice)) {
             return $regularSinglePrice - $singlePrice;
         }
         return 0;
@@ -146,39 +161,61 @@ class OrderService
     {
         $order = is_object($order) ? $order : wc_get_order($order);
 
+        if (is_user_logged_in()) {
+            $paymentService = new PaymentService();
+            $unzer = $paymentService->getUnzerManager();
+            try {
+                $customer = $unzer->fetchCustomerByExtCustomerId('wp-' . wp_get_current_user()->ID);
+            } catch (Exception $e) {
+                //no worries, we cover this by creating a new customer
+            }
+        }
 
-        $customer = (new Customer())
+        if (empty($customer)) {
+            $customer = new Customer();
+            if (is_user_logged_in()) {
+                $customer->setCustomerId('wp-' . wp_get_current_user()->ID);
+            }
+        }
+
+        $customer
             ->setFirstname($order->get_billing_first_name())
             ->setLastname($order->get_billing_last_name())
             ->setPhone($order->get_billing_phone())
             ->setCompany($order->get_billing_company())
             ->setEmail($order->get_billing_email());
 
-        $shippingType = ShippingTypes::EQUALS_BILLING;
-        if ($order->get_formatted_shipping_address() !== $order->get_formatted_billing_address()) {
-            $shippingType = ShippingTypes::DIFFERENT_ADDRESS;
+
+        $dob = $order->get_meta(Main::ORDER_META_KEY_DATE_OF_BIRTH);
+        if (empty($dob)) {
+            if (!empty($_POST['unzer-invoice-dob'])) {
+                $dob = $_POST['unzer-invoice-dob'];
+            }
         }
-        $shippingAddress = (new Address())
-            ->setName($order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name())
-            ->setStreet($order->get_shipping_address_1())
-            ->setZip($order->get_shipping_postcode())
-            ->setCity($order->get_shipping_city())
-            ->setState($order->get_shipping_state())
-            ->setCountry($order->get_shipping_country())
-            ->setShippingType($shippingType);
+        if (!empty($dob)) {
+            $customer->setBirthDate(date('Y-m-d', strtotime($dob)));
+        }
 
-        $billingAddress = (new Address())
-            ->setName($order->get_billing_first_name() . ' ' . $order->get_billing_last_name())
-            ->setStreet($order->get_billing_address_1())
-            ->setZip($order->get_billing_postcode())
-            ->setCity($order->get_billing_city())
-            ->setState($order->get_billing_state())
-            ->setCountry($order->get_billing_country());
+        if ($order->get_billing_company()) {
+            $companyType = $order->get_meta(Main::ORDER_META_KEY_COMPANY_TYPE);
+            if (empty($companyType)) {
+                if (!empty($_POST['unzer-invoice-company-type'])) {
+                    $companyType = $_POST['unzer-invoice-company-type'];
+                }
+            }
+            if (!empty($companyType)) {
+                $companyInfo = (new CompanyInfo())
+                    ->setCompanyType($companyType)
+                    ->setRegistrationType(CompanyRegistrationTypes::REGISTRATION_TYPE_NOT_REGISTERED)
+                    ->setFunction('OWNER');
+//                  ->setRegistrationType(CompanyRegistrationTypes::REGISTRATION_TYPE_REGISTERED)
+//                  ->setCommercialRegisterNumber(uniqid());
+                $customer->setCompanyInfo($companyInfo);
+            }
+        }
 
-        $customer
-            ->setShippingAddress($shippingAddress)
-            ->setBillingAddress($billingAddress);
 
+        $this->setAddresses($customer, $order);
         return $customer;
     }
 
@@ -268,13 +305,13 @@ class OrderService
                         continue;
                     }
                     $registeredRefundAmount = abs($registeredRefund->get_total());
-                    $this->logger->debug('refund data', [$registeredRefundAmount, $unzerRefundAmount,$registeredRefund->get_date_created()->getTimestamp(), strtotime($unzerRefund->getDate())]);
+                    $this->logger->debug('refund data', [$registeredRefundAmount, $unzerRefundAmount, $registeredRefund->get_date_created()->getTimestamp(), strtotime($unzerRefund->getDate())]);
                     if (abs($registeredRefundAmount - $unzerRefundAmount) <= 0.01) {
                         $timeDifference = abs($registeredRefund->get_date_created()->getTimestamp() - strtotime($unzerRefund->getDate()));
                         if ($timeDifference <= 10) {
                             //we consider this a match with some tolerance
                             update_post_meta($registeredRefund->get_id(), Main::ORDER_META_KEY_CANCELLATION_ID, $refundMatchingId);
-                            $this->logger->debug('refund data match', [$registeredRefundAmount, $unzerRefundAmount,$registeredRefund->get_date_created()->getTimestamp(), strtotime($unzerRefund->getDate())]);
+                            $this->logger->debug('refund data match', [$registeredRefundAmount, $unzerRefundAmount, $registeredRefund->get_date_created()->getTimestamp(), strtotime($unzerRefund->getDate())]);
                             continue 2;
                         }
                     }
@@ -313,14 +350,15 @@ class OrderService
         return number_format($processedAmount, 2) === number_format($order->get_total(), 2);
     }
 
-    public static function getUnzerCancellationId(Cancellation $unzerCancellation){
+    public static function getUnzerCancellationId(Cancellation $unzerCancellation)
+    {
         $id = $unzerCancellation->getId();
-        try{
+        try {
             $parentTransaction = $unzerCancellation->getParentResource();
-            if($parentTransaction instanceof AbstractTransactionType){
-                $id .= '---'.$parentTransaction->getId();
+            if ($parentTransaction instanceof AbstractTransactionType) {
+                $id .= '---' . $parentTransaction->getId();
             }
-        }catch (Exception $e){
+        } catch (Exception $e) {
             //silent
         }
         return $id;

@@ -32,22 +32,22 @@ class Prepayment extends AbstractGateway
             [
 
                 'enabled' => [
-                    'title' => __('Enable/Disable', UNZER_PLUGIN_NAME),
-                    'label' => __('Enable Unzer Prepayment', UNZER_PLUGIN_NAME),
+                    'title' => __('Enable/Disable', 'unzer-payments'),
+                    'label' => __('Enable Unzer Prepayment', 'unzer-payments'),
                     'type' => 'checkbox',
                     'description' => '',
                     'default' => 'no',
                 ],
                 'title' => [
-                    'title' => __('Title', UNZER_PLUGIN_NAME),
+                    'title' => __('Title', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the title which the user sees during checkout.', UNZER_PLUGIN_NAME),
-                    'default' => __('Prepayment', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the title which the user sees during checkout.', 'unzer-payments'),
+                    'default' => __('Prepayment', 'unzer-payments'),
                 ],
                 'description' => [
-                    'title' => __('Description', UNZER_PLUGIN_NAME),
+                    'title' => __('Description', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the description which the user sees during checkout.', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
                     'default' => '',
                 ],
             ]
@@ -69,7 +69,7 @@ class Prepayment extends AbstractGateway
         return $return;
     }
 
-    public static function get_payment_information(Charge $charge){
+    public function get_payment_information(Charge $charge){
         return sprintf(__("Please transfer the amount of %s to the following account:<br /><br />"
             . "Holder: %s<br/>"
             . "IBAN: %s<br/>"

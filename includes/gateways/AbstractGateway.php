@@ -4,8 +4,8 @@ namespace UnzerPayments\Gateways;
 
 use UnzerPayments\Main;
 use UnzerPayments\Services\LogService;
-use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
+use WC_Data_Exception;
 use WC_Order;
 use WC_Payment_Gateway;
 
@@ -19,6 +19,12 @@ abstract class AbstractGateway extends WC_Payment_Gateway
 
     const TRANSACTION_TYPE_AUTHORIZE = 'authorize';
     const TRANSACTION_TYPE_CHARGE = 'charge';
+
+    const SETTINGS_KEY_SAVE_INSTRUMENTS = 'save_instruments';
+    /**
+     * @var string
+     */
+    public $paymentTypeResource = '';
     /**
      * @var LogService
      */
@@ -27,12 +33,12 @@ abstract class AbstractGateway extends WC_Payment_Gateway
     public function __construct()
     {
         $this->logger = new LogService();
-        $this->plugin_id = UNZER_PLUGIN_NAME;
+        $this->plugin_id = 'unzer-payments';
         $this->init_settings();
         if ($this->get_public_key() && $this->get_private_key()) {
-            $this->method_description = sprintf(__('The Unzer API settings can be adjusted <a href="%s">here</a>', UNZER_PLUGIN_NAME), admin_url('admin.php?page=wc-settings&tab=checkout&section=unzer_general'));
+            $this->method_description = sprintf(__('The Unzer API settings can be adjusted <a href="%s">here</a>', 'unzer-payments'), admin_url('admin.php?page=wc-settings&tab=checkout&section=unzer_general'));
         } else {
-            $this->method_description = '<div class="error" style="padding:10px;">' . sprintf(__('To start using Unzer payment methods, please enter your credentials first. <br><a href="%s" class="button-primary">API settings</a>', UNZER_PLUGIN_NAME), admin_url('admin.php?page=wc-settings&tab=checkout&section=unzer_general')) . '</div>';
+            $this->method_description = '<div class="error" style="padding:10px;">' . sprintf(__('To start using Unzer payment methods, please enter your credentials first. <br><a href="%s" class="button-primary">API settings</a>', 'unzer-payments'), admin_url('admin.php?page=wc-settings&tab=checkout&section=unzer_general')) . '</div>';
         }
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options']);
         $this->title = $this->get_option('title');
@@ -67,50 +73,63 @@ abstract class AbstractGateway extends WC_Payment_Gateway
         }
     }
 
+    public function process_payment($order_id)
+    {
+        $return = [
+            'result' => 'success',
+        ];
+        $charge = (new PaymentService())->performChargeForOrder($order_id, $this, $this->paymentTypeResource);
+        if ($charge->getPayment()->getRedirectUrl()) {
+            $return['redirect'] = $charge->getPayment()->getRedirectUrl();
+        }
+        return $return;
+    }
+
     public function process_refund($order_id, $amount = null, $reason = '')
     {
         try {
             $paymentService = new PaymentService();
             $cancellation = $paymentService->performRefundOrReversal($order_id, $this, $amount);
             return $cancellation->isSuccess();
-        }catch (\Exception $e){
-            $this->logger->error('refund error: '.$e->getMessage(), ['orderId'=>$order_id, 'amount'=>$amount]);
+        } catch (\Exception $e) {
+            $this->logger->error('refund error: ' . $e->getMessage(), ['orderId' => $order_id, 'amount' => $amount]);
             throw $e;
         }
     }
 
-    public function get_confirm_url()
+    public function get_confirm_url(): string
     {
         return WC()->api_request_url(static::CONFIRMATION_ROUTE_SLUG);
     }
 
-    public function admin_options() {
-        echo '<link rel="stylesheet" href="'.UNZER_PLUGIN_URL.'/assets/css/admin.css" />';
-        echo '<script src="'.UNZER_PLUGIN_URL.'/assets/js/admin.js"></script>';
-        echo '<img src="'.UNZER_PLUGIN_URL.'/assets/img/logo.svg" width="150" alt="Unzer" style="margin-top:20px;"/>';
-        echo '<div>'.wp_kses_post( wpautop( $this->get_method_description() ) ).'</div>';
+    public function admin_options()
+    {
+        wp_enqueue_style('unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css');
+        wp_enqueue_script('unzer_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin.js');
+        echo '<img src="' . esc_url(UNZER_PLUGIN_URL . '/assets/img/logo.svg') . '" width="150" alt="Unzer" style="margin-top:20px;"/>';
+        echo '<div>' . wp_kses_post(wpautop($this->get_method_description())) . '</div>';
         echo '<div class="unzer-content-container">';
-        echo '<h2><span class="unzer-dropdown-icon unzer-content-toggler" data-target=".unzer-payment-navigation" title="'.__('Select another Unzer payment method', UNZER_PLUGIN_NAME).'"></span> ' . esc_html( $this->get_method_title() );
-        wc_back_link( __( 'Return to payments', 'woocommerce' ), admin_url( 'admin.php?page=wc-settings&tab=checkout' ) );
+        echo '<h2><span class="unzer-dropdown-icon unzer-content-toggler" data-target=".unzer-payment-navigation" title="' . __('Select another Unzer payment method', 'unzer-payments') . '"></span> ' . esc_html($this->get_method_title());
+        wc_back_link(__('Return to payments', 'woocommerce'), admin_url('admin.php?page=wc-settings&tab=checkout'));
         echo '</h2>';
         echo $this->getCompletePaymentMethodListHtml();
-        echo '<table class="form-table">' . $this->generate_settings_html( $this->get_form_fields(), false ) . '</table>'; // WPCS: XSS ok.
+        echo '<table class="form-table">' . $this->generate_settings_html($this->get_form_fields(), false) . '</table>';
         echo '</div>';
     }
 
-    protected function getCompletePaymentMethodListHtml()
+    protected function getCompletePaymentMethodListHtml(): string
     {
         $gateways = Main::getInstance()->getPaymentGateways();
         $html = '<ul class="unzer-payment-navigation" style="display: none;">';
         $entries = [];
-        foreach($gateways as $gatewayId=>$gatewayClass){
+        foreach ($gateways as $gatewayId => $gatewayClass) {
             /** @var AbstractGateway $gateway */
             $gateway = new $gatewayClass;
             $caption = str_replace('Unzer ', '', $gateway->method_title);
-            $entries[strtolower($caption)] = '<li><a href="'.admin_url('admin.php?page=wc-settings&tab=checkout&section='.$gatewayId).'">'.$caption.'</a></li>';
+            $entries[strtolower($caption)] = '<li><a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=' . $gatewayId) . '">' . $caption . '</a></li>';
         }
         ksort($entries);
-        $html .= implode('', $entries).'</ul>';
+        $html .= implode('', $entries) . '</ul>';
         return $html;
     }
 
@@ -118,9 +137,28 @@ abstract class AbstractGateway extends WC_Payment_Gateway
      * @param WC_Order $order
      * @param string $unzerPaymentId
      * @return void
+     * @throws WC_Data_Exception
      */
-    protected function set_order_transaction_number($order, $unzerPaymentId){
+    protected function set_order_transaction_number($order, $unzerPaymentId)
+    {
         $order->set_transaction_id($unzerPaymentId);
         $order->save();
+    }
+
+    protected function addCheckoutAssets()
+    {
+        wp_enqueue_script('unzer_js', 'https://static.unzer.com/v1/unzer.js');
+        wp_enqueue_style('unzer_css', 'https://static.unzer.com/v1/unzer.css');
+        wp_register_script('woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', ['unzer_js', 'jquery']);
+        wp_localize_script('woocommerce_unzer', 'unzer_parameters', [
+            'publicKey' => $this->get_public_key(),
+            'locale' => get_locale(),
+        ]);
+        wp_localize_script('woocommerce_unzer', 'unzer_i18n', [
+            'errorDob' => __('Please enter your date of birth', 'unzer-payments'),
+            'errorCompanyType' => __('Please enter your company type', 'unzer-payments'),
+        ]);
+        wp_enqueue_script('woocommerce_unzer');
+
     }
 }

@@ -49,22 +49,22 @@ class Eps extends AbstractGateway
             [
 
                 'enabled' => [
-                    'title' => __('Enable/Disable', UNZER_PLUGIN_NAME),
-                    'label' => __('Enable Unzer EPS', UNZER_PLUGIN_NAME),
+                    'title' => __('Enable/Disable', 'unzer-payments'),
+                    'label' => __('Enable Unzer EPS', 'unzer-payments'),
                     'type' => 'checkbox',
                     'description' => '',
                     'default' => 'no',
                 ],
                 'title' => [
-                    'title' => __('Title', UNZER_PLUGIN_NAME),
+                    'title' => __('Title', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the title which the user sees during checkout.', UNZER_PLUGIN_NAME),
-                    'default' => __('EPS', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the title which the user sees during checkout.', 'unzer-payments'),
+                    'default' => __('EPS', 'unzer-payments'),
                 ],
                 'description' => [
-                    'title' => __('Description', UNZER_PLUGIN_NAME),
+                    'title' => __('Description', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the description which the user sees during checkout.', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
                     'default' => '',
                 ],
             ]

@@ -27,7 +27,7 @@ class CheckoutController
         $paymentGateway = $unzerPluginManager->getPaymentGateway($order->get_payment_method());
         if (!$paymentGateway) {
             (new LogService())->error('payment method unknown', $order->get_payment_method());
-            wc_add_notice(__('Payment error', UNZER_PLUGIN_NAME), 'error');
+            wc_add_notice(__('Payment error', 'unzer-payments'), 'error');
             wp_redirect(wc_get_checkout_url());
             die;
         }
@@ -37,18 +37,23 @@ class CheckoutController
         if (!$transaction) {
             $paymentService->removeTransactionMetaData($orderId);
             (new LogService())->error('no authorization/charge found', ['order' => $orderId]);
-            wc_add_notice(__('Payment error', UNZER_PLUGIN_NAME), 'error');
+            wc_add_notice(__('Payment error', 'unzer-payments'), 'error');
             wp_redirect(wc_get_checkout_url());
             die;
         }
 
         if($transaction->getPayment()->getState() === PaymentState::STATE_CANCELED){
             $paymentService->removeTransactionMetaData($orderId);
-            (new LogService())->debug('payment cancelled', ['order' => $orderId, 'transaction'=>$transaction]);
-            wc_add_notice(__('Payment cancelled', UNZER_PLUGIN_NAME), 'error');
+            (new LogService())->debug('payment cancelled', ['order' => $orderId, 'transaction'=>$transaction->expose()]);
+            wc_add_notice(__('Payment cancelled', 'unzer-payments'), 'error');
             wp_redirect(wc_get_checkout_url());
             die;
         }
+
+        if(method_exists($paymentGateway, 'isSaveInstruments')){
+            $paymentGateway->maybeSavePaymentInstrument($transaction->getPayment()->getPaymentType()->getId());
+        }
+
         $orderService = new OrderService();
         if($orderService->areAmountsEqual($order, $transaction->getPayment())){
             if ($transaction instanceof Authorization) {
@@ -63,7 +68,7 @@ class CheckoutController
             wp_redirect($order->get_checkout_order_received_url());
         } else {
             (new LogService())->error('amounts do not match', ['charged' => $transaction->getPayment()->getAmount()->getCharged(), 'invoiced' => $order->get_total()]);
-            wc_add_notice(__('Payment error', UNZER_PLUGIN_NAME), 'error');
+            wc_add_notice(__('Payment error', 'unzer-payments'), 'error');
             wp_redirect(wc_get_checkout_url());
         }
         die;

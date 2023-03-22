@@ -34,7 +34,7 @@ $ajaxUrl = WC()->api_request_url(AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG)
 <script>
     function unzerWebhookRefreshData() {
         unzerStartLoading();
-        fetch('<?php echo $ajaxUrl;?>')
+        fetch('<?php echo esc_url($ajaxUrl);?>')
             .then(response => response.json())
             .then(data => {
 
@@ -47,7 +47,7 @@ $ajaxUrl = WC()->api_request_url(AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG)
                         <td>${webhook.id}</td>
                         <td>${webhook.event}</td>
                         <td>${webhook.url}</td>
-                        <td><a href="#" onclick="unzerDeleteWebhook('${webhook.id}'); return false;" class="button button-small"><?php echo __('Delete', UNZER_PLUGIN_NAME); ?></a></td>
+                        <td><a href="#" onclick="unzerDeleteWebhook('${webhook.id}'); return false;" class="button button-small"><?php echo esc_html(__('Delete', 'unzer-payments')); ?></a></td>
                     </tr>
                 `;
                     }
@@ -61,7 +61,7 @@ $ajaxUrl = WC()->api_request_url(AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG)
                     addWebhook = '<a href="#" onclick="unzerAddCurrentWebhook(); return false;" class="button button-small button-primary">Add Webhook</a>';
                     statusText = '<div style="color:#dc1b1b;"><span class="unzer-status-circle" style="background:#cc0000;"></span> Webhook is not active</div>';
                 }else{
-                    statusText = '<div><span class="unzer-status-circle" style="background:#00a800;"></span><?php echo __('Webhook is active', UNZER_PLUGIN_NAME); ?></div>';
+                    statusText = '<div><span class="unzer-status-circle" style="background:#00a800;"></span><?php echo esc_html(__('Webhook is active', 'unzer-payments')); ?></div>';
                 }
 
                 document.getElementById('unzer-webhook-actions').innerHTML = addWebhook;
@@ -78,7 +78,7 @@ $ajaxUrl = WC()->api_request_url(AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG)
         unzerStartLoading();
         const formData = new FormData();
         formData.append('action', 'add');
-        fetch('<?php echo $ajaxUrl;?>', {
+        fetch('<?php echo esc_url($ajaxUrl);?>', {
             method: 'POST',
             body: formData
         }).then(response => response.json())
@@ -96,7 +96,7 @@ $ajaxUrl = WC()->api_request_url(AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG)
         const formData = new FormData();
         formData.append('action', 'delete');
         formData.append('id', id);
-        fetch('<?php echo $ajaxUrl;?>', {
+        fetch('<?php echo esc_url($ajaxUrl);?>', {
             method: 'POST',
             body: formData
         }).then(response => response.json())

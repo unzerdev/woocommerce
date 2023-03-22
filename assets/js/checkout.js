@@ -1,6 +1,9 @@
 const UnzerConfig = {
     getPublicKey() {
         return unzer_parameters.publicKey || '';
+    },
+    getLocale() {
+        return unzer_parameters.locale || navigator.language || navigator.userLanguage || null;
     }
 }
 
@@ -8,24 +11,54 @@ const UnzerManager = {
     instance: null,
     initTimeout: null,
     init() {
+        console.log('UnzerManager.init()');
         if (UnzerManager.initTimeout) {
             clearTimeout(UnzerManager.initTimeout);
         }
         UnzerManager.initTimeout = setTimeout(() => {
-            UnzerManager.instance = UnzerManager.instance || new unzer(UnzerConfig.getPublicKey());
+            console.log('UnzerManager - process delayed init');
+            UnzerManager.instance = UnzerManager.instance || new unzer(UnzerConfig.getPublicKey(), {locale: UnzerConfig.getLocale()});
             UnzerManager.initCard();
             UnzerManager.initDirectDebit();
             UnzerManager.initDirectDebitSecured();
             UnzerManager.initInstallment();
             UnzerManager.initEps();
             UnzerManager.initIdeal();
+            UnzerManager.initInvoice();
+            UnzerManager.initSavedPaymentInstruments();
         }, 500);
+    },
+
+    initSavedPaymentInstruments(){
+        const updateFunction = ()=>{
+            const containers = document.querySelectorAll('.unzer-saved-payment-instruments-container');
+            if(!containers){
+                return;
+            }
+            containers.forEach((container)=>{
+               console.log(container);
+               const newForm = container.querySelector('.unzer-payment-instrument-new-form');
+               if(container.querySelector('.unzer-payment-instrument-new-radio:checked')){
+                   newForm.style.display = 'block';
+               }else{
+                   newForm.style.display = 'none';
+               }
+            });
+        }
+        updateFunction();
+        const allRadios = document.querySelectorAll('.unzer-payment-instrument-radio');
+        if(allRadios){
+            allRadios.forEach((radio)=>{
+                radio.addEventListener('change', updateFunction);
+            })
+        }
     },
 
     initCard() {
         if (!document.getElementById('unzer-card-form')) {
             return;
         }
+        console.log('is init', document.getElementById('unzer-card-form'), document.getElementById('unzer-card-form').getAttribute('is-init'));
         if (document.getElementById('unzer-card-form').getAttribute('is-init')) {
             return;
         }
@@ -51,6 +84,10 @@ const UnzerManager = {
             onlyIframe: false
         });
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_card', function () {
+            const selectedSavedCard = document.querySelector('[name="unzer_card_payment_instrument"]:checked');
+            if(selectedSavedCard && selectedSavedCard.value){
+                return true;
+            }
             if (document.getElementById('unzer-card-id').value) {
                 return true;
             }
@@ -62,7 +99,7 @@ const UnzerManager = {
                 })
                 .catch(function (error) {
                     console.warn(error);
-                    UnzerManager.error(error.message);
+                    UnzerManager.error(error.customerMessage || error.message);
                 })
             return false;
         });
@@ -96,7 +133,7 @@ const UnzerManager = {
                 })
                 .catch(function (error) {
                     console.warn(error);
-                    UnzerManager.error(error.message);
+                    UnzerManager.error(error.customerMessage || error.message);
                 })
             return false;
         });
@@ -128,7 +165,7 @@ const UnzerManager = {
                 })
                 .catch(function (error) {
                     console.warn(error);
-                    UnzerManager.error(error.message);
+                    UnzerManager.error(error.customerMessage || error.message);
                 })
             return false;
         });
@@ -154,6 +191,46 @@ const UnzerManager = {
             effectiveInterest: 4.5,
         });
 
+    },
+
+    initInvoice() {
+        if (!document.getElementById('unzer-invoice-form')) {
+            return;
+        }
+        if (document.getElementById('unzer-invoice-form').getAttribute('is-init')) {
+            return;
+        }
+        document.getElementById('unzer-invoice-form').setAttribute('is-init', true);
+
+        const invoiceInstance = UnzerManager.instance.PaylaterInvoice();
+        invoiceInstance.create({
+            containerId: 'unzer-invoice-fields',
+            customerType: 'B2C',
+        })
+
+        jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_invoice', function () {
+            if (document.getElementById('unzer-invoice-id').value) {
+                return true;
+            }
+            if (!document.getElementById('unzer-invoice-dob').value) {
+                UnzerManager.error(unzer_i18n.errorDob || 'Please enter your date fo birth');
+                return false;
+            }
+            if (UnzerManager.isB2B() && !document.getElementById('unzer-invoice-company-type').value) {
+                UnzerManager.error(unzer_i18n.errorCompanyType || 'Please enter your company type');
+                return false;
+            }
+            invoiceInstance.createResource()
+                .then(function (result) {
+                    document.getElementById('unzer-invoice-id').value = result.id;
+                    UnzerManager.getCheckoutForm().trigger('submit');
+                })
+                .catch(function (error) {
+                    console.warn(error);
+                    UnzerManager.error(error.customerMessage || error.message);
+                })
+            return false;
+        });
     },
 
     initEps() {
@@ -184,7 +261,7 @@ const UnzerManager = {
                 })
                 .catch(function (error) {
                     console.warn(error);
-                    UnzerManager.error(error.message);
+                    UnzerManager.error(error.customerMessage || error.message);
                 })
             return false;
         });
@@ -218,7 +295,7 @@ const UnzerManager = {
                 })
                 .catch(function (error) {
                     console.warn(error);
-                    UnzerManager.error(error.message);
+                    UnzerManager.error(error.customerMessage || error.message);
                 })
             return false;
         });
@@ -227,6 +304,7 @@ const UnzerManager = {
     getCheckoutForm() {
         return jQuery('form.woocommerce-checkout');
     },
+
     error(message) {
         jQuery('.woocommerce-NoticeGroup-checkout, .woocommerce-error, .woocommerce-message').remove();
         const $checkoutForm = UnzerManager.getCheckoutForm();
@@ -236,12 +314,18 @@ const UnzerManager = {
         UnzerManager.scrollToNotices();
         jQuery(document.body).trigger('checkout_error', [message]);
     },
+
     scrollToNotices() {
         let scrollElement = jQuery('.woocommerce-NoticeGroup-updateOrderReview, .woocommerce-NoticeGroup-checkout');
         if (!scrollElement.length) {
             scrollElement = jQuery('form.checkout');
         }
         jQuery.scroll_to_notices(scrollElement);
+    },
+
+    isB2B(){
+        const companyNameInput = document.getElementById('billing_company');
+        return (companyNameInput && companyNameInput.value !== '');
     }
 }
 
@@ -254,5 +338,12 @@ jQuery(() => {
         observer.observe(paymentContainer, {attributes: true, childList: true, subtree: true});
     }
     jQuery(document.body).on('updated_checkout', UnzerManager.init);
+    setInterval(function (){
+        const companyTypeInputContainer = document.getElementById('unzer-invoice-company-type-container');
+        if(!companyTypeInputContainer){
+            return;
+        }
+        companyTypeInputContainer.style.display = UnzerManager.isB2B()?'block':'none';
+    }, 500);
 });
 

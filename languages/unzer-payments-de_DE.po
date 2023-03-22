@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Unzer Payments\n"
-"POT-Creation-Date: 2023-01-24 23:33+0100\n"
-"PO-Revision-Date: 2023-01-24 23:34+0100\n"
+"POT-Creation-Date: 2023-03-16 00:22+0100\n"
+"PO-Revision-Date: 2023-03-16 00:23+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de_DE\n"
@@ -22,15 +22,15 @@ msgstr ""
 "X-Poedit-SearchPathExcluded-0: *.min.js\n"
 "X-Poedit-SearchPathExcluded-1: vendor\n"
 
-#: html/admin/global-settings-start.php:4
+#: html/admin/global-settings-start.php:6
 msgid "General settings"
 msgstr "Allgemeine Einstellungen"
 
-#: html/admin/global-settings-start.php:22
+#: html/admin/global-settings-start.php:24
 msgid "Keys are not valid"
 msgstr "Schlüssel sind nicht gültig"
 
-#: html/admin/global-settings-start.php:24
+#: html/admin/global-settings-start.php:26
 msgid "Keys are valid"
 msgstr "Schlüssel sind gültig"
 
@@ -86,7 +86,7 @@ msgstr "Erstatteter Betrag"
 msgid "Remaining amount"
 msgstr "Verbleibender Betrag"
 
-#: html/admin/webhooks.php:50
+#: html/admin/webhooks.php:50 includes/controllers/AccountController.php:56
 msgid "Delete"
 msgstr "Löschen"
 
@@ -94,46 +94,50 @@ msgstr "Löschen"
 msgid "Webhook is active"
 msgstr "Webhook ist aktiv"
 
-#: includes/Main.php:94
+#: includes/Main.php:102
 msgid "Unzer Transactions"
 msgstr "Unzer-Transaktionen"
 
-#: includes/Main.php:98
+#: includes/Main.php:106
 msgid "Unzer API settings"
 msgstr "Unzer API-Einstellungen"
 
-#: includes/Main.php:112
-msgid "Private Key"
-msgstr "Privater Schlüssel"
-
-#: includes/Main.php:119
+#: includes/Main.php:120
 msgid "Public Key"
 msgstr "Öffentlicher Schlüssel"
 
-#: includes/Main.php:126
+#: includes/Main.php:127
+msgid "Private Key"
+msgstr "Privater Schlüssel"
+
+#: includes/Main.php:134
 msgid "Order status for authorized payments"
 msgstr "Auftragsstatus für Aufträge mit autorisierter Zahlung"
 
-#: includes/Main.php:129
+#: includes/Main.php:137
 msgid "This status is assigned for orders, that are authorized"
 msgstr "Dieser Status wird für autorisierte Aufträge vergeben"
 
-#: includes/Main.php:130 includes/Main.php:139
+#: includes/Main.php:138 includes/Main.php:147
 msgid "[Use WooC default status]"
 msgstr "[WooC-Standardstatus verwenden]"
 
-#: includes/Main.php:135
+#: includes/Main.php:143
 msgid "Order status for captured payments"
 msgstr "Auftragsstatus für Aufträge mit eingezogener Zahlung"
 
-#: includes/Main.php:138
+#: includes/Main.php:146
 msgid "This status is assigned for orders, that are captured"
 msgstr ""
 "Dieser Status wird für Aufträge vergeben, deren Zahlung eingezogen wurde"
 
+#: includes/controllers/AccountController.php:62
+msgid "Your saved payment means"
+msgstr "Ihre gespeicherten Zahlungsarten"
+
 #: includes/controllers/CheckoutController.php:30
 #: includes/controllers/CheckoutController.php:40
-#: includes/controllers/CheckoutController.php:66
+#: includes/controllers/CheckoutController.php:71
 msgid "Payment error"
 msgstr "Zahlungsfehler"
 
@@ -141,14 +145,14 @@ msgstr "Zahlungsfehler"
 msgid "Payment cancelled"
 msgstr "Zahlung storniert"
 
-#: includes/gateways/AbstractGateway.php:33
+#: includes/gateways/AbstractGateway.php:39
 #, php-format
 msgid "The Unzer API settings can be adjusted <a href=\"%s\">here</a>"
 msgstr ""
 "Die Einstellungen der Unzer API können <a href=\"%s\">hier</a> angepasst "
 "werden"
 
-#: includes/gateways/AbstractGateway.php:35
+#: includes/gateways/AbstractGateway.php:41
 #, php-format
 msgid ""
 "To start using Unzer payment methods, please enter your credentials first. "
@@ -158,79 +162,87 @@ msgstr ""
 "Anmeldedaten ein <br><a href=\"%s\" class=\"button-primary\">API-"
 "Einstellungen</a>"
 
-#: includes/gateways/AbstractGateway.php:93
+#: includes/gateways/AbstractGateway.php:112
 msgid "Select another Unzer payment method"
 msgstr "Wählen Sie eine andere Unzer-Zahlungsmethode"
 
-#: includes/gateways/AbstractGateway.php:94
+#: includes/gateways/AbstractGateway.php:113
 msgid "Return to payments"
 msgstr "Zurück zu den Zahlungen"
 
-#: includes/gateways/Alipay.php:33 includes/gateways/Bancontact.php:33
-#: includes/gateways/Card.php:104 includes/gateways/DirectDebit.php:86
-#: includes/gateways/DirectDebitSecured.php:86 includes/gateways/Eps.php:52
-#: includes/gateways/Giropay.php:33 includes/gateways/Ideal.php:52
-#: includes/gateways/Installment.php:82 includes/gateways/Invoice.php:33
-#: includes/gateways/Klarna.php:34 includes/gateways/Paypal.php:33
-#: includes/gateways/Pis.php:33 includes/gateways/Prepayment.php:35
-#: includes/gateways/Przelewy24.php:33 includes/gateways/Sofort.php:33
-#: includes/gateways/WeChatPay.php:33
+#: includes/gateways/AbstractGateway.php:158
+msgid "Please enter your date of birth"
+msgstr "Bitte geben Sie Ihr Geburtsdatum ein"
+
+#: includes/gateways/AbstractGateway.php:159 includes/gateways/Invoice.php:145
+msgid "Please enter your company type"
+msgstr "Bitte geben Sie Ihren Unternehmenstyp ein"
+
+#: includes/gateways/Alipay.php:34 includes/gateways/Bancontact.php:33
+#: includes/gateways/Card.php:99 includes/gateways/DirectDebit.php:77
+#: includes/gateways/DirectDebitSecured.php:77 includes/gateways/Eps.php:52
+#: includes/gateways/Giropay.php:34 includes/gateways/Ideal.php:52
+#: includes/gateways/Installment.php:74 includes/gateways/Invoice.php:47
+#: includes/gateways/Klarna.php:34 includes/gateways/Paypal.php:50
+#: includes/gateways/Pis.php:34 includes/gateways/Prepayment.php:35
+#: includes/gateways/Przelewy24.php:34 includes/gateways/Sofort.php:34
+#: includes/gateways/WeChatPay.php:34
 msgid "Enable/Disable"
 msgstr "Aktivieren/Deaktivieren"
 
-#: includes/gateways/Alipay.php:34
+#: includes/gateways/Alipay.php:35
 msgid "Enable Unzer Alipay"
 msgstr "Unzer Alipay aktivieren"
 
-#: includes/gateways/Alipay.php:40 includes/gateways/Bancontact.php:40
-#: includes/gateways/Card.php:111 includes/gateways/DirectDebit.php:93
-#: includes/gateways/DirectDebitSecured.php:93 includes/gateways/Eps.php:59
-#: includes/gateways/Giropay.php:40 includes/gateways/Ideal.php:59
-#: includes/gateways/Installment.php:89 includes/gateways/Invoice.php:40
-#: includes/gateways/Klarna.php:41 includes/gateways/Paypal.php:40
-#: includes/gateways/Pis.php:40 includes/gateways/Prepayment.php:42
-#: includes/gateways/Przelewy24.php:40 includes/gateways/Sofort.php:40
-#: includes/gateways/WeChatPay.php:40
+#: includes/gateways/Alipay.php:41 includes/gateways/Bancontact.php:40
+#: includes/gateways/Card.php:106 includes/gateways/DirectDebit.php:84
+#: includes/gateways/DirectDebitSecured.php:84 includes/gateways/Eps.php:59
+#: includes/gateways/Giropay.php:41 includes/gateways/Ideal.php:59
+#: includes/gateways/Installment.php:81 includes/gateways/Invoice.php:54
+#: includes/gateways/Klarna.php:41 includes/gateways/Paypal.php:57
+#: includes/gateways/Pis.php:41 includes/gateways/Prepayment.php:42
+#: includes/gateways/Przelewy24.php:41 includes/gateways/Sofort.php:41
+#: includes/gateways/WeChatPay.php:41
 msgid "Title"
 msgstr "Titel"
 
-#: includes/gateways/Alipay.php:42 includes/gateways/Bancontact.php:42
-#: includes/gateways/Card.php:113 includes/gateways/DirectDebit.php:95
-#: includes/gateways/DirectDebitSecured.php:95 includes/gateways/Eps.php:61
-#: includes/gateways/Giropay.php:42 includes/gateways/Ideal.php:61
-#: includes/gateways/Installment.php:91 includes/gateways/Invoice.php:42
-#: includes/gateways/Klarna.php:43 includes/gateways/Paypal.php:42
-#: includes/gateways/Pis.php:42 includes/gateways/Prepayment.php:44
-#: includes/gateways/Przelewy24.php:42 includes/gateways/Sofort.php:42
-#: includes/gateways/WeChatPay.php:42
+#: includes/gateways/Alipay.php:43 includes/gateways/Bancontact.php:42
+#: includes/gateways/Card.php:108 includes/gateways/DirectDebit.php:86
+#: includes/gateways/DirectDebitSecured.php:86 includes/gateways/Eps.php:61
+#: includes/gateways/Giropay.php:43 includes/gateways/Ideal.php:61
+#: includes/gateways/Installment.php:83 includes/gateways/Invoice.php:56
+#: includes/gateways/Klarna.php:43 includes/gateways/Paypal.php:59
+#: includes/gateways/Pis.php:43 includes/gateways/Prepayment.php:44
+#: includes/gateways/Przelewy24.php:43 includes/gateways/Sofort.php:43
+#: includes/gateways/WeChatPay.php:43
 msgid "This controls the title which the user sees during checkout."
 msgstr "Dies steuert den Titel, den der Kunde während des Zahlvorgangs sieht."
 
-#: includes/gateways/Alipay.php:43
+#: includes/gateways/Alipay.php:44
 msgid "Alipay"
 msgstr "Alipay"
 
-#: includes/gateways/Alipay.php:46 includes/gateways/Bancontact.php:46
-#: includes/gateways/Card.php:117 includes/gateways/DirectDebit.php:99
-#: includes/gateways/DirectDebitSecured.php:99 includes/gateways/Eps.php:65
-#: includes/gateways/Giropay.php:46 includes/gateways/Ideal.php:65
-#: includes/gateways/Installment.php:95 includes/gateways/Invoice.php:46
-#: includes/gateways/Klarna.php:47 includes/gateways/Paypal.php:46
-#: includes/gateways/Pis.php:46 includes/gateways/Prepayment.php:48
-#: includes/gateways/Przelewy24.php:46 includes/gateways/Sofort.php:46
-#: includes/gateways/WeChatPay.php:46
+#: includes/gateways/Alipay.php:47 includes/gateways/Bancontact.php:46
+#: includes/gateways/Card.php:112 includes/gateways/DirectDebit.php:90
+#: includes/gateways/DirectDebitSecured.php:90 includes/gateways/Eps.php:65
+#: includes/gateways/Giropay.php:47 includes/gateways/Ideal.php:65
+#: includes/gateways/Installment.php:87 includes/gateways/Invoice.php:60
+#: includes/gateways/Klarna.php:47 includes/gateways/Paypal.php:63
+#: includes/gateways/Pis.php:47 includes/gateways/Prepayment.php:48
+#: includes/gateways/Przelewy24.php:47 includes/gateways/Sofort.php:47
+#: includes/gateways/WeChatPay.php:47
 msgid "Description"
 msgstr "Beschreibung"
 
-#: includes/gateways/Alipay.php:48 includes/gateways/Bancontact.php:48
-#: includes/gateways/Card.php:119 includes/gateways/DirectDebit.php:101
-#: includes/gateways/DirectDebitSecured.php:101 includes/gateways/Eps.php:67
-#: includes/gateways/Giropay.php:48 includes/gateways/Ideal.php:67
-#: includes/gateways/Installment.php:97 includes/gateways/Invoice.php:48
-#: includes/gateways/Klarna.php:49 includes/gateways/Paypal.php:48
-#: includes/gateways/Pis.php:48 includes/gateways/Prepayment.php:50
-#: includes/gateways/Przelewy24.php:48 includes/gateways/Sofort.php:48
-#: includes/gateways/WeChatPay.php:48
+#: includes/gateways/Alipay.php:49 includes/gateways/Bancontact.php:48
+#: includes/gateways/Card.php:114 includes/gateways/DirectDebit.php:92
+#: includes/gateways/DirectDebitSecured.php:92 includes/gateways/Eps.php:67
+#: includes/gateways/Giropay.php:49 includes/gateways/Ideal.php:67
+#: includes/gateways/Installment.php:89 includes/gateways/Invoice.php:62
+#: includes/gateways/Klarna.php:49 includes/gateways/Paypal.php:65
+#: includes/gateways/Pis.php:49 includes/gateways/Prepayment.php:50
+#: includes/gateways/Przelewy24.php:49 includes/gateways/Sofort.php:49
+#: includes/gateways/WeChatPay.php:49
 msgid "This controls the description which the user sees during checkout."
 msgstr ""
 "Beschreibungstext, den Benutzer bei der Auswahl dieser Zahlungsart sehen."
@@ -243,19 +255,19 @@ msgstr "Unzer Bancontact aktivieren"
 msgid "Bancontact"
 msgstr "Bancontact"
 
-#: includes/gateways/Card.php:105
+#: includes/gateways/Card.php:100
 msgid "Enable Unzer Card Payments"
 msgstr "Unzer-Kartenzahlungen aktivieren"
 
-#: includes/gateways/Card.php:114
+#: includes/gateways/Card.php:109
 msgid "Credit Card"
 msgstr "Kreditkarte"
 
-#: includes/gateways/Card.php:123 includes/gateways/Paypal.php:52
+#: includes/gateways/Card.php:118 includes/gateways/Paypal.php:69
 msgid "Charge or Authorize"
 msgstr "Belasten oder autorisieren"
 
-#: includes/gateways/Card.php:126 includes/gateways/Paypal.php:55
+#: includes/gateways/Card.php:121 includes/gateways/Paypal.php:72
 msgid ""
 "Choose \"authorize\", if you you want to charge the shopper at a later point "
 "of time"
@@ -263,21 +275,21 @@ msgstr ""
 "Wählen Sie \"autorisieren\", wenn Sie den Käufer zu einem späteren Zeitpunkt "
 "belasten möchten"
 
-#: includes/gateways/Card.php:128 includes/gateways/Paypal.php:57
+#: includes/gateways/Card.php:123 includes/gateways/Paypal.php:74
 msgid "authorize"
 msgstr "Autorisieren"
 
-#: includes/gateways/Card.php:129 includes/gateways/Paypal.php:58
+#: includes/gateways/Card.php:124 includes/gateways/Paypal.php:75
 msgid "charge"
 msgstr "Belastung"
 
-#: includes/gateways/DirectDebit.php:87
-#: includes/gateways/DirectDebitSecured.php:87
+#: includes/gateways/DirectDebit.php:78
+#: includes/gateways/DirectDebitSecured.php:78
 msgid "Enable Unzer Direct Debit Payments"
 msgstr "Unzer-Lastschriftzahlungen aktivieren"
 
-#: includes/gateways/DirectDebit.php:96
-#: includes/gateways/DirectDebitSecured.php:96
+#: includes/gateways/DirectDebit.php:87
+#: includes/gateways/DirectDebitSecured.php:87
 msgid "Direct Debit"
 msgstr "Lastschrift"
 
@@ -293,11 +305,11 @@ msgstr "EPS"
 msgid "Please select your bank"
 msgstr "Bitte wählen Sie Ihre Bank"
 
-#: includes/gateways/Giropay.php:34
+#: includes/gateways/Giropay.php:35
 msgid "Enable Unzer Giropay"
 msgstr "Unzer Giropay aktivieren"
 
-#: includes/gateways/Giropay.php:43
+#: includes/gateways/Giropay.php:44
 msgid "Giropay"
 msgstr "Giropay"
 
@@ -309,21 +321,68 @@ msgstr "Aktivieren Sie Unzer iDEAL"
 msgid "iDEAL"
 msgstr "iDEAL"
 
-#: includes/gateways/Installment.php:83
+#: includes/gateways/Installment.php:75
 msgid "Enable Unzer Installment"
 msgstr "Unzer Ratenzahlung aktivieren"
 
-#: includes/gateways/Installment.php:92
+#: includes/gateways/Installment.php:84
 msgid "Installment"
 msgstr "Rate"
 
-#: includes/gateways/Invoice.php:34
-msgid "Enable Unzer Invoice"
-msgstr "Unzer-Rechnung aktivieren"
+#: includes/gateways/Invoice.php:37 includes/gateways/Invoice.php:57
+msgid "Unzer Invoice (Paylater)"
+msgstr "Unzer Rechnung (Paylater)"
 
-#: includes/gateways/Invoice.php:43
-msgid "Invoice"
-msgstr "Rechnung"
+#: includes/gateways/Invoice.php:48
+msgid "Enable Unzer Invoice (Paylater)"
+msgstr "Unzer Rechnung (Paylater) aktivieren"
+
+#: includes/gateways/Invoice.php:82
+msgid "Date of birth"
+msgstr "Geburtsdatum"
+
+#: includes/gateways/Invoice.php:86
+msgid "Type of company"
+msgstr "Art des Unternehmens"
+
+#: includes/gateways/Invoice.php:89
+msgid "Association"
+msgstr "Gesellschaft"
+
+#: includes/gateways/Invoice.php:90
+msgid "Authority"
+msgstr "Behörde"
+
+#: includes/gateways/Invoice.php:91
+msgid "Company"
+msgstr "Firma"
+
+#: includes/gateways/Invoice.php:92
+msgid "Sole"
+msgstr "Einzelunternehmen"
+
+#: includes/gateways/Invoice.php:93
+msgid "Other"
+msgstr "Sonstiges"
+
+#: includes/gateways/Invoice.php:131
+msgid "You have to be at least 18 years old for this payment method"
+msgstr "Für diese Zahlungsmethode müssen Sie mindestens 18 Jahre alt sein"
+
+#: includes/gateways/Invoice.php:134
+msgid "Please check your date of birth"
+msgstr "Bitte überprüfen Sie Ihr Geburtsdatum"
+
+#: includes/gateways/Invoice.php:207 includes/gateways/Prepayment.php:73
+#, php-format
+msgid ""
+"Please transfer the amount of %s to the following account:<br /><br /"
+">Holder: %s<br/>IBAN: %s<br/>BIC: %s<br/><br/><i>Please use only this "
+"identification number as the descriptor: </i><br/>%s"
+msgstr ""
+"Bitte überweisen Sie den Betrag von %s auf das folgende Konto:<br /><br /"
+">Inhaber: %s<br/>IBAN: %s<br/>BIC: %s<br/><br/><i>Bitte verwenden Sie nur "
+"diese Identifikationsnummer als Bezeichnung </i><br/>%s"
 
 #: includes/gateways/Klarna.php:35
 msgid "Enable Unzer Klarna"
@@ -333,19 +392,19 @@ msgstr "Unzer Klarna aktivieren"
 msgid "Klarna"
 msgstr "Klarna"
 
-#: includes/gateways/Paypal.php:34
+#: includes/gateways/Paypal.php:51
 msgid "Enable Unzer PayPal"
 msgstr "Aktivieren Sie Unzer PayPal"
 
-#: includes/gateways/Paypal.php:43
+#: includes/gateways/Paypal.php:60
 msgid "PayPal"
 msgstr "PayPal"
 
-#: includes/gateways/Pis.php:34
+#: includes/gateways/Pis.php:35
 msgid "Enable Unzer Bank Transfer"
 msgstr "Unzer Banküberweisung aktivieren"
 
-#: includes/gateways/Pis.php:43
+#: includes/gateways/Pis.php:44
 msgid "Bank Transfer"
 msgstr "Banküberweisung"
 
@@ -357,56 +416,62 @@ msgstr "Unzer Vorauszahlung aktivieren"
 msgid "Prepayment"
 msgstr "Vorauszahlung"
 
-#: includes/gateways/Prepayment.php:73
-#, php-format
-msgid ""
-"Please transfer the amount of %s to the following account:<br /><br /"
-">Holder: %s<br/>IBAN: %s<br/>BIC: %s<br/><br/><i>Please use only this "
-"identification number as the descriptor: </i><br/>%s"
-msgstr ""
-"Bitte überweisen Sie den Betrag von %s auf das folgende Konto:<br /><br /"
-">Inhaber: %s<br/>IBAN: %s<br/>BIC: %s<br/><br/><i>Bitte verwenden Sie nur "
-"diese Identifikationsnummer als Bezeichnung </i><br/>%s"
-
-#: includes/gateways/Przelewy24.php:34
+#: includes/gateways/Przelewy24.php:35
 msgid "Enable Unzer Przelewy24"
 msgstr "Unzer Przelewy24 aktivieren"
 
-#: includes/gateways/Przelewy24.php:43
+#: includes/gateways/Przelewy24.php:44
 msgid "Przelewy24"
 msgstr "Przelewy24"
 
-#: includes/gateways/Sofort.php:34
+#: includes/gateways/Sofort.php:35
 msgid "Enable Unzer Sofort"
 msgstr "Unzer Sofort Aktivieren"
 
-#: includes/gateways/Sofort.php:43
+#: includes/gateways/Sofort.php:44
 msgid "Sofort"
 msgstr "Sofort"
 
-#: includes/gateways/WeChatPay.php:34
+#: includes/gateways/WeChatPay.php:35
 msgid "Enable Unzer WeChat Pay"
 msgstr "Aktivieren Sie Unzer WeChat Pay"
 
-#: includes/gateways/WeChatPay.php:43
+#: includes/gateways/WeChatPay.php:44
 msgid "WeChat Pay"
 msgstr "WeChat Bezahlen"
 
-#: includes/services/OrderService.php:226
+#: includes/services/OrderService.php:253
 msgid "Payment complete event failed."
 msgstr "Abschluss der Zahlung ist fehlgeschlagen."
 
-#: includes/services/PaymentService.php:215
+#: includes/services/PaymentService.php:218
 #, php-format
 msgid "Unable to do refund: Maximum amount for single refund is %s."
 msgstr ""
 "Erstattung nicht möglich: Maximaler Betrag für eine einzelne Erstattung ist "
 "%s."
 
-#: includes/services/PaymentService.php:215
+#: includes/services/PaymentService.php:218
 #, php-format
 msgid "However, you may refund in up to %s smaller chunks."
 msgstr "Es ist jedoch möglich bis zu %s einzelne Erstattungen vorzunehmen."
+
+#: includes/services/PaymentService.php:242
+msgid "Refund not possible"
+msgstr "Rückerstattung nicht möglich"
+
+#: includes/services/PaymentService.php:247
+msgid "Reversals prior to capturing are only allowed for the full amount"
+msgstr ""
+"Stornierungen vor Zahlungseinzug sind nur in Höhe des vollen Betrags möglich"
+
+#: includes/services/PaymentService.php:252
+msgid "Reversal not possible"
+msgstr "Stornierung nicht möglich"
+
+#: includes/traits/SavePaymentInstrumentTrait.php:29
+msgid "Use another one"
+msgstr "andere"
 
 #: unzer-payments.php:37
 msgid "Unzer requires WooCommerce to be installed and active."
@@ -414,7 +479,7 @@ msgstr "WooCommerce muss installiert und aktiv sein."
 
 #. Plugin Name of the plugin/theme
 msgid "Unzer Payments"
-msgstr "Unzer-Zahlungen"
+msgstr "Unzer Payments"
 
 #. Description of the plugin/theme
 msgid "Official Unzer Plugin"
@@ -427,3 +492,15 @@ msgstr "Unzer"
 #. Author URI of the plugin/theme
 msgid "https://www.unzer.com"
 msgstr "https://www.unzer.com"
+
+#~ msgid "Save card for registered customers"
+#~ msgstr "Kreditkarten für registrierte Kunden speichern"
+
+#~ msgid "&nbsp;"
+#~ msgstr "&nbsp;"
+
+#~ msgid "Save PayPal account for registered customers"
+#~ msgstr "PayPal-Konto für registrierte Kunden speichern"
+
+#~ msgid "Invoice"
+#~ msgstr "Rechnung"

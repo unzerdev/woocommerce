@@ -49,6 +49,16 @@ class AdminController
                     }
                 }
             }
+            if($payment->getReversals()){
+                foreach ($payment->getReversals() as $reversal) {
+                    $transactions[] = $reversal;
+                }
+            }
+            if($payment->getRefunds()){
+                foreach ($payment->getRefunds() as $refund) {
+                    $transactions[] = $refund;
+                }
+            }
             //$transactions = array_merge($transactions, $payment->getCharges(), $payment->getRefunds(), $payment->getReversals());
             $transactionTypes = [
                 Cancellation::class => 'cancellation',
@@ -98,7 +108,7 @@ class AdminController
 
     public function doCharge()
     {
-        $orderId = $_POST['order_id'];
+        $orderId = (int)$_POST['order_id'];
         $amount = isset($_POST['amount'])?(float)$_POST['amount']:null;
         try {
             (new PaymentService())->performChargeOnAuthorization($orderId, $amount);

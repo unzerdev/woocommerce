@@ -3,6 +3,7 @@
 namespace UnzerPayments;
 
 
+use UnzerPayments\Controllers\AccountController;
 use UnzerPayments\Controllers\AdminController;
 use UnzerPayments\Controllers\CheckoutController;
 use UnzerPayments\Controllers\WebhookController;
@@ -34,14 +35,19 @@ class Main
     const ORDER_META_KEY_PAYMENT_SHORT_ID = 'unzer_payment_short_id';
     const ORDER_META_KEY_PAYMENT_INSTRUCTIONS = 'unzer_payment_instructions';
     const ORDER_META_KEY_CANCELLATION_ID = 'unzer_cancellation_id';
+    const ORDER_META_KEY_DATE_OF_BIRTH = 'unzer_dob';
+    const ORDER_META_KEY_COMPANY_TYPE = 'unzer_company_type';
     const ORDER_META_KEYS = [
         self::ORDER_META_KEY_AUTHORIZATION_ID,
         self::ORDER_META_KEY_CHARGE_ID,
         self::ORDER_META_KEY_PAYMENT_ID,
         self::ORDER_META_KEY_PAYMENT_SHORT_ID,
         self::ORDER_META_KEY_PAYMENT_INSTRUCTIONS,
-        self::ORDER_META_KEY_CANCELLATION_ID
+        self::ORDER_META_KEY_CANCELLATION_ID,
+        self::ORDER_META_KEY_DATE_OF_BIRTH
     ];
+
+    const USER_META_KEY_PAYMENT_INSTRUMENTS = 'payment_instruments';
 
     public static function getInstance(): self
     {
@@ -67,12 +73,14 @@ class Main
         add_action('woocommerce_api_' . AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG, [new AdminController(), 'webhookManagement']);
         add_action('woocommerce_api_' . AdminController::KEY_VALIDATION_ROUTE_SLUG, [new AdminController(), 'validateKeypair']);
         add_action('woocommerce_api_' . WebhookController::WEBHOOK_ROUTE_SLUG, [new WebhookController(), 'receiveWebhook']);
-        add_filter('plugin_action_links_' . plugin_basename(UNZER_PLUGIN_PATH . UNZER_PLUGIN_NAME . '.php'), [$this, 'addPluginSettingsLink']);
+        add_action('woocommerce_api_' . AccountController::DELETE_PAYMENT_INSTRUMENT_URL_SLUG, [new AccountController(), 'deletePaymentInstrument']);
+        add_filter('plugin_action_links_' . plugin_basename(UNZER_PLUGIN_PATH . 'unzer-payments' . '.php'), [$this, 'addPluginSettingsLink']);
         add_action( 'add_meta_boxes', array( $this, 'addMetaBoxes' ), 40 );
         add_action('woocommerce_settings_checkout', [AdminController::class, 'renderGlobalSettingsStart']);
         add_action('woocommerce_settings_tabs_checkout', [AdminController::class, 'renderGlobalSettingsEnd'], 10);
         add_action('woocommerce_settings_tabs_checkout', [new AdminController(), 'renderWebhookManagement'], 20);
         add_action('woocommerce_order_details_after_order_table', [CheckoutController::class, 'checkoutSuccess'], 10);
+        add_action('woocommerce_after_edit_account_form', [new AccountController(), 'accountPaymentInstruments']);
     }
 
     public function setMetaProtected($protected, $meta_key, $meta_type){
@@ -91,11 +99,11 @@ class Main
             return;
         }
         $paymentShortId = get_post_meta($_GET['post'], Main::ORDER_META_KEY_PAYMENT_SHORT_ID, true);
-        add_meta_box( 'woocommerce-unzer-transactions', __( 'Unzer Transactions', UNZER_PLUGIN_NAME).' #'.$paymentShortId, AdminController::class.'::renderTransactionTable', 'shop_order', 'normal', 'high' );
+        add_meta_box( 'woocommerce-unzer-transactions', __( 'Unzer Transactions', 'unzer-payments').' #'.$paymentShortId, AdminController::class.'::renderTransactionTable', 'shop_order', 'normal', 'high' );
     }
     public function addPluginSettingsLink($links): array
     {
-        $settingsLink = '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=unzer_general') . '">' . __('Unzer API settings', UNZER_PLUGIN_NAME) . '</a>';
+        $settingsLink = '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=unzer_general') . '">' . __('Unzer API settings', 'unzer-payments') . '</a>';
         array_unshift($links, $settingsLink);
         return $links;
     }
@@ -108,35 +116,35 @@ class Main
                     'type' => 'title',
                     'desc' => '',
                 ],
-                'private_key' => [
-                    'title' => __('Private Key', UNZER_PLUGIN_NAME),
-                    'type' => 'text',
-                    'desc' => '',
-                    'id' => 'unzer_private_key',
-                    'value' => get_option('unzer_private_key'),
-                ],
                 'public_key' => [
-                    'title' => __('Public Key', UNZER_PLUGIN_NAME),
+                    'title' => __('Public Key', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
                     'id' => 'unzer_public_key',
                     'value' => get_option('unzer_public_key'),
                 ],
+                'private_key' => [
+                    'title' => __('Private Key', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                    'id' => 'unzer_private_key',
+                    'value' => get_option('unzer_private_key'),
+                ],
                 'authorized_order_status' => [
-                    'title' => __('Order status for authorized payments', UNZER_PLUGIN_NAME),
+                    'title' => __('Order status for authorized payments', 'unzer-payments'),
                     'label' => '',
                     'type' => 'select',
-                    'desc' => __('This status is assigned for orders, that are authorized', UNZER_PLUGIN_NAME),
-                    'options' => array_merge(['' => __('[Use WooC default status]', UNZER_PLUGIN_NAME)], wc_get_order_statuses()),
+                    'desc' => __('This status is assigned for orders, that are authorized', 'unzer-payments'),
+                    'options' => array_merge(['' => __('[Use WooC default status]', 'unzer-payments')], wc_get_order_statuses()),
                     'id' => 'unzer_authorized_order_status',
                     'value' => get_option('unzer_authorized_order_status'),
                 ],
                 'captured_order_status' => [
-                    'title' => __('Order status for captured payments', UNZER_PLUGIN_NAME),
+                    'title' => __('Order status for captured payments', 'unzer-payments'),
                     'label' => '',
                     'type' => 'select',
-                    'desc' => __('This status is assigned for orders, that are captured', UNZER_PLUGIN_NAME),
-                    'options' => array_merge(['' => __('[Use WooC default status]', UNZER_PLUGIN_NAME)], wc_get_order_statuses()),
+                    'desc' => __('This status is assigned for orders, that are captured', 'unzer-payments'),
+                    'options' => array_merge(['' => __('[Use WooC default status]', 'unzer-payments')], wc_get_order_statuses()),
                     'id' => 'unzer_captured_order_status',
                     'value' => get_option('unzer_captured_order_status'),
                 ],

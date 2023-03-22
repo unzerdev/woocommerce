@@ -41,7 +41,7 @@ class DirectDebit extends AbstractGateway
     {
         $description = $this->get_description();
         if ($description) {
-            echo wpautop(wptexturize($description)); // @codingStandardsIgnoreLine.
+            echo wpautop(wptexturize($description));
         }
         ?>
         <div id="unzer-direct-debit-form" class="unzerUI form">
@@ -64,16 +64,7 @@ class DirectDebit extends AbstractGateway
             return;
         }
 
-        wp_enqueue_script('unzer_js', 'https://static.unzer.com/v1/unzer.js');
-        wp_enqueue_style('unzer_css', 'https://static.unzer.com/v1/unzer.css');
-        wp_register_script('woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', ['unzer_js', 'jquery']);
-
-        // in most payment processors you have to use PUBLIC KEY to obtain a token
-        wp_localize_script('woocommerce_unzer', 'unzer_parameters', [
-            'publicKey' => $this->get_public_key(),
-        ]);
-        wp_enqueue_script('woocommerce_unzer');
-
+        $this->addCheckoutAssets();
     }
 
     public function get_form_fields()
@@ -83,22 +74,22 @@ class DirectDebit extends AbstractGateway
             [
 
                 'enabled' => [
-                    'title' => __('Enable/Disable', UNZER_PLUGIN_NAME),
-                    'label' => __('Enable Unzer Direct Debit Payments', UNZER_PLUGIN_NAME),
+                    'title' => __('Enable/Disable', 'unzer-payments'),
+                    'label' => __('Enable Unzer Direct Debit Payments', 'unzer-payments'),
                     'type' => 'checkbox',
                     'description' => '',
                     'default' => 'no',
                 ],
                 'title' => [
-                    'title' => __('Title', UNZER_PLUGIN_NAME),
+                    'title' => __('Title', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the title which the user sees during checkout.', UNZER_PLUGIN_NAME),
-                    'default' => __('Direct Debit', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the title which the user sees during checkout.', 'unzer-payments'),
+                    'default' => __('Direct Debit', 'unzer-payments'),
                 ],
                 'description' => [
-                    'title' => __('Description', UNZER_PLUGIN_NAME),
+                    'title' => __('Description', 'unzer-payments'),
                     'type' => 'text',
-                    'description' => __('This controls the description which the user sees during checkout.', UNZER_PLUGIN_NAME),
+                    'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
                     'default' => '',
                 ],
             ]
