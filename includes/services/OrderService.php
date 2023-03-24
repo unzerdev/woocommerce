@@ -337,9 +337,9 @@ class OrderService
             $order = wc_get_order($orderId);
             $order->add_order_note('Refund created from Unzer cancellation ' . $unzerRefund->getId());
             update_post_meta($shopRefund->get_id(), Main::ORDER_META_KEY_CANCELLATION_ID, self::getUnzerCancellationId($unzerRefund));
-            (new LogService())->warning('refund created from unzer cancellation', ['refund' => $shopRefund, 'unzerRefund' => $unzerRefund]);
+            (new LogService())->warning('refund created from unzer cancellation', ['refund' => $shopRefund, 'unzerRefund' => $unzerRefund->expose()]);
         } else {
-            (new LogService())->warning('unable to create shop refund from unzer cancellation', ['order' => $orderId, 'cancellation' => $unzerRefund, 'response' => $shopRefund]);
+            (new LogService())->warning('unable to create shop refund from unzer cancellation', ['order' => $orderId, 'cancellation' => $unzerRefund->expose(), 'response' => $shopRefund]);
         }
     }
 

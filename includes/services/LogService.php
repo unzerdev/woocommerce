@@ -2,6 +2,8 @@
 
 namespace UnzerPayments\Services;
 
+use Exception;
+
 class LogService{
     private $logDir;
 
@@ -18,7 +20,21 @@ class LogService{
     }
 
     public function log($message, $level = 'debug', $data = null){
-        file_put_contents($this->getLogFile($level), '['.date('Y-m-d H:i:s').'] '.$message.' | '.serialize($data)."\n", 8);
+        try{
+            $serializedData = serialize($data);
+        }catch (Exception $e){
+            if(is_array($data)){
+                foreach($data as $key => $value){
+                    try{
+                        $serializedData[$key] = serialize($value);
+                    }catch (Exception $e){
+                        $serializedData[$key] = gettype($value);
+                    }
+                }
+            }
+            $serializedData = serialize($serializedData);
+        }
+        file_put_contents($this->getLogFile($level), '['.date('Y-m-d H:i:s').'] '.$message.' | '.$serializedData."\n", 8);
     }
 
     public function debug($message, $data = null){

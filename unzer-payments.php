@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 /**
  * Required minimums and constants
  */
-define('UNZER_VERSION', '1.0.1');
+define('UNZER_VERSION', '1.0.2');
 define('UNZER_PLUGIN_TYPE_STRING', 'Unzer Payments');
 define('UNZER_PLUGIN_URL', untrailingslashit(plugins_url(basename(plugin_dir_path(__FILE__)), basename(__FILE__))));
 define('UNZER_PLUGIN_PATH', __DIR__ . '/');
