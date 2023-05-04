@@ -3,7 +3,7 @@ Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
 Tested up to: 6.1.0
-Stable tag: 1.0.2
+Stable tag: 1.1.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Author URI: https://unzer.com
@@ -33,11 +33,15 @@ Use Unzer plugin for WooCommerce to provide an easy-to-install and use payment g
 • PayPal
 • SOFORT
 • Unzer Invoice (Paylater)
+• Alipay
+• Bancontact
+• Direct Debit
+• Prepayment
+• Przelewy24
+• Wechat Pay
 
 == Known issues ==
 
-• Credit card details cannot be saved for a registered customer account
-• PayPal details cannot be saved for a registered customer account
 • For chargeback, the transaction is currently not displayed in Unzer Transactions
 
 == Support ==
@@ -49,6 +53,17 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth - online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 == Changelog ==
+
+= 1.1.0 =
+- Save card details for subsequent transactions for registered customers
+- Save PayPal details for subsequent transactions for registered customers
+- The following payment methods are now available in the plugin:
+• Alipay
+• Bancontact
+• Direct Debit
+• Prepayment
+• Przelewy24
+• Wechat Pay
 
 = 1.0.2 =
 Bugfix Logging method / serialization

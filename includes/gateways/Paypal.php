@@ -28,7 +28,7 @@ class Paypal extends AbstractGateway
 
     public function has_fields()
     {
-        return ($this->isSaveInstruments() && !empty($this->getSavedPaymentInstruments()));
+        return $this->isSaveInstruments();
     }
 
     public function payment_fields()
@@ -76,13 +76,17 @@ class Paypal extends AbstractGateway
                     ],
                     'default' => 'charge',
                 ],
-//                AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => [
-//                    'title' => __('Save PayPal account for registered customers', 'unzer-payments'),
-//                    'label' => __('&nbsp;', 'unzer-payments'),
-//                    'type' => 'checkbox',
-//                    'description' => '',
-//                    'default' => 'no',
-//                ],
+                AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => [
+                'title' => __('Save PayPAl account for registered customers', 'unzer-payments'),
+                'label' => __('&nbsp;', 'unzer-payments'),
+                'type' => 'select',
+                'description' => '',
+                'default' => 'no',
+                'options' => [
+                    'no' => __('No', 'unzer-payments'),
+                    'yes' => __('Yes', 'unzer-payments'),
+                ],
+            ],
             ]
         );
     }
@@ -94,7 +98,7 @@ class Paypal extends AbstractGateway
         ];
 
         $paymentMean = empty($_POST['unzer_paypal_payment_instrument'])?\UnzerSDK\Resources\PaymentTypes\Paypal::class:$_POST['unzer_paypal_payment_instrument'];
-
+        WC()->session->set('save_payment_instrument', !empty($_POST['unzer-save-payment-instrument']));
         if ($this->get_option('transaction_type') === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE) {
             $transaction = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $paymentMean);
         } else {

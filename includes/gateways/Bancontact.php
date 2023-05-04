@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) {
 class Bancontact extends AbstractGateway
 {
     const GATEWAY_ID = 'unzer_bancontact';
+    public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Bancontact::class;
     public $method_title = 'Unzer Bancontact';
     public $method_description;
     public $title = 'Bancontact';

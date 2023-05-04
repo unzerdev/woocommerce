@@ -11,11 +11,20 @@ use UnzerSDK\Resources\PaymentTypes\Paypal;
 use UnzerSDK\Resources\PaymentTypes\SepaDirectDebit;
 
 trait SavePaymentInstrumentTrait{
-    public function isSaveInstruments(){
-        return false; //$this->get_option(AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS) === 'yes';
+    public function isSaveInstruments(): bool
+    {
+        return $this->get_option(AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS) === 'yes' && is_user_logged_in();
     }
 
     public function renderSavedInstrumentsSelection($originalForm){
+        if($this->isSaveInstruments()){
+            $originalForm .= '<div class="unzer-save-new-payment-instrument">
+                                   <label>
+                                        <input type="checkbox" name="unzer-save-payment-instrument" value="1" class="unzer-save-payment-instrument-checkbox" '.(WC()->session->get('save_payment_instrument')?'checked ':'').'/>
+                                        <span class="label">'.esc_html(__('Save this for my next purchase', 'unzer-payments')).'</span>
+                                   </label>
+                              </div>';
+        }
         if(!$this->isSaveInstruments() || empty($this->getSavedPaymentInstruments())){
             return $originalForm;
         }else{
@@ -34,7 +43,7 @@ trait SavePaymentInstrumentTrait{
 
     public function maybeSavePaymentInstrument($paymentInstrumentId)
     {
-        if (!$this->isSaveInstruments() || !is_user_logged_in()) {
+        if (!$this->isSaveInstruments()) {
             return;
         }
         $paymentService = new PaymentService();
@@ -80,6 +89,22 @@ trait SavePaymentInstrumentTrait{
             return [];
         }else{
             return $existingPaymentMeans[$this->paymentTypeResource];
+        }
+    }
+
+    public function deleteAllSavedPaymentInstruments(){
+        global $wpdb;
+
+        $q = $wpdb->prepare("SELECT * FROM ".$wpdb->usermeta." WHERE meta_key = %s", Main::USER_META_KEY_PAYMENT_INSTRUMENTS);
+        $results = $wpdb->get_results($q);
+        foreach($results as $result){
+            $data = unserialize($result->meta_value);
+            if(is_array($data) && !empty($data[$this->paymentTypeResource])){
+                unset($data[$this->paymentTypeResource]);
+                $data = serialize($data);
+                $q = $wpdb->prepare("UPDATE ".$wpdb->usermeta." SET meta_value = %s WHERE umeta_id = %d", $data, $result->umeta_id);
+                $wpdb->query($q);
+            }
         }
     }
 }

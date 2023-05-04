@@ -155,6 +155,10 @@ const UnzerManager = {
         });
 
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_direct_debit_secured', function () {
+            if (!document.getElementById('unzer-direct-debit-secured-dob').value) {
+                UnzerManager.error(unzer_i18n.errorDob || 'Please enter your date fo birth');
+                return false;
+            }
             if (document.getElementById('unzer-direct-debit-secured-id').value) {
                 return true;
             }

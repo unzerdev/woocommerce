@@ -44,6 +44,10 @@ class DirectDebitSecured extends AbstractGateway
             echo wpautop(wptexturize($description));
         }
         ?>
+        <div class="unzer-checkout-field-row form-row">
+            <label><?php echo esc_html(__('Date of birth', 'unzer-payments')); ?></label>
+            <input type="date" id="unzer-direct-debit-secured-dob" name="unzer-direct-debit-secured-dob" class="input-text" value="" max="<?php echo date('Y-m-d'); ?>"/>
+        </div>
         <div id="unzer-direct-debit-secured-form" class="unzerUI form">
             <input type="hidden" id="unzer-direct-debit-secured-id" name="unzer-direct-debit-secured-id" value=""/>
             <div class="field">
@@ -99,16 +103,20 @@ class DirectDebitSecured extends AbstractGateway
     public function process_payment($order_id)
     {
         $this->logger->debug('start payment for #' . $order_id . ' with ' . self::GATEWAY_ID);
+        $order = wc_get_order($order_id);
         $return = [
             'result' => 'success',
         ];
+        $this->handleDateOfBirth($order, $_POST['unzer-direct-debit-secured-dob']);
+        $_POST['unzer-dob'] = $_POST['unzer-direct-debit-secured-dob'];
+
         $charge = (new PaymentService())->performChargeForOrder($order_id, $this, $_POST['unzer-direct-debit-secured-id']);
 
         if (!($charge->isPending() || $charge->isSuccess())) {
             throw new Exception($charge->getMessage()->getCustomer());
         }
         if($charge->isSuccess()){
-            $order = wc_get_order($order_id);
+
             $order->payment_complete($charge->getPayment()->getId());
         }else{
             $this->set_order_transaction_number(wc_get_order($order_id), $charge->getPayment()->getId());

@@ -125,13 +125,17 @@ class Card extends AbstractGateway
                     ],
                     'default' => 'charge',
                 ],
-//                AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => [
-//                    'title' => __('Save card for registered customers', 'unzer-payments'),
-//                    'label' => __('&nbsp;', 'unzer-payments'),
-//                    'type' => 'checkbox',
-//                    'description' => '',
-//                    'default' => 'no',
-//                ],
+                AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => [
+                    'title' => __('Save card for registered customers', 'unzer-payments'),
+                    'label' => __('&nbsp;', 'unzer-payments'),
+                    'type' => 'select',
+                    'description' => '',
+                    'default' => 'no',
+                    'options' => [
+                        'no' => __('No', 'unzer-payments'),
+                        'yes' => __('Yes', 'unzer-payments'),
+                    ],
+                ],
                 /*
                 'capture_trigger_order_status' => [
                     'title' => __('Capture status', 'unzer-payments'),
@@ -153,8 +157,8 @@ class Card extends AbstractGateway
         ];
 
         // for saved payment instruments
-        $cardId = !empty($_POST[static::GATEWAY_ID.'_payment_instrument'])?$_POST[static::GATEWAY_ID.'_payment_instrument']:$_POST['unzer-card-id'];
-
+        $cardId = !empty($_POST[static::GATEWAY_ID . '_payment_instrument']) ? $_POST[static::GATEWAY_ID . '_payment_instrument'] : $_POST['unzer-card-id'];
+        WC()->session->set('save_payment_instrument', !empty($_POST['unzer-save-payment-instrument']));
 
         if ($this->get_option('transaction_type') === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE) {
             $transaction = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $cardId);
@@ -164,7 +168,7 @@ class Card extends AbstractGateway
 
         if ($transaction->getPayment()->getRedirectUrl()) {
             $return['redirect'] = $transaction->getPayment()->getRedirectUrl();
-        }elseif ($transaction->isSuccess()){
+        } elseif ($transaction->isSuccess()) {
             $return['redirect'] = $this->get_confirm_url();
         }
         return $return;

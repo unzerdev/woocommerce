@@ -51,9 +51,10 @@ class CheckoutController
         }
 
         if(method_exists($paymentGateway, 'isSaveInstruments')){
-            $paymentGateway->maybeSavePaymentInstrument($transaction->getPayment()->getPaymentType()->getId());
+            if(WC()->session->get('save_payment_instrument')) {
+                $paymentGateway->maybeSavePaymentInstrument($transaction->getPayment()->getPaymentType()->getId());
+            }
         }
-
         $orderService = new OrderService();
         if($orderService->areAmountsEqual($order, $transaction->getPayment())){
             if ($transaction instanceof Authorization) {
@@ -71,6 +72,7 @@ class CheckoutController
             wc_add_notice(__('Payment error', 'unzer-payments'), 'error');
             wp_redirect(wc_get_checkout_url());
         }
+        WC()->session->set('save_payment_instrument', false);
         die;
     }
 

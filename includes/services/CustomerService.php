@@ -52,33 +52,35 @@ class CustomerService
         }
 
         $customer
-            ->setFirstname($order->get_billing_first_name())
-            ->setLastname($order->get_billing_last_name())
-            ->setPhone($order->get_billing_phone())
-            ->setCompany($order->get_billing_company())
-            ->setEmail($order->get_billing_email());
+            ->setFirstname($order->get_billing_first_name() ?: '')
+            ->setLastname($order->get_billing_last_name() ?: '')
+            ->setPhone($order->get_billing_phone() ?: '')
+            ->setCompany($order->get_billing_company() ?: '')
+            ->setEmail($order->get_billing_email() ?: '');
 
 
         $this->setDateOfBirth($customer, $order);
         $this->setCompanyInfo($customer, $order);
         $this->setAddresses($customer, $order);
+        $this->logger->debug('customer data', [$customer->expose()]);
 
-        if($customer->getId()){
-            try{
+        if ($customer->getId()) {
+            try {
                 /** @noinspection PhpUndefinedVariableInspection */
                 $unzer->updateCustomer($customer);
             } catch (Exception $e) {
-                $this->logger->warning('update customer failed: '.$e->getMessage(), [$customer->expose()]);
+                $this->logger->warning('update customer failed: ' . $e->getMessage(), [$customer->expose()]);
             }
         }
 
         return $customer;
     }
 
-    protected function setDateOfBirth(Customer $customer, WC_Abstract_Order $order){
+    protected function setDateOfBirth(Customer $customer, WC_Abstract_Order $order)
+    {
         $dob = $order->get_meta(Main::ORDER_META_KEY_DATE_OF_BIRTH);
-        if (empty($dob) && !empty($_POST['unzer-invoice-dob'])) {
-            $dob = $_POST['unzer-invoice-dob'];
+        if (empty($dob) && !empty($_POST['unzer-dob'])) {
+            $dob = $_POST['unzer-dob'];
         }
         if (!empty($dob)) {
             $customer->setBirthDate(date('Y-m-d', strtotime($dob)));

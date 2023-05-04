@@ -8,16 +8,13 @@ use UnzerPayments\Main;
 use UnzerPayments\Util;
 use UnzerSDK\Constants\BasketItemTypes;
 use UnzerSDK\Constants\CompanyRegistrationTypes;
-use UnzerSDK\Constants\ShippingTypes;
 use UnzerSDK\Resources\Basket;
 use UnzerSDK\Resources\Customer;
-use UnzerSDK\Resources\EmbeddedResources\Address;
 use UnzerSDK\Resources\EmbeddedResources\BasketItem;
 use UnzerSDK\Resources\EmbeddedResources\CompanyInfo;
 use UnzerSDK\Resources\Payment;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
 use UnzerSDK\Resources\TransactionTypes\Cancellation;
-use WC_Abstract_Order;
 use WC_Order;
 use WC_Order_Item_Coupon;
 use WC_Order_Refund;
@@ -113,7 +110,7 @@ class OrderService
                     ->setTitle('Rounding fix')
                     ->setQuantity(1)
                     ->setType(BasketItemTypes::VOUCHER)
-                    ->setAmountDiscountPerUnitGross(round($totalLeft*-1, 2))
+                    ->setAmountDiscountPerUnitGross(round($totalLeft * -1, 2))
                     ->setVat(0);
                 $basketItems[] = $basketItem;
             } else {
@@ -187,11 +184,10 @@ class OrderService
 
 
         $dob = $order->get_meta(Main::ORDER_META_KEY_DATE_OF_BIRTH);
-        if (empty($dob)) {
-            if (!empty($_POST['unzer-invoice-dob'])) {
-                $dob = $_POST['unzer-invoice-dob'];
-            }
+        if (empty($dob) && !empty($_POST['unzer-dob'])) {
+            $dob = $_POST['unzer-dob'];
         }
+
         if (!empty($dob)) {
             $customer->setBirthDate(date('Y-m-d', strtotime($dob)));
         }

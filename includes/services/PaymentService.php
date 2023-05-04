@@ -183,6 +183,7 @@ class PaymentService
      */
     public function performRefundOrReversal($orderId, AbstractGateway $paymentGateway, $amount): AbstractUnzerResource
     {
+        $amount = (float)$amount;
         $unzer = $this->getUnzerManager($paymentGateway);
         $paymentId = get_post_meta($orderId, Main::ORDER_META_KEY_PAYMENT_ID, true);
         $maxCaptureRefund = 0;
@@ -200,7 +201,7 @@ class PaymentService
                         $numberOfRefundsPossible++;
                     }
                     $maxCaptureRefund = max($charge->getTotalAmount(), $maxCaptureRefund);
-                    if ($charge->getTotalAmount() < $amount) {
+                    if ($charge->getTotalAmount() < $amount && !Util::safeCompareAmount($charge->getTotalAmount(), $amount)) {
                         continue;
                     }
                     return $charge->cancel($amount, null, 'fromWordpressOrder' . $orderId . '_' . uniqid());

@@ -122,22 +122,19 @@ class Invoice extends AbstractGateway
     }
 
 
+    /**
+     * @param $order_id
+     * @return array
+     * @throws \WC_Data_Exception|Exception
+     */
     public function process_payment($order_id)
     {
-        $birthDate = new DateTime($_POST['unzer-invoice-dob']);
-        $maxDate = new DateTime('-18 years');
-        $minDate = new DateTime('-120 years');
-        if ($birthDate >= $maxDate) {
-            throw new Exception(__('You have to be at least 18 years old for this payment method', 'unzer-payments'));
-        }
-        if ($birthDate < $minDate) {
-            throw new Exception(__('Please check your date of birth', 'unzer-payments'));
-        }
         $return = [
             'result' => 'success',
         ];
         $order = wc_get_order($order_id);
-        $order->update_meta_data(Main::ORDER_META_KEY_DATE_OF_BIRTH, date('Y-m-d', strtotime($_POST['unzer-invoice-dob'])));
+        $this->handleDateOfBirth($order, $_POST['unzer-invoice-dob']);
+        $_POST['unzer-dob'] = $_POST['unzer-invoice-dob'];
 
         if ($order->get_billing_company()) {
             $companyType = (string)$_POST['unzer-invoice-company-type'];
@@ -146,7 +143,6 @@ class Invoice extends AbstractGateway
             }
             $order->update_meta_data(Main::ORDER_META_KEY_COMPANY_TYPE, $companyType);
         }
-
         $order->save_meta_data();
 
         try {

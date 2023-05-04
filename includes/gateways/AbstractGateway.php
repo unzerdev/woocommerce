@@ -2,6 +2,8 @@
 
 namespace UnzerPayments\Gateways;
 
+use DateTime;
+use Exception;
 use UnzerPayments\Main;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\PaymentService;
@@ -105,7 +107,11 @@ abstract class AbstractGateway extends WC_Payment_Gateway
     public function admin_options()
     {
         wp_enqueue_style('unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css');
-        wp_enqueue_script('unzer_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin.js');
+        wp_register_script('unzer_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin.js');
+        wp_localize_script('unzer_admin_js', 'unzer_i18n', [
+            'deletePaymentInstrumentsWarning' => __('Turning off this feature will delete all stored payment instruments of your customers. Change this setting back to "yes" if you want to keep your customers\' payment instruments.', 'unzer-payments'),
+        ]);
+        wp_enqueue_script('unzer_admin_js');
         echo '<img src="' . esc_url(UNZER_PLUGIN_URL . '/assets/img/logo.svg') . '" width="150" alt="Unzer" style="margin-top:20px;"/>';
         echo '<div>' . wp_kses_post(wpautop($this->get_method_description())) . '</div>';
         echo '<div class="unzer-content-container">';
@@ -143,6 +149,23 @@ abstract class AbstractGateway extends WC_Payment_Gateway
     {
         $order->set_transaction_id($unzerPaymentId);
         $order->save();
+    }
+
+    /**
+     * @param $order
+     * @return void
+     */
+    protected function handleDateOfBirth($order, $dateOfBirth){
+        $birthDate = new DateTime($dateOfBirth);
+        $maxDate = new DateTime('-18 years');
+        $minDate = new DateTime('-120 years');
+        if ($birthDate >= $maxDate) {
+            throw new Exception(__('You have to be at least 18 years old for this payment method', 'unzer-payments'));
+        }
+        if ($birthDate < $minDate) {
+            throw new Exception(__('Please check your date of birth', 'unzer-payments'));
+        }
+        $order->update_meta_data(Main::ORDER_META_KEY_DATE_OF_BIRTH, date('Y-m-d', strtotime($dateOfBirth)));
     }
 
     protected function addCheckoutAssets()

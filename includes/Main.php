@@ -81,6 +81,22 @@ class Main
         add_action('woocommerce_settings_tabs_checkout', [new AdminController(), 'renderWebhookManagement'], 20);
         add_action('woocommerce_order_details_after_order_table', [CheckoutController::class, 'checkoutSuccess'], 10);
         add_action('woocommerce_after_edit_account_form', [new AccountController(), 'accountPaymentInstruments']);
+        add_action('woocommerce_update_options_payment_gateways_unzer_card', [$this, 'savePaymentMethodSettingsCard']);
+        add_action('woocommerce_update_options_payment_gateways_unzer_paypal', [$this, 'savePaymentMethodSettingsPaypal']);
+    }
+
+    public function savePaymentMethodSettingsCard(){
+        $cardGateway = new Card();
+        if($_POST['unzer-paymentsunzer_card_save_instruments'] === 'no'){
+            $cardGateway->deleteAllSavedPaymentInstruments();
+        }
+    }
+
+    public function savePaymentMethodSettingsPaypal(){
+        $paypalGateway = new Paypal();
+        if($_POST['unzer-paymentsunzer_paypal_save_instruments'] === 'no'){
+            $paypalGateway->deleteAllSavedPaymentInstruments();
+        }
     }
 
     public function setMetaProtected($protected, $meta_key, $meta_type){
@@ -173,12 +189,12 @@ class Main
             Eps::GATEWAY_ID => Eps::class,
             Giropay::GATEWAY_ID => Giropay::class,
             Sofort::GATEWAY_ID => Sofort::class,
-            Klarna::GATEWAY_ID => Klarna::class,
-            Pis::GATEWAY_ID => Pis::class,
+            //Klarna::GATEWAY_ID => Klarna::class,
+            //Pis::GATEWAY_ID => Pis::class,
             DirectDebit::GATEWAY_ID => DirectDebit::class,
-            DirectDebitSecured::GATEWAY_ID => DirectDebitSecured::class,
+            //DirectDebitSecured::GATEWAY_ID => DirectDebitSecured::class,
             Invoice::GATEWAY_ID => Invoice::class,
-            Installment::GATEWAY_ID => Installment::class,
+            //Installment::GATEWAY_ID => Installment::class,
             Prepayment::GATEWAY_ID => Prepayment::class,
             Ideal::GATEWAY_ID => Ideal::class, //TODO setBIC
         ];
