@@ -5,7 +5,7 @@
  * Description: Official Unzer Plugin
  * Author: Unzer
  * Author URI: https://www.unzer.com
- * Version: 1.0.0
+ * Version: 1.1.0
  * Requires at least: 4.5
  * Tested up to:
  * WC requires at least: 6.0
