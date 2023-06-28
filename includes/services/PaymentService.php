@@ -111,6 +111,7 @@ class PaymentService
             $this->logger->debug('try authorization/charge for #' . $orderId . ' with ' . $order->get_payment_method(), ['type' => $type, 'basket' => $basket->expose(), 'customer' => $customer->expose()]);
             if ($type === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE) {
                 $authorization = new Authorization($basket->getTotalValueGross(), $basket->getCurrencyCode(), $paymentGateway->get_confirm_url());
+                $authorization->setOrderId($order->get_id());
                 if ($transactionEditor !== null) {
                     $transactionEditor($authorization);
                 }
@@ -125,6 +126,7 @@ class PaymentService
                 $return = $authorization;
             } else {
                 $charge = new Charge($basket->getTotalValueGross(), $basket->getCurrencyCode(), $paymentGateway->get_confirm_url());
+                $charge->setOrderId($order->get_id());
                 if ($transactionEditor !== null) {
                     $transactionEditor($charge);
                 }

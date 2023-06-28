@@ -4,25 +4,25 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7d54fccc88636cd741c8e81fd256e9e7",
+    "content-hash": "8d0000af72d73b19430b8090b56cc930",
     "packages": [
         {
             "name": "unzerdev/php-sdk",
-            "version": "1.2.1.0",
+            "version": "3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/unzerdev/php-sdk.git",
-                "reference": "b8edb5b1b9d4834af587d326a99fa509fde1dc1b"
+                "reference": "7842ffac892f538f2fa7d5b63d176b90dff5e8b3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/unzerdev/php-sdk/zipball/b8edb5b1b9d4834af587d326a99fa509fde1dc1b",
-                "reference": "b8edb5b1b9d4834af587d326a99fa509fde1dc1b",
+                "url": "https://api.github.com/repos/unzerdev/php-sdk/zipball/7842ffac892f538f2fa7d5b63d176b90dff5e8b3",
+                "reference": "7842ffac892f538f2fa7d5b63d176b90dff5e8b3",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "php": "~7.1.0|~7.2.0|~7.3.0|~7.4.0|~8.0.0|~8.1.0"
+                "php": "~7.4.0|~8.0.0|~8.1.0|~8.2.0"
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.0",
@@ -45,9 +45,9 @@
             "description": "This is the php sdk to connect to the Unzer rest api.",
             "support": {
                 "email": "support@unzer.com",
-                "source": "https://github.com/unzerdev/php-sdk/tree/1.2.1.0"
+                "source": "https://github.com/unzerdev/php-sdk/tree/3.1.0"
             },
-            "time": "2022-08-30T09:35:43+00:00"
+            "time": "2023-04-05T09:58:15+00:00"
         }
     ],
     "packages-dev": [],

@@ -26,19 +26,20 @@ use UnzerSDK\Exceptions\UnzerApiException;
 
 interface HttpAdapterInterface
 {
-    public const REQUEST_POST = 'POST';
     public const REQUEST_DELETE = 'DELETE';
-    public const REQUEST_PUT = 'PUT';
     public const REQUEST_GET = 'GET';
+    public const REQUEST_PATCH = 'PATCH';
+    public const REQUEST_POST = 'POST';
+    public const REQUEST_PUT = 'PUT';
 
     /**
      * Initializes the request.
      *
-     * @param string $url        The full url to connect to.
-     * @param string $payload    Json encoded payload string.
-     * @param string $httpMethod The Http method to perform.
+     * @param string      $url        The full url to connect to.
+     * @param string|null $payload    Json encoded payload string.
+     * @param string      $httpMethod The Http method to perform.
      */
-    public function init($url, $payload = null, $httpMethod = HttpAdapterInterface::REQUEST_GET): void;
+    public function init(string $url, string $payload = null, string $httpMethod = HttpAdapterInterface::REQUEST_GET): void;
 
     /**
      * Executes the request and returns the response.

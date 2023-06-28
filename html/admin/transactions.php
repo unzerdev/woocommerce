@@ -12,6 +12,7 @@ if ($paymentInstructions) {
 }
 ?>
 <h3><?php echo esc_html(__('Totals', 'unzer-payments')); ?></h3>
+<div id="unzer-status-message"></div>
 <table id="unzer-sums">
     <tbody id="unzer-sums-body">
 
@@ -71,6 +72,8 @@ $chargeUrl = WC()->api_request_url(AdminController::CHARGE_ROUTE_SLUG);
                     }
                     document.getElementById('unzer-transactions-body').innerHTML = tHtml;
                 }
+
+                    document.getElementById('unzer-status-message').innerHTML = data.status === 'chargeback' ? '<div style="color:#cc0000; margin:10px 0; font-weight:bold;">CHARGEBACK!</div>' : '';
 
                 let captureAction = '';
                 if (data.remainingPlain) {

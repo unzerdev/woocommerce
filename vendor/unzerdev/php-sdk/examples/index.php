@@ -221,7 +221,7 @@ function printMessage($type, $title, $text)
                 <div class="card olive">
                     <div class="content">
                         <div class="header">
-                            Invoice
+                            Invoice (deprecated)
                         </div>
                         <div class="description">
                         </div>
@@ -340,6 +340,30 @@ function printMessage($type, $title, $text)
                         </div>
                     </div>
                     <div id="tryUnzerBankTransferExample" class="ui bottom attached green button" onclick="location.href='BankTransfer/';">
+                        Try
+                    </div>
+                </div>
+                <div class="card olive">
+                    <div class="content">
+                        <div class="header">
+                            Post Finance Card
+                        </div>
+                        <div class="description">
+                        </div>
+                    </div>
+                    <div id="tryPostFinanceCardExample" class="ui bottom attached green button" onclick="location.href='PostFinanceCard/';">
+                        Try
+                    </div>
+                </div>
+                <div class="card olive">
+                    <div class="content">
+                        <div class="header">
+                            Post Finance eFinance
+                        </div>
+                        <div class="description">
+                        </div>
+                    </div>
+                    <div id="tryPostFinanceEfinanceExample" class="ui bottom attached green button" onclick="location.href='PostFinanceEfinance/';">
                         Try
                     </div>
                 </div>

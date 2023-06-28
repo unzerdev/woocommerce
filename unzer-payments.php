@@ -5,7 +5,7 @@
  * Description: Official Unzer Plugin
  * Author: Unzer
  * Author URI: https://www.unzer.com
- * Version: 1.1.0
+ * Version: 1.2.0
  * Requires at least: 4.5
  * Tested up to:
  * WC requires at least: 6.0
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 /**
  * Required minimums and constants
  */
-define('UNZER_VERSION', '1.1.0');
+define('UNZER_VERSION', '1.2.0');
 define('UNZER_PLUGIN_TYPE_STRING', 'Unzer Payments');
 define('UNZER_PLUGIN_URL', untrailingslashit(plugins_url(basename(plugin_dir_path(__FILE__)), basename(__FILE__))));
 define('UNZER_PLUGIN_PATH', __DIR__ . '/');
@@ -41,6 +41,7 @@ add_action('plugins_loaded', function () {
     require_once UNZER_PLUGIN_PATH . 'vendor/autoload.php';
     require_once UNZER_PLUGIN_PATH . 'includes/Main.php';
     require_once UNZER_PLUGIN_PATH . 'includes/Util.php';
+    require_once UNZER_PLUGIN_PATH . 'includes/services/DashboardService.php';
     require_once UNZER_PLUGIN_PATH . 'includes/services/OrderService.php';
     require_once UNZER_PLUGIN_PATH . 'includes/services/CustomerService.php';
     require_once UNZER_PLUGIN_PATH . 'includes/services/LogService.php';

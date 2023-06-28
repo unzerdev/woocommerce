@@ -44,7 +44,7 @@ class CheckoutController
 
         if($transaction->getPayment()->getState() === PaymentState::STATE_CANCELED){
             $paymentService->removeTransactionMetaData($orderId);
-            (new LogService())->debug('payment cancelled', ['order' => $orderId, 'transaction'=>$transaction->expose()]);
+            (new LogService())->debug('payment cancelled', ['order' => $orderId, 'transaction'=>$transaction->expose(), 'reason' => $transaction->getMessage()->getMerchant()]);
             wc_add_notice(__('Payment cancelled', 'unzer-payments'), 'error');
             wp_redirect(wc_get_checkout_url());
             die;

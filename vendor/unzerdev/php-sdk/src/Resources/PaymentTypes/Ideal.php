@@ -36,17 +36,17 @@ class Ideal extends BasePaymentType
     /**
      * @return string|null
      */
-    public function getBic(): string
+    public function getBic(): ?string
     {
         return $this->bic;
     }
 
     /**
-     * @param string $bic
+     * @param string|null $bic
      *
      * @return self
      */
-    public function setBic(string $bic): self
+    public function setBic(?string $bic): self
     {
         $this->bic = $bic;
         return $this;

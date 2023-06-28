@@ -45,7 +45,7 @@ class Card extends AbstractGateway
     {
         $description = $this->get_description();
         if ($description) {
-            echo esc_html(wpautop(wptexturize($description)));
+            echo wpautop(wptexturize($description));
         }
         $form = '
         <div id="unzer-card-form" class="unzerUI form">

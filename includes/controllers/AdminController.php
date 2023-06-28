@@ -4,6 +4,7 @@ namespace UnzerPayments\Controllers;
 
 use Exception;
 use UnzerPayments\Main;
+use UnzerPayments\Services\DashboardService;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Services\WebhookManagementService;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
@@ -18,6 +19,7 @@ class AdminController
     const CHARGE_ROUTE_SLUG = 'admin_unzer_charge';
     const WEBHOOK_MANAGEMENT_ROUTE_SLUG = 'admin_unzer_webhooks';
     const KEY_VALIDATION_ROUTE_SLUG = 'admin_unzer_key_validation';
+    const NOTIFICATION_SLUG = 'admin_unzer_notification';
 
     public function getOrderTransactions()
     {
@@ -49,12 +51,12 @@ class AdminController
                     }
                 }
             }
-            if($payment->getReversals()){
+            if ($payment->getReversals()) {
                 foreach ($payment->getReversals() as $reversal) {
                     $transactions[] = $reversal;
                 }
             }
-            if($payment->getRefunds()){
+            if ($payment->getRefunds()) {
                 foreach ($payment->getRefunds() as $refund) {
                     $transactions[] = $refund;
                 }
@@ -73,7 +75,7 @@ class AdminController
                 $return['time'] = $transaction->getDate();
                 if (method_exists($transaction, 'getAmount') && method_exists($transaction, 'getCurrency')) {
                     $return['amount'] = wc_price($transaction->getAmount(), ['currency' => $transaction->getCurrency()]);
-                }elseif (isset($return['amount'])){
+                } elseif (isset($return['amount'])) {
                     $return['amount'] = wc_price($return['amount'], ['currency' => $currency]);
                 }
                 $status = $transaction->isSuccess() ? 'success' : 'error';
@@ -94,6 +96,7 @@ class AdminController
                 'remaining' => wc_price($payment->getAmount()->getRemaining(), ['currency' => $payment->getAmount()->getCurrency()]),
                 'remainingPlain' => $payment->getAmount()->getRemaining(),
                 'transactions' => $transactions,
+                'status' => $payment->getStateName(),
                 'raw' => print_r($payment, true),
             ];
 
@@ -109,7 +112,7 @@ class AdminController
     public function doCharge()
     {
         $orderId = (int)$_POST['order_id'];
-        $amount = isset($_POST['amount'])?(float)$_POST['amount']:null;
+        $amount = isset($_POST['amount']) ? (float)$_POST['amount'] : null;
         try {
             (new PaymentService())->performChargeOnAuthorization($orderId, $amount);
         } catch (Exception $e) {
@@ -144,19 +147,34 @@ class AdminController
         }
     }
 
-    public function validateKeypair(){
+    public function handleNotification()
+    {
+        $dashboardService = new DashboardService();
+        if (isset($_POST['remove_notification'])) {
+            $dashboardService->removeNotification($_POST['remove_notification']);
+            $this->renderJson([
+                'success' => true
+            ]);
+        }
+        $this->renderJson([
+            'msg' => 'nothing to do'
+        ]);
+    }
+
+    public function validateKeypair()
+    {
         $paymentService = new PaymentService();
         $unzerManager = $paymentService->getUnzerManager();
         try {
             $keyPair = $unzerManager->fetchKeypair();
-            if(!empty($keyPair->getPublicKey()) && $keyPair->getPublicKey() === get_option('unzer_public_key')) {
+            if (!empty($keyPair->getPublicKey()) && $keyPair->getPublicKey() === get_option('unzer_public_key')) {
                 $this->renderJson([
                     'isValid' => 1,
                 ]);
-            }else{
+            } else {
                 throw new Exception();
             }
-        }catch (Exception $e){
+        } catch (Exception $e) {
             $this->renderJson([
                 'isValid' => 0,
             ]);
@@ -168,14 +186,16 @@ class AdminController
         include UNZER_PLUGIN_PATH . 'html/admin/transactions.php';
     }
 
-    public static function renderGlobalSettingsStart(){
+    public static function renderGlobalSettingsStart()
+    {
         if (empty($_GET['section']) || $_GET['section'] !== 'unzer_general') {
             return;
         }
         include UNZER_PLUGIN_PATH . 'html/admin/global-settings-start.php';
     }
 
-    public static function renderGlobalSettingsEnd(){
+    public static function renderGlobalSettingsEnd()
+    {
         if (empty($_GET['section']) || $_GET['section'] !== 'unzer_general') {
             return;
         }

@@ -1,5 +1,6 @@
 {
     "require": {
-        "unzerdev/php-sdk": "^1.2"
+        "unzerdev/php-sdk": "^3.1",
+        "php": ">=7.1"
     }
 }

@@ -21,7 +21,8 @@ use WC_Order_Refund;
 
 class OrderService
 {
-
+    const ORDER_STATUS_CANCELLED = 'wc-cancelled';
+    const ORDER_STATUS_CHARGEBACK = 'wc-unzer-chargeback';
     /**
      * @var LogService
      */

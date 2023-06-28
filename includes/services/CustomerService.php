@@ -107,17 +107,9 @@ class CustomerService
     protected function setAddresses(Customer $customer, WC_Abstract_Order $order)
     {
         $shippingType = ShippingTypes::EQUALS_BILLING;
-        if ($order->get_formatted_shipping_address() !== $order->get_formatted_billing_address()) {
+        if ($order->has_shipping_address() && $order->get_formatted_shipping_address() !== $order->get_formatted_billing_address()) {
             $shippingType = ShippingTypes::DIFFERENT_ADDRESS;
         }
-        $shippingAddress = (new Address())
-            ->setName($order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name())
-            ->setStreet($order->get_shipping_address_1())
-            ->setZip($order->get_shipping_postcode())
-            ->setCity($order->get_shipping_city())
-            ->setState($order->get_shipping_state())
-            ->setCountry($order->get_shipping_country())
-            ->setShippingType($shippingType);
 
         $billingAddress = (new Address())
             ->setName($order->get_billing_first_name() . ' ' . $order->get_billing_last_name())
@@ -126,6 +118,20 @@ class CustomerService
             ->setCity($order->get_billing_city())
             ->setState($order->get_billing_state())
             ->setCountry($order->get_billing_country());
+
+        if ($order->has_shipping_address()) {
+            $shippingAddress = (new Address())
+                ->setName($order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name())
+                ->setStreet($order->get_shipping_address_1())
+                ->setZip($order->get_shipping_postcode())
+                ->setCity($order->get_shipping_city())
+                ->setState($order->get_shipping_state())
+                ->setCountry($order->get_shipping_country())
+                ->setShippingType($shippingType);
+        } else {
+            $shippingAddress = $billingAddress;
+            $shippingAddress->setShippingType(ShippingTypes::EQUALS_BILLING);
+        }
 
         $customer
             ->setShippingAddress($shippingAddress)

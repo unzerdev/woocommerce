@@ -12,19 +12,19 @@ use UnzerPayments\Gateways\Alipay;
 use UnzerPayments\Gateways\Bancontact;
 use UnzerPayments\Gateways\Card;
 use UnzerPayments\Gateways\DirectDebit;
-use UnzerPayments\Gateways\DirectDebitSecured;
 use UnzerPayments\Gateways\Eps;
 use UnzerPayments\Gateways\Giropay;
 use UnzerPayments\Gateways\Ideal;
-use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
-use UnzerPayments\Gateways\Klarna;
 use UnzerPayments\Gateways\Paypal;
-use UnzerPayments\Gateways\Pis;
+use UnzerPayments\Gateways\PostFinanceCard;
+use UnzerPayments\Gateways\PostFinanceEfinance;
 use UnzerPayments\Gateways\Prepayment;
 use UnzerPayments\Gateways\Przelewy24;
 use UnzerPayments\Gateways\Sofort;
 use UnzerPayments\Gateways\WeChatPay;
+use UnzerPayments\Services\DashboardService;
+use UnzerPayments\Services\OrderService;
 
 class Main
 {
@@ -44,7 +44,7 @@ class Main
         self::ORDER_META_KEY_PAYMENT_SHORT_ID,
         self::ORDER_META_KEY_PAYMENT_INSTRUCTIONS,
         self::ORDER_META_KEY_CANCELLATION_ID,
-        self::ORDER_META_KEY_DATE_OF_BIRTH
+        self::ORDER_META_KEY_DATE_OF_BIRTH,
     ];
 
     const USER_META_KEY_PAYMENT_INSTRUMENTS = 'payment_instruments';
@@ -60,6 +60,7 @@ class Main
     public function init(): void
     {
         $this->registerEvents();
+        $this->registerOrderStatus();
     }
 
     public function registerEvents(): void
@@ -72,10 +73,11 @@ class Main
         add_action('woocommerce_api_' . AdminController::CHARGE_ROUTE_SLUG, [new AdminController(), 'doCharge']);
         add_action('woocommerce_api_' . AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG, [new AdminController(), 'webhookManagement']);
         add_action('woocommerce_api_' . AdminController::KEY_VALIDATION_ROUTE_SLUG, [new AdminController(), 'validateKeypair']);
+        add_action('woocommerce_api_' . AdminController::NOTIFICATION_SLUG, [new AdminController(), 'handleNotification']);
         add_action('woocommerce_api_' . WebhookController::WEBHOOK_ROUTE_SLUG, [new WebhookController(), 'receiveWebhook']);
         add_action('woocommerce_api_' . AccountController::DELETE_PAYMENT_INSTRUMENT_URL_SLUG, [new AccountController(), 'deletePaymentInstrument']);
         add_filter('plugin_action_links_' . plugin_basename(UNZER_PLUGIN_PATH . 'unzer-payments' . '.php'), [$this, 'addPluginSettingsLink']);
-        add_action( 'add_meta_boxes', array( $this, 'addMetaBoxes' ), 40 );
+        add_action('add_meta_boxes', [$this, 'addMetaBoxes'], 40);
         add_action('woocommerce_settings_checkout', [AdminController::class, 'renderGlobalSettingsStart']);
         add_action('woocommerce_settings_tabs_checkout', [AdminController::class, 'renderGlobalSettingsEnd'], 10);
         add_action('woocommerce_settings_tabs_checkout', [new AdminController(), 'renderWebhookManagement'], 20);
@@ -83,30 +85,57 @@ class Main
         add_action('woocommerce_after_edit_account_form', [new AccountController(), 'accountPaymentInstruments']);
         add_action('woocommerce_update_options_payment_gateways_unzer_card', [$this, 'savePaymentMethodSettingsCard']);
         add_action('woocommerce_update_options_payment_gateways_unzer_paypal', [$this, 'savePaymentMethodSettingsPaypal']);
+        add_action('admin_notices', [new DashboardService(), 'showNotifications']);
+        add_action('admin_enqueue_scripts', function(){
+            wp_enqueue_script('unzer_global_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin_global.js');
+        });
     }
 
-    public function savePaymentMethodSettingsCard(){
+    protected function registerOrderStatus(): void
+    {
+        add_action('init', function () {
+            register_post_status(OrderService::ORDER_STATUS_CHARGEBACK, [
+                'label' => __('Chargeback', 'unzer-payments'),
+                'public' => true,
+                'exclude_from_search' => false,
+                'show_in_admin_all_list' => true,
+                'show_in_admin_status_list' => true,
+            ]);
+        });
+
+        add_filter('wc_order_statuses', function ($statusList) {
+            $statusList[OrderService::ORDER_STATUS_CHARGEBACK] = __('Chargeback', 'unzer-payments');
+            return $statusList;
+        });
+    }
+
+
+    public function savePaymentMethodSettingsCard(): void
+    {
         $cardGateway = new Card();
-        if($_POST['unzer-paymentsunzer_card_save_instruments'] === 'no'){
+        if ($_POST['unzer-paymentsunzer_card_save_instruments'] === 'no') {
             $cardGateway->deleteAllSavedPaymentInstruments();
         }
     }
 
-    public function savePaymentMethodSettingsPaypal(){
+    public function savePaymentMethodSettingsPaypal(): void
+    {
         $paypalGateway = new Paypal();
-        if($_POST['unzer-paymentsunzer_paypal_save_instruments'] === 'no'){
+        if ($_POST['unzer-paymentsunzer_paypal_save_instruments'] === 'no') {
             $paypalGateway->deleteAllSavedPaymentInstruments();
         }
     }
 
-    public function setMetaProtected($protected, $meta_key, $meta_type){
-        if(in_array($meta_key, self::ORDER_META_KEYS)){
+    public function setMetaProtected($protected, $meta_key, $meta_type)
+    {
+        if (in_array($meta_key, self::ORDER_META_KEYS)) {
             return true;
         }
         return $protected;
     }
 
-    public function addMetaBoxes(){
+    public function addMetaBoxes()
+    {
         if (!current_user_can('edit_shop_orders') || empty($_GET['post'])) {
             return;
         }
@@ -115,8 +144,9 @@ class Main
             return;
         }
         $paymentShortId = get_post_meta($_GET['post'], Main::ORDER_META_KEY_PAYMENT_SHORT_ID, true);
-        add_meta_box( 'woocommerce-unzer-transactions', __( 'Unzer Transactions', 'unzer-payments').' #'.$paymentShortId, AdminController::class.'::renderTransactionTable', 'shop_order', 'normal', 'high' );
+        add_meta_box('woocommerce-unzer-transactions', __('Unzer Transactions', 'unzer-payments') . ' #' . $paymentShortId, AdminController::class . '::renderTransactionTable', 'shop_order', 'normal', 'high');
     }
+
     public function addPluginSettingsLink($links): array
     {
         $settingsLink = '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=unzer_general') . '">' . __('Unzer API settings', 'unzer-payments') . '</a>';
@@ -127,6 +157,9 @@ class Main
     public function addGlobalSettings($settings, $currentSection): array
     {
         if ($currentSection === 'unzer_general') {
+            if (get_option('unzer_chargeback_order_status') === false) {
+                update_option('unzer_chargeback_order_status', OrderService::ORDER_STATUS_CHARGEBACK);
+            }
             $settings = [
                 'title' => [
                     'type' => 'title',
@@ -164,6 +197,16 @@ class Main
                     'id' => 'unzer_captured_order_status',
                     'value' => get_option('unzer_captured_order_status'),
                 ],
+                'chargeback_order_status' => [
+                    'title' => __('Order status for chargebacks', 'unzer-payments'),
+                    'label' => '',
+                    'type' => 'select',
+                    'desc' => __('This status is assigned for orders with chargebacks', 'unzer-payments'),
+                    'options' => array_merge(['' => __('[No status change]', 'unzer-payments')], wc_get_order_statuses()),
+                    'id' => 'unzer_chargeback_order_status',
+                    'value' => get_option('unzer_chargeback_order_status'),
+                    'default' => OrderService::ORDER_STATUS_CHARGEBACK,
+                ],
                 'sectionend' => [
                     'type' => 'sectionend',
                 ],
@@ -197,6 +240,8 @@ class Main
             //Installment::GATEWAY_ID => Installment::class,
             Prepayment::GATEWAY_ID => Prepayment::class,
             Ideal::GATEWAY_ID => Ideal::class, //TODO setBIC
+            PostFinanceEfinance::GATEWAY_ID => PostFinanceEfinance::class,
+            PostFinanceCard::GATEWAY_ID => PostFinanceCard::class,
         ];
     }
 

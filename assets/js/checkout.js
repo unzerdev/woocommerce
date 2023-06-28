@@ -83,6 +83,11 @@ const UnzerManager = {
             containerId: 'unzer-card-form-cvc',
             onlyIframe: false
         });
+        document.getElementById('unzer-card-id').value = '';
+        jQuery( document.body ).on( 'checkout_error', ()=>{
+            document.getElementById('unzer-card-id').value = '';
+        });
+        jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_card');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_card', function () {
             const selectedSavedCard = document.querySelector('[name="unzer_card_payment_instrument"]:checked');
             if(selectedSavedCard && selectedSavedCard.value){
@@ -121,7 +126,11 @@ const UnzerManager = {
         directDebitInstance.create('sepa-direct-debit', {
             containerId: 'unzer-direct-debit-iban'
         });
-
+        document.getElementById('unzer-direct-debit-id').value = '';
+        jQuery( document.body ).on( 'checkout_error', ()=>{
+            document.getElementById('unzer-direct-debit-id').value = '';
+        });
+        jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_direct_debit');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_direct_debit', function () {
             if (document.getElementById('unzer-direct-debit-id').value) {
                 return true;
@@ -153,7 +162,11 @@ const UnzerManager = {
         directDebitSecuredInstance.create('sepa-direct-debit-secured', {
             containerId: 'unzer-direct-debit-secured-iban'
         });
-
+        document.getElementById('unzer-direct-debit-secured-id').value = '';
+        jQuery( document.body ).on( 'checkout_error', ()=>{
+            document.getElementById('unzer-direct-debit-secured-id').value = '';
+        });
+        jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_direct_debit_secured');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_direct_debit_secured', function () {
             if (!document.getElementById('unzer-direct-debit-secured-dob').value) {
                 UnzerManager.error(unzer_i18n.errorDob || 'Please enter your date fo birth');
@@ -211,7 +224,11 @@ const UnzerManager = {
             containerId: 'unzer-invoice-fields',
             customerType: 'B2C',
         })
-
+        document.getElementById('unzer-invoice-id').value = '';
+        jQuery( document.body ).on( 'checkout_error', ()=>{
+            document.getElementById('unzer-invoice-id').value = '';
+        });
+        jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_invoice');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_invoice', function () {
             if (document.getElementById('unzer-invoice-id').value) {
                 return true;
@@ -253,7 +270,14 @@ const UnzerManager = {
         epsInstance.create('eps', {
             containerId: 'unzer-eps'
         });
-
+        epsInstance.addEventListener('change', ()=>{
+            document.getElementById('unzer-eps-id').value = '';
+        });
+        document.getElementById('unzer-eps-id').value = '';
+        jQuery( document.body ).on( 'checkout_error', ()=>{
+            document.getElementById('unzer-eps-id').value = '';
+        });
+        jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_eps');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_eps', function () {
             if (document.getElementById('unzer-eps-id').value) {
                 return true;
@@ -287,7 +311,14 @@ const UnzerManager = {
         idealInstance.create('ideal', {
             containerId: 'unzer-ideal'
         });
-
+        idealInstance.addEventListener('change', ()=>{
+            document.getElementById('unzer-ideal-id').value = '';
+        });
+        document.getElementById('unzer-ideal-id').value = '';
+        jQuery( document.body ).on( 'checkout_error', ()=>{
+            document.getElementById('unzer-ideal-id').value = '';
+        });
+        jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_ideal');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_ideal', function () {
             if (document.getElementById('unzer-ideal-id').value) {
                 return true;

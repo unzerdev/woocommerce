@@ -2,6 +2,7 @@
 
 namespace UnzerPayments\Controllers;
 
+use UnzerPayments\Services\DashboardService;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\OrderService;
 use UnzerSDK\Constants\WebhookEvents;
@@ -15,6 +16,7 @@ class WebhookController
         WebhookEvents::AUTHORIZE_CANCELED,
         WebhookEvents::AUTHORIZE_SUCCEEDED,
         WebhookEvents::CHARGE_SUCCEEDED,
+        WebhookEvents::PAYMENT_CHARGEBACK,
     ];
 
     /**
@@ -34,15 +36,7 @@ class WebhookController
 
     public function receiveWebhook()
     {
-        if($_GET['test']){
-            $data = [
-                'event'=>'authorize.canceled',
-                'paymentId'=>'s-pay-398'
-            ];
-        }else {
-            $data = json_decode(file_get_contents('php://input'), true);
-            //$data = unserialize('a:4:{s:5:"event";s:15:"charge.canceled";s:9:"publicKey";s:38:"s-pub-2a10SPT8OwkWUbkLNCygS7kug5JOY3KW";s:11:"retrieveUrl";s:83:"https://sbx-api.heidelpay.com/v1/payments/s-pay-293/charges/s-chg-1/cancels/s-cnl-1";s:9:"paymentId";s:9:"s-pay-292";}');
-        }
+        $data = json_decode(file_get_contents('php://input'), true);
         if (empty($data)) {
             $this->logger->debug('empty webhook', ['server' => $_SERVER]);
             status_header(404);
@@ -79,6 +73,9 @@ class WebhookController
             case WebhookEvents::CHARGE_SUCCEEDED:
                 $this->handleChargeSucceeded($data['paymentId'], $orderId);
                 break;
+            case WebhookEvents::PAYMENT_CHARGEBACK:
+                $this->handleChargeback($data['paymentId'], $orderId);
+                break;
         }
         $this->renderJson(['success' => true]);
     }
@@ -88,6 +85,24 @@ class WebhookController
         header('Content-Type: application/json');
         echo json_encode($data);
         die;
+    }
+
+    public function handleChargeback($paymentId, $orderId)
+    {
+        $this->logger->debug('webhook handleChargeback', ['paymentId' => $paymentId, 'orderId' => $orderId]);
+        $order = wc_get_order($orderId);
+
+        if ($order) {
+            $orderStatus = get_option('unzer_chargeback_order_status');
+            $this->logger->debug('chargeback order', ['order' => $order->get_id(), 'status' => $orderStatus]);
+            if ($orderStatus) {
+                $order->update_status($orderStatus, __('Chargeback received', 'unzer-payments'));
+            }
+        }else{
+            $this->logger->debug('no order for chargeback', ['orderId' => $orderId]);
+        }
+        //trigger admin notice
+        (new DashboardService())->addError('chargeback', [$orderId]);
     }
 
     private function handleCancel($paymentId, $orderId)

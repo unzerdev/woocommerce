@@ -36,6 +36,9 @@ trait HasStates
     /** @var bool $isPending */
     private $isPending = false;
 
+    /** @var bool $isResumed */
+    private $isResumed = false;
+
     //<editor-fold desc="Getters/Setters">
 
     /**
@@ -95,6 +98,25 @@ trait HasStates
         return $this;
     }
 
+    /**
+     * @return bool
+     */
+    public function isResumed(): bool
+    {
+        return $this->isResumed;
+    }
+
+    /**
+     * @param bool $isResumed
+     *
+     * @return self
+     */
+    public function setIsResumed(bool $isResumed): self
+    {
+        $this->isResumed = $isResumed;
+        return $this;
+    }
+
     //</editor-fold>
 
     /**
@@ -104,6 +126,8 @@ trait HasStates
      * @param string $status
      *
      * @throws RuntimeException
+     *
+     * @return self
      */
     protected function setStatus(string $status): self
     {
@@ -123,6 +147,9 @@ trait HasStates
             case (TransactionStatus::STATUS_SUCCESS):
                 $this->setIsSuccess(true);
                 break;
+            case (TransactionStatus::STATUS_RESUMED):
+                $this->setIsResumed(true);
+                break;
         }
 
         return $this;
@@ -141,6 +168,7 @@ trait HasStates
             TransactionStatus::STATUS_ERROR,
             TransactionStatus::STATUS_PENDING,
             TransactionStatus::STATUS_SUCCESS,
+            TransactionStatus::STATUS_RESUMED,
         ];
 
         if (!in_array($status, $validStatusArray, true)) {

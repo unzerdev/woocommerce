@@ -32,6 +32,11 @@ abstract class AbstractGateway extends WC_Payment_Gateway
      */
     protected $logger;
 
+    /**
+     * @var null|array
+     */
+    public $allowedCurrencies = null;
+
     public function __construct()
     {
         $this->logger = new LogService();
@@ -65,6 +70,15 @@ abstract class AbstractGateway extends WC_Payment_Gateway
     public function is_enabled()
     {
         return $this->enabled === 'yes';
+    }
+
+    public function is_available()
+    {
+        $isAvailable = parent::is_available();
+        if ($isAvailable && !empty($this->allowedCurrencies)) {
+            $isAvailable = in_array(get_woocommerce_currency(), $this->allowedCurrencies);
+        }
+        return $isAvailable;
     }
 
     public function init_settings()
@@ -155,7 +169,8 @@ abstract class AbstractGateway extends WC_Payment_Gateway
      * @param $order
      * @return void
      */
-    protected function handleDateOfBirth($order, $dateOfBirth){
+    protected function handleDateOfBirth($order, $dateOfBirth)
+    {
         $birthDate = new DateTime($dateOfBirth);
         $maxDate = new DateTime('-18 years');
         $minDate = new DateTime('-120 years');

@@ -29,6 +29,7 @@ use DateTime;
 use PHPUnit\Framework\MockObject\MockObject;
 use stdClass;
 use UnzerSDK\Adapter\HttpAdapterInterface;
+use UnzerSDK\Constants\LiabilityShiftIndicator;
 use UnzerSDK\Constants\TransactionStatus;
 use UnzerSDK\Resources\Payment;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
@@ -115,6 +116,7 @@ class AbstractTransactionTypeTest extends BasePaymentTest
         $this->assertFalse($transactionType->isSuccess());
         $this->assertFalse($transactionType->isPending());
         $this->assertFalse($transactionType->isError());
+        $this->assertFalse($transactionType->isResumed());
 
         $responseArray = ['status' => TransactionStatus::STATUS_ERROR];
         $transactionType->handleResponse((object)$responseArray);
@@ -122,6 +124,7 @@ class AbstractTransactionTypeTest extends BasePaymentTest
         $this->assertFalse($transactionType->isSuccess());
         $this->assertFalse($transactionType->isPending());
         $this->assertTrue($transactionType->isError());
+        $this->assertFalse($transactionType->isResumed());
 
         $responseArray['status'] = TransactionStatus::STATUS_SUCCESS;
         $transactionType->handleResponse((object)$responseArray);
@@ -129,6 +132,7 @@ class AbstractTransactionTypeTest extends BasePaymentTest
         $this->assertTrue($transactionType->isSuccess());
         $this->assertFalse($transactionType->isPending());
         $this->assertFalse($transactionType->isError());
+        $this->assertFalse($transactionType->isResumed());
 
         $responseArray['status'] = TransactionStatus::STATUS_PENDING;
         $transactionType->handleResponse((object)$responseArray);
@@ -136,6 +140,15 @@ class AbstractTransactionTypeTest extends BasePaymentTest
         $this->assertFalse($transactionType->isSuccess());
         $this->assertTrue($transactionType->isPending());
         $this->assertFalse($transactionType->isError());
+        $this->assertFalse($transactionType->isResumed());
+
+        $responseArray['status'] = TransactionStatus::STATUS_RESUMED;
+        $transactionType->handleResponse((object)$responseArray);
+
+        $this->assertFalse($transactionType->isSuccess());
+        $this->assertFalse($transactionType->isPending());
+        $this->assertFalse($transactionType->isError());
+        $this->assertTrue($transactionType->isResumed());
 
         $this->expectException(\RuntimeException::class);
 
@@ -219,6 +232,7 @@ class AbstractTransactionTypeTest extends BasePaymentTest
      * Verify fetchPayment is never called after a Get-Request.
      *
      * @test
+     *
      * @dataProvider updatePaymentDataProvider
      *
      * @param string  $method
@@ -253,6 +267,24 @@ class AbstractTransactionTypeTest extends BasePaymentTest
 
         $transactionType = (new DummyTransactionType())->setPayment($payment);
         $transactionType->fetchPayment();
+    }
+
+    /**
+     * Liability indicator response should stored in transaction
+     *
+     * @test
+     */
+    public function liabilityResponseShouldBeStroedInTransaction()
+    {
+        $jsonRespone = '{"additionalTransactionData":{"card":{"liability":"MERCHANT"}}}';
+
+        $transaction = new DummyTransactionType();
+        $transaction->handleResponse(json_decode($jsonRespone, false));
+        $this->assertEquals($transaction->getCardTransactionData()->getLiability(), LiabilityShiftIndicator::MERCHANT);
+
+        $jsonRespone = '{"additionalTransactionData":{"card":{"liability":"ISSUER"}}}';
+        $transaction->handleResponse(json_decode($jsonRespone, false));
+        $this->assertEquals($transaction->getCardTransactionData()->getLiability(), LiabilityShiftIndicator::ISSUER);
     }
 
     //<editor-fold desc="Data Providers">

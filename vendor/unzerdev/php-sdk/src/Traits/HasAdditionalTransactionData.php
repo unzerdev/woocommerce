@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This trait allows a transaction type to have additional transaction Data.
  *
@@ -25,9 +26,12 @@ namespace UnzerSDK\Traits;
 
 use stdClass;
 use UnzerSDK\Constants\AdditionalTransactionDataKeys;
+use UnzerSDK\Resources\EmbeddedResources\CardTransactionData;
 use UnzerSDK\Resources\EmbeddedResources\RiskData;
 use UnzerSDK\Resources\EmbeddedResources\ShippingData;
+use UnzerSDK\Resources\PaymentTypes\BasePaymentType;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
+use UnzerSDK\Services\ResourceService;
 
 trait HasAdditionalTransactionData
 {
@@ -164,5 +168,72 @@ trait HasAdditionalTransactionData
     {
         $propertyKey = AdditionalTransactionDataKeys::TERMS_AND_CONDITION_URL;
         return $this->getAdditionalTransactionData()->$propertyKey ?? null;
+    }
+
+    /**
+     * Set checkout type based on the given payment Type.
+     *
+     * @param string                   $checkoutType
+     * @param BasePaymentType | string $paymentType  This is needed to set the correct key in additionalTransactionData array.
+     *
+     * @return self
+     */
+    public function setCheckoutType(string $checkoutType, $paymentType): self
+    {
+        if (is_string($paymentType)) {
+            $paymentType = ResourceService::getTypeInstanceFromIdString($paymentType);
+        }
+
+        $typeName = $paymentType::getResourceName();
+        if (empty($this->getAdditionalTransactionData()->$typeName)) {
+            $this->addAdditionalTransactionData($typeName, new StdClass());
+        }
+
+        $checkoutTypekey = AdditionalTransactionDataKeys::CHECKOUTTYPE;
+        $this->getAdditionalTransactionData()->$typeName->$checkoutTypekey = $checkoutType;
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getCheckoutType(): ?string
+    {
+        $additionalTransactionData = $this->getAdditionalTransactionData();
+        if ($additionalTransactionData !== null) {
+            $key = AdditionalTransactionDataKeys::CHECKOUTTYPE;
+            foreach ($additionalTransactionData as $data) {
+                if ($data instanceof stdClass && property_exists($data, $key)) {
+                    return $data->$key ?? null;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the card field from additional transaction Data.
+     *
+     * @return CardTransactionData|null "card" object of additionalTransaction data.
+     */
+    public function getCardTransactionData(): ?CardTransactionData
+    {
+        $key = AdditionalTransactionDataKeys::CARD;
+        $card = $this->getAdditionalTransactionData()->$key ?? null;
+        return $card instanceof CardTransactionData ? $card : null;
+    }
+
+    /**
+     * Sets CardTransactionData object as "card" field of additionalTransactionData.
+     *
+     * @param CardTransactionData|null $cardTransactionData
+     *
+     * @return self
+     */
+    public function setCardTransactionData(?CardTransactionData $cardTransactionData): self
+    {
+        $this->addAdditionalTransactionData(AdditionalTransactionDataKeys::CARD, $cardTransactionData);
+        return $this;
     }
 }

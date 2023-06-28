@@ -112,7 +112,7 @@ class RecurringPaymentTest extends BaseIntegrationTest
     {
         /** @var Paypal $paypal */
         $paypal = $this->unzer->createPaymentType(new Paypal());
-        $recurring = $paypal->activateRecurring('https://dev.unzer.com', RecurrenceTypes::ONE_CLICK);
+        $recurring = $paypal->activateRecurring('https://dev.unzer.com');
         $this->assertPending($recurring);
         $this->assertNotEmpty($recurring->getReturnUrl());
     }
@@ -155,7 +155,7 @@ class RecurringPaymentTest extends BaseIntegrationTest
 
         $this->expectException(UnzerApiException::class);
         $this->expectExceptionCode(ApiResponseCodes::API_ERROR_RECURRING_ALREADY_ACTIVE);
-        $this->unzer->activateRecurringPayment($ddg, self::RETURN_URL, RecurrenceTypes::ONE_CLICK);
+        $this->unzer->activateRecurringPayment($ddg, self::RETURN_URL);
     }
 
     /**
