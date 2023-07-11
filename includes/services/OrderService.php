@@ -93,15 +93,24 @@ class OrderService
 
             /** @var WC_Order_Item_Coupon $coupon */
             foreach ($coupons as $coupon) {
-                $vatRate = round($coupon->get_discount_tax() / $order->get_discount_total() * 100, 1);
-                $basketItem = (new BasketItem())
-                    ->setTitle($coupon->get_code())
-                    ->setQuantity(1)
-                    ->setType(BasketItemTypes::VOUCHER)
-                    ->setAmountDiscountPerUnitGross(round((float)$order->get_discount_total() + (float)$order->get_discount_tax(), 2))
-                    ->setVat($vatRate);
-                $basketItems[] = $basketItem;
-                $totalLeft += $basketItem->getAmountDiscountPerUnitGross();
+                $vatRate = 0;
+                if ((float)$coupon->get_discount_tax() > 0) {
+                    $vatRate = round($coupon->get_discount_tax() / $order->get_discount_total() * 100, 1);
+                }
+                $amountDiscount = (float)$order->get_discount_total();
+                if ((float)$order->get_discount_tax() > 0) {
+                    $amountDiscount = (float)$order->get_discount_total() + (float)$order->get_discount_tax();
+                }
+                if (round($amountDiscount, 2) > 0) {
+                    $basketItem = (new BasketItem())
+                        ->setTitle($coupon->get_code())
+                        ->setQuantity(1)
+                        ->setType(BasketItemTypes::VOUCHER)
+                        ->setAmountDiscountPerUnitGross(round($amountDiscount, 2))
+                        ->setVat($vatRate);
+                    $basketItems[] = $basketItem;
+                    $totalLeft += $basketItem->getAmountDiscountPerUnitGross();
+                }
             }
         }
 
@@ -144,7 +153,7 @@ class OrderService
         }
         $totalLinePrice = (float)$orderItem->get_subtotal() + (float)$orderItem->get_subtotal_tax();
         $singlePrice = $totalLinePrice / ($orderItem->get_quantity() ?: 1);
-        $regularSinglePrice = $orderItem->get_product()->get_regular_price();
+        $regularSinglePrice = wc_get_price_including_tax($orderItem->get_product());
         if (!Util::safeCompareAmount($singlePrice, $regularSinglePrice)) {
             return $regularSinglePrice - $singlePrice;
         }

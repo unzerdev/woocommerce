@@ -48,8 +48,9 @@ class Card extends AbstractGateway
             echo wpautop(wptexturize($description));
         }
         $form = '
-        <div id="unzer-card-form" class="unzerUI form">
             <input type="hidden" id="unzer-card-id" name="unzer-card-id" value=""/>
+        <div id="unzer-card-form" class="unzerUI form">
+            
             <div class="field">
                 <div id="unzer-card-form-holder" class="unzerInput">
                     <!-- Card holder UI Element is inserted here. -->

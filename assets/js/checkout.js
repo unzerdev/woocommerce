@@ -36,7 +36,6 @@ const UnzerManager = {
                 return;
             }
             containers.forEach((container)=>{
-               console.log(container);
                const newForm = container.querySelector('.unzer-payment-instrument-new-form');
                if(container.querySelector('.unzer-payment-instrument-new-radio:checked')){
                    newForm.style.display = 'block';
@@ -58,7 +57,6 @@ const UnzerManager = {
         if (!document.getElementById('unzer-card-form')) {
             return;
         }
-        console.log('is init', document.getElementById('unzer-card-form'), document.getElementById('unzer-card-form').getAttribute('is-init'));
         if (document.getElementById('unzer-card-form').getAttribute('is-init')) {
             return;
         }
@@ -85,7 +83,7 @@ const UnzerManager = {
         });
         document.getElementById('unzer-card-id').value = '';
         jQuery( document.body ).on( 'checkout_error', ()=>{
-            document.getElementById('unzer-card-id').value = '';
+            //document.getElementById('unzer-card-id').value = '';
         });
         jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_card');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_card', function () {
@@ -99,8 +97,9 @@ const UnzerManager = {
             cardInstance.createResource()
                 .then(function (result) {
                     document.getElementById('unzer-card-id').value = result.id;
-                    UnzerManager.getCheckoutForm().trigger('submit');
+                    document.getElementById('unzer-card-form').innerHTML = '<div style="font-size:0.8em;">' + result.cardHolder + '<br/>' + result.number + '<br/>' + result.expiryDate + '</div>';
                     console.log(result);
+                    UnzerManager.getCheckoutForm().trigger('submit');
                 })
                 .catch(function (error) {
                     console.warn(error);
