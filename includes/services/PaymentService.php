@@ -5,6 +5,7 @@ namespace UnzerPayments\Services;
 
 use Exception;
 use UnzerPayments\Gateways\AbstractGateway;
+use UnzerPayments\Gateways\Invoice;
 use UnzerPayments\Main;
 use UnzerPayments\Util;
 use UnzerSDK\Exceptions\UnzerApiException;
@@ -14,6 +15,7 @@ use UnzerSDK\Resources\TransactionTypes\Authorization;
 use UnzerSDK\Resources\TransactionTypes\Cancellation;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 use UnzerSDK\Unzer;
+use WC_Order;
 
 class PaymentService
 {
@@ -31,6 +33,27 @@ class PaymentService
         return new Unzer($paymentGateway ? $paymentGateway->get_private_key() : get_option('unzer_private_key'));
     }
 
+    /**
+     * @param WC_Order|null $order
+     * @return Unzer
+     */
+    public function getUnzerManagerForOrder(WC_Order $order = null): Unzer
+    {
+        $unzerPluginManager = Main::getInstance();
+        $paymentGateway = $unzerPluginManager->getPaymentGateway($order->get_payment_method());
+        $privateKey = $paymentGateway->get_private_key();
+        if ($paymentGateway instanceof Invoice) {
+            $isB2B = !empty($order->get_billing_company());
+            $currency = $order->get_currency();
+            $optionKey = 'private_key_' . strtolower($currency) . '_' . ($isB2B ? 'b2b' : 'b2c');
+            $specialPrivateKey = $paymentGateway->get_option($optionKey);
+            if (!empty($specialPrivateKey)) {
+                $privateKey = $specialPrivateKey;
+            }
+        }
+        return new Unzer($privateKey);
+    }
+
     public function performChargeOnAuthorization($orderId, $amount = null)
     {
         if (empty($orderId)) {
@@ -46,7 +69,7 @@ class PaymentService
         if ($amount) {
             $charge->setAmount($amount);
         }
-        $unzerManager = $this->getUnzerManager();
+        $unzerManager = $this->getUnzerManagerForOrder($order);
         $unzerManager->performChargeOnPayment($paymentId, $charge);
     }
 
@@ -104,7 +127,7 @@ class PaymentService
         $this->logger->debug('start authorization/charge for #' . $orderId . ' with ' . $order->get_payment_method());
         $basket = (new OrderService())->getBasket($order);
         $customer = (new CustomerService())->getCustomerFromOrder($order);
-        $unzer = $this->getUnzerManager($paymentGateway);
+        $unzer = $this->getUnzerManagerForOrder($order);
         $paymentType = class_exists($paymentType) ? $unzer->createPaymentType(new $paymentType) : $paymentType;
 
         try {
@@ -142,7 +165,7 @@ class PaymentService
             }
 
         } catch (Exception $e) {
-            $this->logger->error('authorization/charge failed for #' . $orderId . ' with ' . $order->get_payment_method(), ['msg' => $e->getMessage()]);
+            $this->logger->error('authorization/charge failed for #' . $orderId . ' with ' . $order->get_payment_method(), ['msg' => $e->getMessage(), 'code' => $e->getCode(), 'trace' => $e->getTraceAsString()]);
             throw $e;
         }
         return $return;
@@ -169,7 +192,7 @@ class PaymentService
             $this->logger->warning('could not find payment id in order #' . $orderId);
             return null;
         }
-        $unzer = $this->getUnzerManager($paymentGateway);
+        $unzer = $this->getUnzerManagerForOrder(wc_get_order($orderId));
         try {
             return ($unzerChargeId ? $unzer->fetchChargeById($unzerPaymentId, $unzerChargeId) : $unzer->fetchAuthorization($unzerPaymentId));
         } catch (Exception $e) {
@@ -186,7 +209,7 @@ class PaymentService
     public function performRefundOrReversal($orderId, AbstractGateway $paymentGateway, $amount): AbstractUnzerResource
     {
         $amount = (float)$amount;
-        $unzer = $this->getUnzerManager($paymentGateway);
+        $unzer = $this->getUnzerManagerForOrder(wc_get_order($orderId));
         $paymentId = get_post_meta($orderId, Main::ORDER_META_KEY_PAYMENT_ID, true);
         $maxCaptureRefund = 0;
         $numberOfRefundsPossible = 0;
@@ -227,9 +250,9 @@ class PaymentService
      * @throws UnzerApiException
      * @throws Exception
      */
-    public function performRefundOrReversalOnPayment($orderId, AbstractGateway $paymentGateway, $amount): AbstractUnzerResource
+    public function performRefundOrReversalOnPayment($orderId, $amount): AbstractUnzerResource
     {
-        $unzer = $this->getUnzerManager($paymentGateway);
+        $unzer = $this->getUnzerManagerForOrder(wc_get_order($orderId));
         $paymentId = get_post_meta($orderId, Main::ORDER_META_KEY_PAYMENT_ID, true);
 
         if (empty($paymentId)) {
@@ -242,7 +265,7 @@ class PaymentService
                 return $unzer->cancelChargedPayment($paymentId, new Cancellation($amount));
             } catch (Exception $e) {
                 $this->logger->warning('Refund not possible: ' . $e->getMessage());
-                throw new Exception(__('Refund not possible', 'unzer-payments').': '.$e->getMessage());
+                throw new Exception(__('Refund not possible', 'unzer-payments') . ': ' . $e->getMessage());
             }
         } else {
             try {
@@ -252,7 +275,7 @@ class PaymentService
                 return $unzer->cancelAuthorizedPayment($paymentId);
             } catch (Exception $e) {
                 $this->logger->warning('Reversal not possible: ' . $e->getMessage());
-                throw new Exception(__('Reversal not possible', 'unzer-payments').': '.$e->getMessage());
+                throw new Exception(__('Reversal not possible', 'unzer-payments') . ': ' . $e->getMessage());
             }
         }
     }

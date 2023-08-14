@@ -9,6 +9,7 @@ use UnzerPayments\Controllers\CheckoutController;
 use UnzerPayments\Controllers\WebhookController;
 use UnzerPayments\Gateways\AbstractGateway;
 use UnzerPayments\Gateways\Alipay;
+use UnzerPayments\Gateways\ApplePay;
 use UnzerPayments\Gateways\Bancontact;
 use UnzerPayments\Gateways\Card;
 use UnzerPayments\Gateways\DirectDebit;
@@ -23,8 +24,11 @@ use UnzerPayments\Gateways\Prepayment;
 use UnzerPayments\Gateways\Przelewy24;
 use UnzerPayments\Gateways\Sofort;
 use UnzerPayments\Gateways\WeChatPay;
+use UnzerPayments\SdkExtension\Resource\ApplePayCertificate;
+use UnzerPayments\SdkExtension\Resource\ApplePayPrivateKey;
 use UnzerPayments\Services\DashboardService;
 use UnzerPayments\Services\OrderService;
+use UnzerPayments\Services\PaymentService;
 
 class Main
 {
@@ -68,14 +72,19 @@ class Main
         add_filter('woocommerce_get_settings_checkout', [$this, 'addGlobalSettings'], 10, 3);
         add_filter('woocommerce_payment_gateways', [$this, 'addPaymentGateways']);
         add_filter('is_protected_meta', [$this, 'setMetaProtected'], 10, 3);
-        add_action('woocommerce_api_' . AbstractGateway::CONFIRMATION_ROUTE_SLUG, [new CheckoutController(), 'confirm']);
+
         add_action('woocommerce_api_' . AdminController::GET_ORDER_TRANSACTIONS_ROUTE_SLUG, [new AdminController(), 'getOrderTransactions']);
         add_action('woocommerce_api_' . AdminController::CHARGE_ROUTE_SLUG, [new AdminController(), 'doCharge']);
         add_action('woocommerce_api_' . AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG, [new AdminController(), 'webhookManagement']);
         add_action('woocommerce_api_' . AdminController::KEY_VALIDATION_ROUTE_SLUG, [new AdminController(), 'validateKeypair']);
         add_action('woocommerce_api_' . AdminController::NOTIFICATION_SLUG, [new AdminController(), 'handleNotification']);
+        add_action('woocommerce_api_' . AdminController::APPLE_PAY_REMOVE_KEY_ROUTE_SLUG, [new AdminController(), 'applePayRemoveKey']);
+        add_action('woocommerce_api_' . AdminController::APPLE_PAY_VALIDATE_CREDENTIALS_ROUTE_SLUG, [new AdminController(), 'applePayValidateCredentials']);
+
+        add_action('woocommerce_api_' . AbstractGateway::CONFIRMATION_ROUTE_SLUG, [new CheckoutController(), 'confirm']);
         add_action('woocommerce_api_' . WebhookController::WEBHOOK_ROUTE_SLUG, [new WebhookController(), 'receiveWebhook']);
         add_action('woocommerce_api_' . AccountController::DELETE_PAYMENT_INSTRUMENT_URL_SLUG, [new AccountController(), 'deletePaymentInstrument']);
+        add_action('woocommerce_api_' . CheckoutController::APPLE_PAY_MERCHANT_VALIDATION_ROUTE_SLUG, [new CheckoutController(), 'validateApplePayMerchant']);
         add_filter('plugin_action_links_' . plugin_basename(UNZER_PLUGIN_PATH . 'unzer-payments' . '.php'), [$this, 'addPluginSettingsLink']);
         add_action('add_meta_boxes', [$this, 'addMetaBoxes'], 40);
         add_action('woocommerce_settings_checkout', [AdminController::class, 'renderGlobalSettingsStart']);
@@ -85,8 +94,9 @@ class Main
         add_action('woocommerce_after_edit_account_form', [new AccountController(), 'accountPaymentInstruments']);
         add_action('woocommerce_update_options_payment_gateways_unzer_card', [$this, 'savePaymentMethodSettingsCard']);
         add_action('woocommerce_update_options_payment_gateways_unzer_paypal', [$this, 'savePaymentMethodSettingsPaypal']);
+        add_action('woocommerce_update_options_payment_gateways_unzer_apple_pay', [$this, 'savePaymentMethodSettingsApplePay']);
         add_action('admin_notices', [new DashboardService(), 'showNotifications']);
-        add_action('admin_enqueue_scripts', function(){
+        add_action('admin_enqueue_scripts', function () {
             wp_enqueue_script('unzer_global_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin_global.js');
         });
     }
@@ -101,10 +111,18 @@ class Main
                 'show_in_admin_all_list' => true,
                 'show_in_admin_status_list' => true,
             ]);
+            register_post_status(OrderService::ORDER_STATUS_AUTHORIZED, [
+                'label' => __('Ready to Capture', 'unzer-payments'),
+                'public' => true,
+                'exclude_from_search' => false,
+                'show_in_admin_all_list' => true,
+                'show_in_admin_status_list' => true,
+            ]);
         });
 
         add_filter('wc_order_statuses', function ($statusList) {
             $statusList[OrderService::ORDER_STATUS_CHARGEBACK] = __('Chargeback', 'unzer-payments');
+            $statusList[OrderService::ORDER_STATUS_AUTHORIZED] = __('Ready to Capture', 'unzer-payments');
             return $statusList;
         });
     }
@@ -124,6 +142,42 @@ class Main
         if ($_POST['unzer-paymentsunzer_paypal_save_instruments'] === 'no') {
             $paypalGateway->deleteAllSavedPaymentInstruments();
         }
+    }
+
+    public function savePaymentMethodSettingsApplePay(): void
+    {
+        if (!empty($_FILES['unzer_apple_pay_payment_processing_certificate']['tmp_name']) && !empty($_FILES['unzer_apple_pay_payment_processing_key']['tmp_name'])) {
+            $client = (new PaymentService())->getUnzerManager();
+            $certificate = file_get_contents($_FILES['unzer_apple_pay_payment_processing_certificate']['tmp_name']);
+            $key = file_get_contents($_FILES['unzer_apple_pay_payment_processing_key']['tmp_name']);
+
+            if (extension_loaded('openssl') && !openssl_x509_parse($certificate)) {
+                throw new \Exception('Invalid Payment Processing certificate given');
+            }
+
+            $privateKeyResource = new ApplePayPrivateKey();
+            $privateKeyResource->setCertificate($key);
+            $client->getResourceService()->createResource($privateKeyResource->setParentResource($client));
+            /** @var string $privateKeyId */
+            $privateKeyId = $privateKeyResource->getId();
+            update_option('unzer_apple_pay_payment_key_id', $privateKeyId);
+            $certificateResource = new ApplePayCertificate();
+            $certificateResource->setCertificate($certificate);
+            $certificateResource->setPrivateKey($privateKeyId);
+            $client->getResourceService()->createResource($certificateResource->setParentResource($client));
+            update_option('unzer_apple_pay_payment_certificate_id', $certificateResource->getId());
+        }
+
+        if (!empty($_FILES['unzer_apple_pay_merchant_id_certificate']['tmp_name'])) {
+            $certificate = file_get_contents($_FILES['unzer_apple_pay_merchant_id_certificate']['tmp_name']);
+            update_option('unzer_apple_pay_merchant_id_certificate', $certificate);
+        }
+
+        if (!empty($_FILES['unzer_apple_pay_merchant_id_key']['tmp_name'])) {
+            $certificate = file_get_contents($_FILES['unzer_apple_pay_merchant_id_key']['tmp_name']);
+            update_option('unzer_apple_pay_merchant_id_key', $certificate);
+        }
+
     }
 
     public function setMetaProtected($protected, $meta_key, $meta_type)
@@ -187,6 +241,7 @@ class Main
                     'options' => array_merge(['' => __('[Use WooC default status]', 'unzer-payments')], wc_get_order_statuses()),
                     'id' => 'unzer_authorized_order_status',
                     'value' => get_option('unzer_authorized_order_status'),
+                    'default' => OrderService::ORDER_STATUS_AUTHORIZED,
                 ],
                 'captured_order_status' => [
                     'title' => __('Order status for captured payments', 'unzer-payments'),
@@ -242,6 +297,7 @@ class Main
             Ideal::GATEWAY_ID => Ideal::class, //TODO setBIC
             PostFinanceEfinance::GATEWAY_ID => PostFinanceEfinance::class,
             PostFinanceCard::GATEWAY_ID => PostFinanceCard::class,
+            ApplePay::GATEWAY_ID => ApplePay::class,
         ];
     }
 

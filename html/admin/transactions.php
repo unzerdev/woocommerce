@@ -76,7 +76,7 @@ $chargeUrl = WC()->api_request_url(AdminController::CHARGE_ROUTE_SLUG);
                     document.getElementById('unzer-status-message').innerHTML = data.status === 'chargeback' ? '<div style="color:#cc0000; margin:10px 0; font-weight:bold;">CHARGEBACK!</div>' : '';
 
                 let captureAction = '';
-                if (data.remainingPlain) {
+                if (data.remainingPlain && data.paymentMethod !== 'unzer_prepayment') {
                     captureAction = '<div><input type="number" step="0.01" min="0.01"  max="'+data.remainingPlain+'" value="'+data.remainingPlain+'" id="unzer-capture-amount-input" /></div> ' +
                         '<a href="#" onclick="unzerCaptureOrder(unzerOrderId, document.getElementById(\'unzer-capture-amount-input\').value); return false;" class="button button-small" style="width:100%; text-align: center;"><?php echo esc_html(__('Capture Amount', 'unzer-payments')); ?></a>'
 

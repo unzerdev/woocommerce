@@ -36,7 +36,7 @@ class CustomerService
 
         if (is_user_logged_in()) {
             $paymentService = new PaymentService();
-            $unzer = $paymentService->getUnzerManager();
+            $unzer = $paymentService->getUnzerManagerForOrder($order);
             try {
                 $customer = $unzer->fetchCustomerByExtCustomerId('wp-' . wp_get_current_user()->ID);
             } catch (Exception $e) {

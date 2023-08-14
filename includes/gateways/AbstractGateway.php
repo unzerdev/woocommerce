@@ -4,6 +4,7 @@ namespace UnzerPayments\Gateways;
 
 use DateTime;
 use Exception;
+use UnzerPayments\Controllers\CheckoutController;
 use UnzerPayments\Main;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\PaymentService;
@@ -134,6 +135,9 @@ abstract class AbstractGateway extends WC_Payment_Gateway
         echo '</h2>';
         echo $this->getCompletePaymentMethodListHtml();
         echo '<table class="form-table">' . $this->generate_settings_html($this->get_form_fields(), false) . '</table>';
+        if (method_exists($this, 'get_additional_options_html')) {
+            echo $this->get_additional_options_html();
+        }
         echo '</div>';
     }
 
@@ -188,9 +192,22 @@ abstract class AbstractGateway extends WC_Payment_Gateway
         wp_enqueue_script('unzer_js', 'https://static.unzer.com/v1/unzer.js');
         wp_enqueue_style('unzer_css', 'https://static.unzer.com/v1/unzer.css');
         wp_register_script('woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', ['unzer_js', 'jquery']);
+
+        // for separate api keys
+        $paylaterGateway = new Invoice();
+
         wp_localize_script('woocommerce_unzer', 'unzer_parameters', [
             'publicKey' => $this->get_public_key(),
+            'publicKey_eur_b2b' => $paylaterGateway->get_option('public_key_eur_b2b'),
+            'publicKey_eur_b2c' => $paylaterGateway->get_option('public_key_eur_b2c'),
+            'publicKey_chf_b2b' => $paylaterGateway->get_option('public_key_chf_b2b'),
+            'publicKey_chf_b2c' => $paylaterGateway->get_option('public_key_chf_b2c'),
+            'generic_error_message'=>__('An error occurred while processing your payment. Please try another payment method.', 'unzer-payments'),
             'locale' => get_locale(),
+            'store_name' => get_bloginfo('name'),
+            'store_country' => strtoupper(substr(get_option('woocommerce_default_country'), 0, 2)),
+            'apple_pay_merchant_validation_url' => WC()->api_request_url(CheckoutController::APPLE_PAY_MERCHANT_VALIDATION_ROUTE_SLUG),
+            'currency' => get_woocommerce_currency(),
         ]);
         wp_localize_script('woocommerce_unzer', 'unzer_i18n', [
             'errorDob' => __('Please enter your date of birth', 'unzer-payments'),
