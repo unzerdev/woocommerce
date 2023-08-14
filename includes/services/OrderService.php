@@ -23,6 +23,7 @@ class OrderService
 {
     const ORDER_STATUS_CANCELLED = 'wc-cancelled';
     const ORDER_STATUS_CHARGEBACK = 'wc-unzer-chargeback';
+    const ORDER_STATUS_AUTHORIZED = 'wc-unzer-authorized';
     /**
      * @var LogService
      */
@@ -40,7 +41,7 @@ class OrderService
     public function getBasket($order): Basket
     {
         $order = is_object($order) ? $order : wc_get_order($order);
-        $totalLeft = $order->get_total();
+
         $basket = (new Basket())
             ->setTotalValueGross($order->get_total())
             ->setOrderId($order->get_id())
@@ -49,7 +50,6 @@ class OrderService
         $basketItems = [];
         /** @var \WC_Order_Item_Product $orderItem */
         foreach ($order->get_items() as $orderItem) {
-
             $basketItem = (new BasketItem())
                 ->setTitle($orderItem->get_name())
                 ->setQuantity($orderItem->get_quantity())
@@ -62,7 +62,6 @@ class OrderService
                 if ($orderItem->get_subtotal() > 0) {
                     $vatRate = round($orderItem->get_subtotal_tax() / $orderItem->get_subtotal() * 100, 1);
                 }
-                $totalLeft -= $price * $orderItem->get_quantity();
             }
             if ($discount = $this->getDiscountFromOrderItem($orderItem)) {
                 $basketItem->setAmountDiscountPerUnitGross($discount);
@@ -72,7 +71,6 @@ class OrderService
                 $basketItem
                     ->setAmountPerUnitGross($price)
                     ->setVat($vatRate);
-
                 $basketItems[] = $basketItem;
             }
         }
@@ -83,44 +81,55 @@ class OrderService
                 ->setTitle($order->get_shipping_method())
                 ->setQuantity(1)
                 ->setType(BasketItemTypes::SHIPMENT)
-                ->setAmountPerUnitGross(round((float)$order->get_shipping_total() + (float)$order->get_shipping_tax(), 2))
+                ->setAmountPerUnitGross(Util::round((float)$order->get_shipping_total() + (float)$order->get_shipping_tax()))
                 ->setVat($vatRate);
             $basketItems[] = $basketItem;
-            $totalLeft -= $basketItem->getAmountPerUnitGross();
         }
 
+        $isVoucherDeducted = false;
         if ($coupons = $order->get_coupons()) {
-
             /** @var WC_Order_Item_Coupon $coupon */
             foreach ($coupons as $coupon) {
-                $vatRate = 0;
-                if ((float)$coupon->get_discount_tax() > 0) {
-                    $vatRate = round($coupon->get_discount_tax() / $order->get_discount_total() * 100, 1);
+                $amountDiscountNet = (float)$coupon->get_discount();
+                $discountTax = (float)$coupon->get_discount_tax();
+                $amountDiscount = $amountDiscountNet + $discountTax;
+                if (round($amountDiscount, 2) <= 0) {
+                    if (!$isVoucherDeducted) {
+                        $isVoucherDeducted = true;
+                        $amountDiscountNet = (float)$order->get_total_discount();
+                        $discountTax = (float)$order->get_discount_tax();
+                        $amountDiscount = $amountDiscountNet + $discountTax;
+                    }
                 }
-                $amountDiscount = (float)$order->get_discount_total();
-                if ((float)$order->get_discount_tax() > 0) {
-                    $amountDiscount = (float)$order->get_discount_total() + (float)$order->get_discount_tax();
+
+                if (round($amountDiscount, 2) <= 0) {
+                    continue;
                 }
-                if (round($amountDiscount, 2) > 0) {
-                    $basketItem = (new BasketItem())
-                        ->setTitle($coupon->get_code())
-                        ->setQuantity(1)
-                        ->setType(BasketItemTypes::VOUCHER)
-                        ->setAmountDiscountPerUnitGross(round($amountDiscount, 2))
-                        ->setVat($vatRate);
-                    $basketItems[] = $basketItem;
-                    $totalLeft += $basketItem->getAmountDiscountPerUnitGross();
-                }
+
+                $vatRate = round($discountTax / $amountDiscountNet * 100, 1);
+
+                $basketItem = (new BasketItem())
+                    ->setTitle($coupon->get_code())
+                    ->setQuantity(1)
+                    ->setType(BasketItemTypes::VOUCHER)
+                    ->setAmountDiscountPerUnitGross(Util::round($amountDiscount, 2))
+                    ->setVat($vatRate);
+                $basketItems[] = $basketItem;
             }
+        }
+        $totalLeft = $order->get_total();
+        foreach ($basketItems as $basketItem) {
+            $totalLeft -= $basketItem->getAmountPerUnitGross() * $basketItem->getQuantity();
+            $totalLeft += $basketItem->getAmountDiscountPerUnitGross() * $basketItem->getQuantity();
         }
 
         if (number_format($totalLeft, 2) !== '0.00') {
             if ($totalLeft < 0) {
                 $basketItem = (new BasketItem())
-                    ->setTitle('Rounding fix')
+                    ->setTitle('---')
                     ->setQuantity(1)
                     ->setType(BasketItemTypes::VOUCHER)
-                    ->setAmountDiscountPerUnitGross(round($totalLeft * -1, 2))
+                    ->setAmountDiscountPerUnitGross(Util::round($totalLeft * -1))
                     ->setVat(0);
                 $basketItems[] = $basketItem;
             } else {
@@ -128,7 +137,7 @@ class OrderService
                     ->setTitle('---')
                     ->setQuantity(1)
                     ->setType(BasketItemTypes::GOODS)
-                    ->setAmountPerUnitGross($totalLeft);
+                    ->setAmountPerUnitGross(Util::round($totalLeft));
                 $basketItems[] = $basketItem;
             }
         }
@@ -154,8 +163,8 @@ class OrderService
         $totalLinePrice = (float)$orderItem->get_subtotal() + (float)$orderItem->get_subtotal_tax();
         $singlePrice = $totalLinePrice / ($orderItem->get_quantity() ?: 1);
         $regularSinglePrice = wc_get_price_including_tax($orderItem->get_product());
-        if (!Util::safeCompareAmount($singlePrice, $regularSinglePrice)) {
-            return $regularSinglePrice - $singlePrice;
+        if (!Util::safeCompareAmount($singlePrice, $regularSinglePrice) && $regularSinglePrice > $singlePrice) {
+            return Util::round($regularSinglePrice - $singlePrice);
         }
         return 0;
     }
@@ -170,7 +179,7 @@ class OrderService
 
         if (is_user_logged_in()) {
             $paymentService = new PaymentService();
-            $unzer = $paymentService->getUnzerManager();
+            $unzer = $paymentService->getUnzerManagerForOrder($order);
             try {
                 $customer = $unzer->fetchCustomerByExtCustomerId('wp-' . wp_get_current_user()->ID);
             } catch (Exception $e) {
@@ -288,10 +297,11 @@ class OrderService
     public function updateRefunds($paymentId, $orderId)
     {
         $paymentService = new PaymentService();
-        $unzer = $paymentService->getUnzerManager();
+        $order = wc_get_order($orderId);
+        $unzer = $paymentService->getUnzerManagerForOrder($order);
         $payment = $unzer->fetchPayment($paymentId);
         if ($payment->getCancellations()) {
-            $order = wc_get_order($orderId);
+
             $registeredRefunds = $order->get_refunds();
             /** @var Cancellation $unzerRefund */
             foreach ($payment->getCancellations() as $unzerRefund) {

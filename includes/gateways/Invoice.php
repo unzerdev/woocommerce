@@ -3,9 +3,10 @@
 namespace UnzerPayments\Gateways;
 
 
-use DateTime;
 use Exception;
+use UnzerPayments\Controllers\AdminController;
 use UnzerPayments\Main;
+use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\EmbeddedResources\RiskData;
@@ -62,8 +63,108 @@ class Invoice extends AbstractGateway
                     'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
                     'default' => '',
                 ],
+                'public_key_eur_b2c' => [
+                    'title' => __('Public Key EUR/B2C', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                ],
+                'private_key_eur_b2c' => [
+                    'title' => __('Private Key EUR/B2C', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                ],
+                'key_check_eur_b2c' => [
+                    'title' => __('Key Check EUR/B2C', 'unzer-payments'),
+                    'type' => 'key_check',
+                    'slug' => 'eur_b2c',
+                    'desc' => '',
+                ],
+                'public_key_eur_b2b' => [
+                    'title' => __('Public Key EUR/B2B', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                ],
+                'private_key_eur_b2b' => [
+                    'title' => __('Private Key EUR/B2B', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                ],
+                'key_check_eur_b2b' => [
+                    'title' => __('Key Check EUR/B2B', 'unzer-payments'),
+                    'type' => 'key_check',
+                    'slug' => 'eur_b2b',
+                    'desc' => '',
+                ],
+                'public_key_chf_b2c' => [
+                    'title' => __('Public Key CHF/B2C', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                ],
+                'private_key_chf_b2c' => [
+                    'title' => __('Private Key CHF/B2C', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                ],
+                'key_check_chf_b2c' => [
+                    'title' => __('Key Check CHF/B2C', 'unzer-payments'),
+                    'type' => 'key_check',
+                    'slug' => 'chf_b2c',
+                    'desc' => '',
+                ],
+                'public_key_chf_b2b' => [
+                    'title' => __('Public Key CHF/B2B', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                ],
+                'private_key_chf_b2b' => [
+                    'title' => __('Private Key CHF/B2B', 'unzer-payments'),
+                    'type' => 'text',
+                    'desc' => '',
+                ],
+                'key_check_chf_b2b' => [
+                    'title' => __('Key Check CHF/B2B', 'unzer-payments'),
+                    'type' => 'key_check',
+                    'slug' => 'chf_b2b',
+                    'desc' => '',
+                ],
             ]
         );
+    }
+
+    public function generate_key_check_html($key, $data)
+    {
+        $slug = $data['slug'];
+        $title = wp_kses_post($data['title']);
+        $isInvalidText = esc_html(__('Keys are not valid', 'unzer-payments'));
+        $isValidText = esc_html(__('Keys are valid', 'unzer-payments'));
+        wp_enqueue_script('unzer_admin_key_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_key_management.js');
+        wp_enqueue_script('unzer_admin_webhook_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_webhook_management.js');
+
+        $webhookHtml = '';
+        if($this->get_option('private_key_' . $slug) && $this->get_option('public_key_' . $slug)) {
+            ob_start();
+            include UNZER_PLUGIN_PATH . 'html/admin/webhooks.php';
+            $webhookHtml = ob_get_contents();
+            ob_end_clean();
+        }
+        $ajaxUrl = WC()->api_request_url(AdminController::KEY_VALIDATION_ROUTE_SLUG);
+        $returnHtml =  <<<HTML
+            <tr valign="top">
+                <th scope="row" class="titledesc">
+                    <label for="$key">$title</label>
+                </th>
+                <td class="forminp">
+                    <div id="unzer-key-status-$slug" class="unzer-key-status" data-slug="$slug" data-url="$ajaxUrl" style="margin-bottom:20px;">
+                        <div class="is-error" style="color:#dc1b1b; display:none;"><span class="unzer-status-circle" style="background:#cc0000;"></span>$isInvalidText</div>
+                        <div class="is-success" style=" display:none;"><span class="unzer-status-circle" style="background:#00a800;"></span>$isValidText</div>
+                    </div>
+                    $webhookHtml
+                </td>
+            </tr>
+            
+HTML;
+        return $returnHtml;
+
     }
 
     public function has_fields()
@@ -169,7 +270,8 @@ class Invoice extends AbstractGateway
         }
         if ($authorization->isSuccess()) {
             $order = wc_get_order($order_id);
-            $order->payment_complete($authorization->getPayment()->getId());
+            $orderService = new OrderService();
+            $orderService->setOrderAuthorized($order, $authorization->getPayment()->getId());
         } else {
             $this->set_order_transaction_number(wc_get_order($order_id), $authorization->getPayment()->getId());
         }
@@ -189,7 +291,7 @@ class Invoice extends AbstractGateway
     {
         try {
             $paymentService = new PaymentService();
-            $cancellation = $paymentService->performRefundOrReversalOnPayment($order_id, $this, $amount);
+            $cancellation = $paymentService->performRefundOrReversalOnPayment($order_id, $amount);
             return $cancellation->isSuccess();
         } catch (\Exception $e) {
             $this->logger->error('refund error: ' . $e->getMessage(), ['orderId' => $order_id, 'amount' => $amount]);

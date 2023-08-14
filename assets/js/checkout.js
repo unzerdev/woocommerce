@@ -4,20 +4,47 @@ const UnzerConfig = {
     },
     getLocale() {
         return unzer_parameters.locale || navigator.language || navigator.userLanguage || null;
+    },
+    getPublicKeyForPayLater(isB2B, currency) {
+        if (currency === 'EUR') {
+            return isB2B ? unzer_parameters.publicKey_eur_b2b : unzer_parameters.publicKey_eur_b2c;
+        } else if (currency === 'CHF') {
+            return isB2B ? unzer_parameters.publicKey_chf_b2b : unzer_parameters.publicKey_chf_b2c;
+        }
+        return null;
     }
 }
 
 const UnzerManager = {
     instance: null,
+    currency: null,
+    instancePayLaterB2B: null,
+    instancePayLaterB2C: null,
+    b2bState: false,
     initTimeout: null,
     init() {
-        console.log('UnzerManager.init()');
         if (UnzerManager.initTimeout) {
             clearTimeout(UnzerManager.initTimeout);
         }
+
         UnzerManager.initTimeout = setTimeout(() => {
-            console.log('UnzerManager - process delayed init');
+            UnzerManager.currency = unzer_parameters.currency;
             UnzerManager.instance = UnzerManager.instance || new unzer(UnzerConfig.getPublicKey(), {locale: UnzerConfig.getLocale()});
+            UnzerManager.b2bState = UnzerManager.isB2B();
+            //separate instances for invoice/paylater + b2b/b2c
+            if (UnzerConfig.getPublicKeyForPayLater(true, UnzerManager.currency)) {
+                UnzerManager.instancePayLaterB2B = UnzerManager.instancePayLaterB2B || new unzer(UnzerConfig.getPublicKeyForPayLater(true, UnzerManager.currency), {
+                    locale: UnzerConfig.getLocale(),
+                    showNotify: false
+                });
+            }
+            if (UnzerConfig.getPublicKeyForPayLater(false, UnzerManager.currency)) {
+                UnzerManager.instancePayLaterB2C = UnzerManager.instancePayLaterB2C || new unzer(UnzerConfig.getPublicKeyForPayLater(false, UnzerManager.currency), {
+                    locale: UnzerConfig.getLocale(),
+                    showNotify: false
+                });
+            }
+
             UnzerManager.initCard();
             UnzerManager.initDirectDebit();
             UnzerManager.initDirectDebitSecured();
@@ -25,29 +52,30 @@ const UnzerManager = {
             UnzerManager.initEps();
             UnzerManager.initIdeal();
             UnzerManager.initInvoice();
+            UnzerManager.initApplePay();
             UnzerManager.initSavedPaymentInstruments();
         }, 500);
     },
 
-    initSavedPaymentInstruments(){
-        const updateFunction = ()=>{
+    initSavedPaymentInstruments() {
+        const updateFunction = () => {
             const containers = document.querySelectorAll('.unzer-saved-payment-instruments-container');
-            if(!containers){
+            if (!containers) {
                 return;
             }
-            containers.forEach((container)=>{
-               const newForm = container.querySelector('.unzer-payment-instrument-new-form');
-               if(container.querySelector('.unzer-payment-instrument-new-radio:checked')){
-                   newForm.style.display = 'block';
-               }else{
-                   newForm.style.display = 'none';
-               }
+            containers.forEach((container) => {
+                const newForm = container.querySelector('.unzer-payment-instrument-new-form');
+                if (container.querySelector('.unzer-payment-instrument-new-radio:checked')) {
+                    newForm.style.display = 'block';
+                } else {
+                    newForm.style.display = 'none';
+                }
             });
         }
         updateFunction();
         const allRadios = document.querySelectorAll('.unzer-payment-instrument-radio');
-        if(allRadios){
-            allRadios.forEach((radio)=>{
+        if (allRadios) {
+            allRadios.forEach((radio) => {
                 radio.addEventListener('change', updateFunction);
             })
         }
@@ -82,13 +110,13 @@ const UnzerManager = {
             onlyIframe: false
         });
         document.getElementById('unzer-card-id').value = '';
-        jQuery( document.body ).on( 'checkout_error', ()=>{
+        jQuery(document.body).on('checkout_error', () => {
             //document.getElementById('unzer-card-id').value = '';
         });
         jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_card');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_card', function () {
             const selectedSavedCard = document.querySelector('[name="unzer_card_payment_instrument"]:checked');
-            if(selectedSavedCard && selectedSavedCard.value){
+            if (selectedSavedCard && selectedSavedCard.value) {
                 return true;
             }
             if (document.getElementById('unzer-card-id').value) {
@@ -98,7 +126,6 @@ const UnzerManager = {
                 .then(function (result) {
                     document.getElementById('unzer-card-id').value = result.id;
                     document.getElementById('unzer-card-form').innerHTML = '<div style="font-size:0.8em;">' + result.cardHolder + '<br/>' + result.number + '<br/>' + result.expiryDate + '</div>';
-                    console.log(result);
                     UnzerManager.getCheckoutForm().trigger('submit');
                 })
                 .catch(function (error) {
@@ -126,7 +153,7 @@ const UnzerManager = {
             containerId: 'unzer-direct-debit-iban'
         });
         document.getElementById('unzer-direct-debit-id').value = '';
-        jQuery( document.body ).on( 'checkout_error', ()=>{
+        jQuery(document.body).on('checkout_error', () => {
             document.getElementById('unzer-direct-debit-id').value = '';
         });
         jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_direct_debit');
@@ -162,7 +189,7 @@ const UnzerManager = {
             containerId: 'unzer-direct-debit-secured-iban'
         });
         document.getElementById('unzer-direct-debit-secured-id').value = '';
-        jQuery( document.body ).on( 'checkout_error', ()=>{
+        jQuery(document.body).on('checkout_error', () => {
             document.getElementById('unzer-direct-debit-secured-id').value = '';
         });
         jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_direct_debit_secured');
@@ -202,29 +229,55 @@ const UnzerManager = {
         installmentInstance.create({
             containerId: 'unzer-installment',
             amount: 100,
-            currency: 'EUR',
+            currency: UnzerManager.currency,
             orderDate: '2022-10-11',
             effectiveInterest: 4.5,
         });
 
     },
 
-    initInvoice() {
-        if (!document.getElementById('unzer-invoice-form')) {
+    rerenderInvoice() {
+        const form = document.getElementById('unzer-invoice-form');
+        if (!form) {
             return;
         }
-        if (document.getElementById('unzer-invoice-form').getAttribute('is-init')) {
-            return;
-        }
-        document.getElementById('unzer-invoice-form').setAttribute('is-init', true);
+        form.removeAttribute('is-init');
+        form.querySelector('#unzer-invoice-fields').innerHTML = '';
+        UnzerManager.initInvoice();
+    },
 
-        const invoiceInstance = UnzerManager.instance.PaylaterInvoice();
+    initInvoice() {
+        const form = document.getElementById('unzer-invoice-form');
+        if (!form) {
+            return;
+        }
+
+        if (form.getAttribute('is-init')) {
+            return;
+        }
+
+        let unzerInstance = null;
+        if (UnzerManager.isB2B()) {
+            unzerInstance = UnzerManager.instancePayLaterB2B;
+        } else {
+            unzerInstance = UnzerManager.instancePayLaterB2C;
+        }
+        if (!unzerInstance) {
+            document.querySelector('.wc_payment_method.payment_method_unzer_invoice').style.display = 'none';
+            //uncheck radio button
+            document.getElementById('payment_method_unzer_invoice').checked = false;
+            return;
+        }
+        document.querySelector('.wc_payment_method.payment_method_unzer_invoice').style.display = '';
+        form.setAttribute('is-init', true);
+
+        const invoiceInstance = unzerInstance.PaylaterInvoice();
         invoiceInstance.create({
             containerId: 'unzer-invoice-fields',
             customerType: 'B2C',
         })
         document.getElementById('unzer-invoice-id').value = '';
-        jQuery( document.body ).on( 'checkout_error', ()=>{
+        jQuery(document.body).on('checkout_error', () => {
             document.getElementById('unzer-invoice-id').value = '';
         });
         jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_invoice');
@@ -269,11 +322,11 @@ const UnzerManager = {
         epsInstance.create('eps', {
             containerId: 'unzer-eps'
         });
-        epsInstance.addEventListener('change', ()=>{
+        epsInstance.addEventListener('change', () => {
             document.getElementById('unzer-eps-id').value = '';
         });
         document.getElementById('unzer-eps-id').value = '';
-        jQuery( document.body ).on( 'checkout_error', ()=>{
+        jQuery(document.body).on('checkout_error', () => {
             document.getElementById('unzer-eps-id').value = '';
         });
         jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_eps');
@@ -310,11 +363,11 @@ const UnzerManager = {
         idealInstance.create('ideal', {
             containerId: 'unzer-ideal'
         });
-        idealInstance.addEventListener('change', ()=>{
+        idealInstance.addEventListener('change', () => {
             document.getElementById('unzer-ideal-id').value = '';
         });
         document.getElementById('unzer-ideal-id').value = '';
-        jQuery( document.body ).on( 'checkout_error', ()=>{
+        jQuery(document.body).on('checkout_error', () => {
             document.getElementById('unzer-ideal-id').value = '';
         });
         jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_ideal');
@@ -335,11 +388,104 @@ const UnzerManager = {
         });
     },
 
+    initApplePay() {
+        if (!document.getElementById('unzer-apple-pay-id')) {
+            return;
+        }
+        const applePayInstance = UnzerManager.instance.ApplePay();
+        window.api = applePayInstance;
+
+        jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_apple_pay');
+        jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_apple_pay', function () {
+            //from customer submit
+            if (window.doNotStartApplePaySession) {
+                window.doNotStartApplePaySession = false;
+                return true;
+            }
+            UnzerManager.startApplePaySession();
+            return true;
+        });
+
+        const unzerApplePayProcessingAction = function (msg) {
+            if (msg && msg.indexOf('<!-- start-unzer-apple-pay -->') !== -1) {
+                UnzerManager.beginApplePaySession();
+            }
+        }
+
+        jQuery(document.body).on('checkout_error', function (e, msg) {
+            unzerApplePayProcessingAction(msg);
+        });
+
+        //for plugin CheckoutWC
+        window.addEventListener('cfw-checkout-failed-before-error-message', function (event) {
+            if (typeof event.detail.response.messages === 'undefined') {
+                return;
+            }
+            unzerApplePayProcessingAction(event.detail.response.messages);
+        });
+
+    },
+
+    startApplePaySession() {
+        const unzerApplePayInstance = UnzerManager.instance.ApplePay();
+        let applePayPaymentRequest = {
+            countryCode: unzer_parameters.store_country,
+            currencyCode: UnzerManager.currency,
+            supportedNetworks: ['visa', 'masterCard'],
+            merchantCapabilities: ['supports3DS'],
+            total: {
+                label: unzer_parameters.store_name,
+                amount: parseFloat(document.getElementById('unzer-apple-pay-amount').value)
+            }
+        };
+
+        window.apsession = new window.ApplePaySession(6, applePayPaymentRequest);
+
+        window.apsession.onvalidatemerchant = function (event) {
+            try {
+                jQuery.post(unzer_parameters.apple_pay_merchant_validation_url,
+                    {
+                        validation_url: event.validationURL
+                    },
+                    (data) => {
+                        window.apsession.completeMerchantValidation(JSON.parse(data.response));
+                    }
+                );
+            } catch (e) {
+                window.apsession.abort();
+                UnzerManager.error(unzer_parameters.generic_error_message);
+            }
+        }
+
+        window.apsession.onpaymentauthorized = function (event) {
+            let paymentData = event.payment.token.paymentData;
+            unzerApplePayInstance.createResource(paymentData)
+                .then(function (createdResource) {
+                    document.getElementById('unzer-apple-pay-id').value = createdResource.id;
+                    window.apsession.completePayment({status: window.ApplePaySession.STATUS_SUCCESS});
+                    window.doNotStartApplePaySession = true;
+                    UnzerManager.getCheckoutForm().trigger('submit');
+                    setTimeout(function () {
+                        window.doNotStartApplePaySession = false;
+                    }, 500);
+                })
+                .catch(function (error) {
+                    window.apsession.abort();
+                    UnzerManager.error(error.customerMessage || error.message || unzer_parameters.generic_error_message);
+                    console.log(error);
+                })
+        }
+    },
+    beginApplePaySession() {
+        window.apsession.begin();
+    },
+
     getCheckoutForm() {
         return jQuery('form.woocommerce-checkout');
     },
 
     error(message) {
+        console.error(message);
         jQuery('.woocommerce-NoticeGroup-checkout, .woocommerce-error, .woocommerce-message').remove();
         const $checkoutForm = UnzerManager.getCheckoutForm();
         $checkoutForm.prepend('<div class="woocommerce-NoticeGroup woocommerce-NoticeGroup-checkout"><div class="woocommerce-error">' + message + '</div></div>'); // eslint-disable-line max-len
@@ -357,7 +503,7 @@ const UnzerManager = {
         jQuery.scroll_to_notices(scrollElement);
     },
 
-    isB2B(){
+    isB2B() {
         const companyNameInput = document.getElementById('billing_company');
         return (companyNameInput && companyNameInput.value !== '');
     }
@@ -372,12 +518,44 @@ jQuery(() => {
         observer.observe(paymentContainer, {attributes: true, childList: true, subtree: true});
     }
     jQuery(document.body).on('updated_checkout', UnzerManager.init);
-    setInterval(function (){
+    setInterval(function () {
+        if (UnzerManager.b2bState !== UnzerManager.isB2B()) {
+            UnzerManager.b2bState = UnzerManager.isB2B();
+            UnzerManager.rerenderInvoice();
+        }
+
         const companyTypeInputContainer = document.getElementById('unzer-invoice-company-type-container');
-        if(!companyTypeInputContainer){
+        if (!companyTypeInputContainer) {
             return;
         }
-        companyTypeInputContainer.style.display = UnzerManager.isB2B()?'block':'none';
+        companyTypeInputContainer.style.display = UnzerManager.isB2B() ? 'block' : 'none';
+
+        const applePayContainer = document.querySelector('.payment_method_unzer_apple_pay');
+        if (applePayContainer) {
+            if (window.ApplePaySession && window.ApplePaySession.canMakePayments() && window.ApplePaySession.supportsVersion(6)) {
+                applePayContainer.style.display = '';
+                const placeOrderButton = document.querySelector('#place_order');
+                if (placeOrderButton) {
+                    let applePayButton = document.getElementById('unzer_apple_pay_place_order');
+                    if (!applePayButton) {
+                        applePayButton = document.createElement('div');
+                        applePayButton.id = 'unzer_apple_pay_place_order';
+                        placeOrderButton.parentNode.appendChild(applePayButton);
+                        applePayButton.innerHTML = '<apple-pay-button onclick="document.querySelector(\'#place_order\').click(); return false;" buttonstyle="black" type="buy" locale="' + UnzerConfig.getLocale() + '"></apple-pay-button>';
+                    }
+
+                    if (document.getElementById('payment_method_unzer_apple_pay').checked) {
+                        applePayButton.style.display = '';
+                        placeOrderButton.style.display = 'none';
+                    } else {
+                        applePayButton.style.display = 'none';
+                        placeOrderButton.style.display = '';
+                    }
+                }
+            } else {
+                applePayContainer.style.display = 'none';
+            }
+        }
     }, 500);
 });
 

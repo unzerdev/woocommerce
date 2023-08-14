@@ -127,6 +127,8 @@ class WebhookController
         $order = wc_get_order($orderId);
         if (empty($order->get_transaction_id())) {
             $order->payment_complete($paymentId);
+            $order->set_transaction_id($paymentId);
+            $order->save();
         }
     }
 }

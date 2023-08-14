@@ -3,9 +3,11 @@
 namespace UnzerPayments\Services;
 
 use UnzerPayments\Controllers\WebhookController;
+use UnzerPayments\Gateways\Invoice;
 use UnzerSDK\Constants\WebhookEvents;
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\Webhook;
+use UnzerSDK\Unzer;
 
 class WebhookManagementService
 {
@@ -14,10 +16,19 @@ class WebhookManagementService
      */
     private $unzerManager;
 
-    public function __construct()
+    public function __construct($slug = null)
     {
         $paymentService = new PaymentService();
-        $this->unzerManager = $paymentService->getUnzerManager();
+        if (!empty($slug)) {
+            $invoiceGateway = new Invoice();
+            $privateKey = $invoiceGateway->get_option('private_key_' . $slug);
+            if (empty($privateKey)) {
+                throw new \Exception('Private key not found');
+            }
+            $this->unzerManager = new Unzer($privateKey);
+        } else {
+            $this->unzerManager = $paymentService->getUnzerManager(null);
+        }
     }
 
     public function fetchAllWebhooks()
