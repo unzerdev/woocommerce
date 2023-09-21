@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocMissingThrowsInspection */
 /**
@@ -22,8 +23,10 @@
  *
  * @package  UnzerSDK\test\integration
  */
+
 namespace UnzerSDK\test\integration;
 
+use UnzerSDK\Constants\CustomerTypes;
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\Config;
 use UnzerSDK\Resources\PaymentTypes\Card;
@@ -45,7 +48,7 @@ class ConfigTest extends BaseIntegrationTest
     public function verifyPaylaterinvoiceConfigIsFetchable()
     {
         $config = (new Config())
-            ->setCustomerType('B2C')
+            ->setCustomerType(CustomerTypes::B2C)
             ->setCountry('DE');
 
         $this->assertNull($config->getDataPrivacyConsent());

@@ -24,6 +24,10 @@
     color: #fff !important;
 }
 
+.unzer-webhooks td:first-child{
+    white-space: nowrap;
+}
+
 .unzer-dropdown-icon{
     width:18px;
     height:18px;

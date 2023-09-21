@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocMissingThrowsInspection */
 /**
@@ -22,18 +23,25 @@
  *
  * @package  UnzerSDK\test\integration\PaymentTypes
  */
+
 namespace UnzerSDK\test\integration\PaymentTypes;
 
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\PaymentTypes\InvoiceSecured;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 use UnzerSDK\test\BaseIntegrationTest;
+use UnzerSDK\test\Helper\TestEnvironmentService;
 
 /**
  * @deprecated since 1.2.0.0 PaylaterInvoice should be used instead in the future.
  */
 class InvoiceGuaranteedTest extends BaseIntegrationTest
 {
+    protected function setUp(): void
+    {
+        $this->getUnzerObject(TestEnvironmentService::getLegacyTestPrivateKey());
+    }
+
     /**
      * Verify, backwards compatibility regarding fetching payment type and map it to invoice secured class.
      *
@@ -47,11 +55,11 @@ class InvoiceGuaranteedTest extends BaseIntegrationTest
         /** @var InvoiceSecured $ivgType */
         $ivgType = $this->unzer->createPaymentType($ivgMock);
         $this->assertInstanceOf(InvoiceSecured::class, $ivgType);
-        $this->assertRegExp('/^s-ivg-[.]*/', $ivgType->getId());
+        $this->assertMatchesRegularExpression('/^s-ivg-[.]*/', $ivgType->getId());
 
         $fetchedType = $this->unzer->fetchPaymentType($ivgType->getId());
         $this->assertInstanceOf(InvoiceSecured::class, $fetchedType);
-        $this->assertRegExp('/^s-ivg-[.]*/', $fetchedType->getId());
+        $this->assertMatchesRegularExpression('/^s-ivg-[.]*/', $fetchedType->getId());
 
         return $fetchedType;
     }

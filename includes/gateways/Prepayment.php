@@ -4,6 +4,7 @@ namespace UnzerPayments\Gateways;
 
 
 use Exception;
+use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 
@@ -50,6 +51,14 @@ class Prepayment extends AbstractGateway
                     'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
                     'default' => '',
                 ],
+                'order_status' => [
+                    'title' => __('Order status', 'unzer-payments'),
+                    'label' => '',
+                    'type' => 'select',
+                    'description' => __('This status is assigned to all orders created with this payment method', 'unzer-payments'),
+                    'options' => array_merge(['' => __('[Use WooC default status]', 'unzer-payments')], wc_get_order_statuses()),
+                    'default' => OrderService::ORDER_STATUS_WAITING_FOR_PAYMENT,
+                ],
             ]
         );
     }
@@ -64,12 +73,19 @@ class Prepayment extends AbstractGateway
         if (!$charge->getPayment()->isPending()) {
             throw new Exception($charge->getMessage()->getCustomer());
         }
-        $this->set_order_transaction_number(wc_get_order($order_id), $charge->getPayment()->getId());
-        $return['redirect'] = $this->get_return_url(wc_get_order($order_id));
+
+        $order = wc_get_order($order_id);
+        $order->set_transaction_id($charge->getPayment()->getId());
+        if ($status = $this->get_option('order_status')) {
+            $order->set_status($status);
+        }
+        $order->save();
+        $return['redirect'] = $this->get_return_url($order);
         return $return;
     }
 
-    public function get_payment_information(Charge $charge){
+    public function get_payment_information(Charge $charge)
+    {
         return sprintf(__("Please transfer the amount of %s to the following account:<br /><br />"
             . "Holder: %s<br/>"
             . "IBAN: %s<br/>"

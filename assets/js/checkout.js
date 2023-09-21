@@ -12,14 +12,24 @@ const UnzerConfig = {
             return isB2B ? unzer_parameters.publicKey_chf_b2b : unzer_parameters.publicKey_chf_b2c;
         }
         return null;
+    },
+    getPublicKeyForInstallment(currency) {
+        if (currency === 'EUR') {
+            return unzer_parameters.publicKey_installment_eur_b2c;
+        } else if (currency === 'CHF') {
+            return unzer_parameters.publicKey_installment_chf_b2c;
+        }
+        return null;
     }
 }
 
 const UnzerManager = {
     instance: null,
     currency: null,
+    country: null,
     instancePayLaterB2B: null,
     instancePayLaterB2C: null,
+    instanceInstallments: null,
     b2bState: false,
     initTimeout: null,
     init() {
@@ -31,6 +41,7 @@ const UnzerManager = {
             UnzerManager.currency = unzer_parameters.currency;
             UnzerManager.instance = UnzerManager.instance || new unzer(UnzerConfig.getPublicKey(), {locale: UnzerConfig.getLocale()});
             UnzerManager.b2bState = UnzerManager.isB2B();
+            UnzerManager.checkCountry();
             //separate instances for invoice/paylater + b2b/b2c
             if (UnzerConfig.getPublicKeyForPayLater(true, UnzerManager.currency)) {
                 UnzerManager.instancePayLaterB2B = UnzerManager.instancePayLaterB2B || new unzer(UnzerConfig.getPublicKeyForPayLater(true, UnzerManager.currency), {
@@ -40,6 +51,12 @@ const UnzerManager = {
             }
             if (UnzerConfig.getPublicKeyForPayLater(false, UnzerManager.currency)) {
                 UnzerManager.instancePayLaterB2C = UnzerManager.instancePayLaterB2C || new unzer(UnzerConfig.getPublicKeyForPayLater(false, UnzerManager.currency), {
+                    locale: UnzerConfig.getLocale(),
+                    showNotify: false
+                });
+            }
+            if (UnzerConfig.getPublicKeyForInstallment(UnzerManager.currency)) {
+                UnzerManager.instanceInstallments = UnzerManager.instanceInstallments || new unzer(UnzerConfig.getPublicKeyForInstallment(UnzerManager.currency), {
                     locale: UnzerConfig.getLocale(),
                     showNotify: false
                 });
@@ -222,18 +239,84 @@ const UnzerManager = {
         if (form.getAttribute('is-init')) {
             return;
         }
+
+        const unzerInstance = UnzerManager.instanceInstallments;
+        UnzerManager.toggleInstallmentDisplay();
+        if (!unzerInstance) {
+            return;
+        }
+
+
         form.setAttribute('is-init', true);
 
-
-        const installmentInstance = UnzerManager.instance.InstallmentSecured();
+        UnzerManager.checkCountry();
+        const installmentInstance = unzerInstance.PaylaterInstallment();
         installmentInstance.create({
-            containerId: 'unzer-installment',
-            amount: 100,
+            containerId: 'unzer-installment-fields',
+            amount: parseFloat(document.getElementById('unzer-installment-amount').value),
             currency: UnzerManager.currency,
-            orderDate: '2022-10-11',
-            effectiveInterest: 4.5,
+            customerType: 'B2C',
+            country: UnzerManager.country
         });
 
+        const installmentCountryChangedHandler = function () {
+            const isInstallmentAvailable = UnzerManager.toggleInstallmentDisplay();
+            if (isInstallmentAvailable) {
+                const fetchPlansPromise = installmentInstance.fetchPlans({
+                    country: UnzerManager.country
+                });
+                fetchPlansPromise
+                    .then(function (data) {
+                        //
+                    })
+                    .catch(function (error) {
+                        //
+                    });
+            }
+        }
+        document.addEventListener('unzer_country_changed', installmentCountryChangedHandler);
+
+        document.getElementById('unzer-installment-id').value = '';
+        jQuery(document.body).on('checkout_error', () => {
+            document.getElementById('unzer-installment-id').value = '';
+        });
+        jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_installment');
+        jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_installment', function () {
+            if (document.getElementById('unzer-installment-id').value) {
+                return true;
+            }
+            if (!document.getElementById('unzer-installment-dob').value) {
+                UnzerManager.error(unzer_i18n.errorDob || 'Please enter your date fo birth');
+                return false;
+            }
+            installmentInstance.createResource()
+                .then(function (result) {
+                    document.getElementById('unzer-installment-id').value = result.id;
+                    UnzerManager.getCheckoutForm().trigger('submit');
+                })
+                .catch(function (error) {
+                    console.warn(error);
+                    UnzerManager.error(error.customerMessage || error.message);
+                })
+            return false;
+        });
+    },
+
+    toggleInstallmentDisplay() {
+        const paymentMethodContainer = document.querySelector('.wc_payment_method.payment_method_unzer_installment');
+        if (!paymentMethodContainer) {
+            return false;
+        }
+
+        if (!UnzerManager.instanceInstallments || UnzerManager.isB2B() || ['DE', 'AT', 'CH'].indexOf(UnzerManager.country) === -1) {
+            paymentMethodContainer.style.display = 'none';
+            //uncheck radio button
+            document.getElementById('payment_method_unzer_installment').checked = false;
+            return false;
+        } else {
+            paymentMethodContainer.style.display = '';
+            return true;
+        }
     },
 
     rerenderInvoice() {
@@ -506,6 +589,20 @@ const UnzerManager = {
     isB2B() {
         const companyNameInput = document.getElementById('billing_company');
         return (companyNameInput && companyNameInput.value !== '');
+    },
+
+    checkCountry() {
+        const countryInput = document.getElementById('billing_country');
+        let value = null;
+        if (countryInput) {
+            value = countryInput.value;
+        }
+        if (value !== UnzerManager.country) {
+            UnzerManager.country = value;
+            // trigger event
+            const event = new CustomEvent('unzer_country_changed', {detail: {country: value}});
+            document.dispatchEvent(event);
+        }
     }
 }
 
@@ -517,18 +614,24 @@ jQuery(() => {
         const observer = new MutationObserver(UnzerManager.init);
         observer.observe(paymentContainer, {attributes: true, childList: true, subtree: true});
     }
-    jQuery(document.body).on('updated_checkout', UnzerManager.init);
+    jQuery(document.body).on('updated_checkout', () => {
+        UnzerManager.init();
+        UnzerManager.checkCountry();
+    });
     setInterval(function () {
         if (UnzerManager.b2bState !== UnzerManager.isB2B()) {
             UnzerManager.b2bState = UnzerManager.isB2B();
             UnzerManager.rerenderInvoice();
+            UnzerManager.toggleInstallmentDisplay();
         }
 
+        UnzerManager.checkCountry();
+
         const companyTypeInputContainer = document.getElementById('unzer-invoice-company-type-container');
-        if (!companyTypeInputContainer) {
-            return;
+        if (companyTypeInputContainer) {
+            companyTypeInputContainer.style.display = UnzerManager.isB2B() ? 'block' : 'none';
         }
-        companyTypeInputContainer.style.display = UnzerManager.isB2B() ? 'block' : 'none';
+
 
         const applePayContainer = document.querySelector('.payment_method_unzer_apple_pay');
         if (applePayContainer) {

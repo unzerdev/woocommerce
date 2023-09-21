@@ -4,10 +4,13 @@ namespace UnzerPayments\Gateways;
 
 use DateTime;
 use Exception;
+use UnzerPayments\Controllers\AdminController;
 use UnzerPayments\Controllers\CheckoutController;
 use UnzerPayments\Main;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\PaymentService;
+use UnzerSDK\Resources\EmbeddedResources\RiskData;
+use UnzerSDK\Resources\TransactionTypes\Authorization;
 use WC_Data_Exception;
 use WC_Order;
 use WC_Payment_Gateway;
@@ -37,6 +40,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway
      * @var null|array
      */
     public $allowedCurrencies = null;
+    public $allowedCountries = null;
 
     public function __construct()
     {
@@ -78,6 +82,11 @@ abstract class AbstractGateway extends WC_Payment_Gateway
         $isAvailable = parent::is_available();
         if ($isAvailable && !empty($this->allowedCurrencies)) {
             $isAvailable = in_array(get_woocommerce_currency(), $this->allowedCurrencies);
+        }
+        if ($isAvailable && !empty($this->allowedCountries)) {
+            if (!empty($_POST['country']) && !in_array($_POST['country'], $this->allowedCountries)) {
+                $isAvailable = false;
+            }
         }
         return $isAvailable;
     }
@@ -141,6 +150,44 @@ abstract class AbstractGateway extends WC_Payment_Gateway
         echo '</div>';
     }
 
+
+    public function generate_key_check_html($key, $data)
+    {
+        $slug = $data['slug'];
+        $gateway = esc_attr($this->id);
+        $title = wp_kses_post($data['title']);
+        $isInvalidText = esc_html(__('Keys are not valid', 'unzer-payments'));
+        $isValidText = esc_html(__('Keys are valid', 'unzer-payments'));
+        wp_enqueue_script('unzer_admin_key_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_key_management.js');
+        wp_enqueue_script('unzer_admin_webhook_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_webhook_management.js');
+
+        $webhookHtml = '';
+        if ($this->get_option('private_key_' . $slug) && $this->get_option('public_key_' . $slug)) {
+            ob_start();
+            include UNZER_PLUGIN_PATH . 'html/admin/webhooks.php';
+            $webhookHtml = ob_get_contents();
+            ob_end_clean();
+        }
+        $ajaxUrl = WC()->api_request_url(AdminController::KEY_VALIDATION_ROUTE_SLUG);
+        $returnHtml = <<<HTML
+            <tr valign="top">
+                <th scope="row" class="titledesc">
+                    <label for="$key">$title</label>
+                </th>
+                <td class="forminp">
+                    <div id="unzer-key-status-$slug" class="unzer-key-status" data-slug="$slug" data-gateway="$gateway" data-url="$ajaxUrl" style="margin-bottom:20px;">
+                        <div class="is-error" style="color:#dc1b1b; display:none;"><span class="unzer-status-circle" style="background:#cc0000;"></span>$isInvalidText</div>
+                        <div class="is-success" style=" display:none;"><span class="unzer-status-circle" style="background:#00a800;"></span>$isValidText</div>
+                    </div>
+                    $webhookHtml
+                </td>
+            </tr>
+            
+HTML;
+        return $returnHtml;
+
+    }
+
     protected function getCompletePaymentMethodListHtml(): string
     {
         $gateways = Main::getInstance()->getPaymentGateways();
@@ -195,6 +242,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway
 
         // for separate api keys
         $paylaterGateway = new Invoice();
+        $installmentGateway = new Installment();
 
         wp_localize_script('woocommerce_unzer', 'unzer_parameters', [
             'publicKey' => $this->get_public_key(),
@@ -202,7 +250,9 @@ abstract class AbstractGateway extends WC_Payment_Gateway
             'publicKey_eur_b2c' => $paylaterGateway->get_option('public_key_eur_b2c'),
             'publicKey_chf_b2b' => $paylaterGateway->get_option('public_key_chf_b2b'),
             'publicKey_chf_b2c' => $paylaterGateway->get_option('public_key_chf_b2c'),
-            'generic_error_message'=>__('An error occurred while processing your payment. Please try another payment method.', 'unzer-payments'),
+            'publicKey_installment_eur_b2c' => $installmentGateway->get_option('public_key_eur_b2c'),
+            'publicKey_installment_chf_b2c' => $installmentGateway->get_option('public_key_chf_b2c'),
+            'generic_error_message' => __('An error occurred while processing your payment. Please try another payment method.', 'unzer-payments'),
             'locale' => get_locale(),
             'store_name' => get_bloginfo('name'),
             'store_country' => strtoupper(substr(get_option('woocommerce_default_country'), 0, 2)),
@@ -215,5 +265,22 @@ abstract class AbstractGateway extends WC_Payment_Gateway
         ]);
         wp_enqueue_script('woocommerce_unzer');
 
+    }
+
+    public static function addRiskDataToAuthorization(Authorization $authorization)
+    {
+        $riskData = new RiskData();
+        $riskData->setThreatMetrixId(WC()->session->get('unzerThreatMetrixId'));
+        WC()->session->set('unzerThreatMetrixId', '');
+        if (is_user_logged_in()) {
+            /** @var \WP_User $user */
+            $user = wp_get_current_user();
+            $date = $user->user_registered ? date('Ymd', strtotime($user->user_registered)) : null;
+            $riskData->setRegistrationLevel(1);
+            $riskData->setRegistrationDate($date);
+        } else {
+            $riskData->setRegistrationLevel(0);
+        }
+        $authorization->setRiskData($riskData);
     }
 }

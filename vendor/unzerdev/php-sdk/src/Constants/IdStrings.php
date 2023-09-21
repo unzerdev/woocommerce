@@ -20,6 +20,7 @@
  *
  * @package  UnzerSDK\Constants
  */
+
 namespace UnzerSDK\Constants;
 
 class IdStrings
@@ -30,6 +31,7 @@ class IdStrings
     public const CHARGE = 'chg';
     public const PAYOUT = 'out';
     public const SHIPMENT = 'shp';
+    public const CHARGEBACK = 'cbk';
 
     // Payment Types
     public const ALIPAY = 'ali';
@@ -47,8 +49,10 @@ class IdStrings
     public const INVOICE_SECURED = 'ivs';
     public const KLARNA = 'kla';
     public const PAYLATER_INVOICE = 'piv';
+    public const PAYLATER_INSTALLMENT = 'pit';
     public const PAYMENT_PAGE = 'ppg';
     public const PAYPAL = 'ppl';
+    public const PAYU = 'pyu';
     public const POST_FINANCE_CARD = 'pfc';
     public const POST_FINANCE_EFINANCE = 'pfe';
     public const PIS = 'pis';
@@ -85,6 +89,7 @@ class IdStrings
         self::PAYLATER_INVOICE,
         self::PAYMENT_PAGE,
         self::PAYPAL,
+        self::PAYU,
         self::POST_FINANCE_CARD,
         self::POST_FINANCE_EFINANCE,
         self::PIS,

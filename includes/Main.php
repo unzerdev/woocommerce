@@ -16,6 +16,7 @@ use UnzerPayments\Gateways\DirectDebit;
 use UnzerPayments\Gateways\Eps;
 use UnzerPayments\Gateways\Giropay;
 use UnzerPayments\Gateways\Ideal;
+use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
 use UnzerPayments\Gateways\Paypal;
 use UnzerPayments\Gateways\PostFinanceCard;
@@ -118,11 +119,19 @@ class Main
                 'show_in_admin_all_list' => true,
                 'show_in_admin_status_list' => true,
             ]);
+            register_post_status(OrderService::ORDER_STATUS_WAITING_FOR_PAYMENT, [
+                'label' => __('Waiting for payment', 'unzer-payments'),
+                'public' => true,
+                'exclude_from_search' => false,
+                'show_in_admin_all_list' => true,
+                'show_in_admin_status_list' => true,
+            ]);
         });
 
         add_filter('wc_order_statuses', function ($statusList) {
             $statusList[OrderService::ORDER_STATUS_CHARGEBACK] = __('Chargeback', 'unzer-payments');
             $statusList[OrderService::ORDER_STATUS_AUTHORIZED] = __('Ready to Capture', 'unzer-payments');
+            $statusList[OrderService::ORDER_STATUS_WAITING_FOR_PAYMENT] = __('Waiting for payment', 'unzer-payments');
             return $statusList;
         });
     }
@@ -214,6 +223,9 @@ class Main
             if (get_option('unzer_chargeback_order_status') === false) {
                 update_option('unzer_chargeback_order_status', OrderService::ORDER_STATUS_CHARGEBACK);
             }
+            if (get_option('unzer_authorized_order_status') === false) {
+                update_option('unzer_authorized_order_status', OrderService::ORDER_STATUS_AUTHORIZED);
+            }
             $settings = [
                 'title' => [
                     'type' => 'title',
@@ -225,6 +237,7 @@ class Main
                     'desc' => '',
                     'id' => 'unzer_public_key',
                     'value' => get_option('unzer_public_key'),
+                    'default' => '',
                 ],
                 'private_key' => [
                     'title' => __('Private Key', 'unzer-payments'),
@@ -232,6 +245,7 @@ class Main
                     'desc' => '',
                     'id' => 'unzer_private_key',
                     'value' => get_option('unzer_private_key'),
+                    'default' => '',
                 ],
                 'authorized_order_status' => [
                     'title' => __('Order status for authorized payments', 'unzer-payments'),
@@ -251,6 +265,7 @@ class Main
                     'options' => array_merge(['' => __('[Use WooC default status]', 'unzer-payments')], wc_get_order_statuses()),
                     'id' => 'unzer_captured_order_status',
                     'value' => get_option('unzer_captured_order_status'),
+                    'default' => '',
                 ],
                 'chargeback_order_status' => [
                     'title' => __('Order status for chargebacks', 'unzer-payments'),
@@ -292,9 +307,9 @@ class Main
             DirectDebit::GATEWAY_ID => DirectDebit::class,
             //DirectDebitSecured::GATEWAY_ID => DirectDebitSecured::class,
             Invoice::GATEWAY_ID => Invoice::class,
-            //Installment::GATEWAY_ID => Installment::class,
+            Installment::GATEWAY_ID => Installment::class,
             Prepayment::GATEWAY_ID => Prepayment::class,
-            Ideal::GATEWAY_ID => Ideal::class, //TODO setBIC
+            Ideal::GATEWAY_ID => Ideal::class,
             PostFinanceEfinance::GATEWAY_ID => PostFinanceEfinance::class,
             PostFinanceCard::GATEWAY_ID => PostFinanceCard::class,
             ApplePay::GATEWAY_ID => ApplePay::class,

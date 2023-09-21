@@ -131,42 +131,6 @@ class Invoice extends AbstractGateway
         );
     }
 
-    public function generate_key_check_html($key, $data)
-    {
-        $slug = $data['slug'];
-        $title = wp_kses_post($data['title']);
-        $isInvalidText = esc_html(__('Keys are not valid', 'unzer-payments'));
-        $isValidText = esc_html(__('Keys are valid', 'unzer-payments'));
-        wp_enqueue_script('unzer_admin_key_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_key_management.js');
-        wp_enqueue_script('unzer_admin_webhook_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_webhook_management.js');
-
-        $webhookHtml = '';
-        if($this->get_option('private_key_' . $slug) && $this->get_option('public_key_' . $slug)) {
-            ob_start();
-            include UNZER_PLUGIN_PATH . 'html/admin/webhooks.php';
-            $webhookHtml = ob_get_contents();
-            ob_end_clean();
-        }
-        $ajaxUrl = WC()->api_request_url(AdminController::KEY_VALIDATION_ROUTE_SLUG);
-        $returnHtml =  <<<HTML
-            <tr valign="top">
-                <th scope="row" class="titledesc">
-                    <label for="$key">$title</label>
-                </th>
-                <td class="forminp">
-                    <div id="unzer-key-status-$slug" class="unzer-key-status" data-slug="$slug" data-url="$ajaxUrl" style="margin-bottom:20px;">
-                        <div class="is-error" style="color:#dc1b1b; display:none;"><span class="unzer-status-circle" style="background:#cc0000;"></span>$isInvalidText</div>
-                        <div class="is-success" style=" display:none;"><span class="unzer-status-circle" style="background:#00a800;"></span>$isValidText</div>
-                    </div>
-                    $webhookHtml
-                </td>
-            </tr>
-            
-HTML;
-        return $returnHtml;
-
-    }
-
     public function has_fields()
     {
         return true;
@@ -214,6 +178,7 @@ HTML;
         if (!$this->is_enabled()) {
             return;
         }
+
         if (empty(WC()->session->get('unzerThreatMetrixId'))) {
             WC()->session->set('unzerThreatMetrixId', uniqid('unzer_tm_'));
         }
@@ -247,21 +212,14 @@ HTML;
         $order->save_meta_data();
 
         try {
-            $authorization = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $_POST['unzer-invoice-id'], function (Authorization $authorization) {
-                $riskData = new RiskData();
-                $riskData->setThreatMetrixId(WC()->session->get('unzerThreatMetrixId'));
-                WC()->session->set('unzerThreatMetrixId', '');
-                if (is_user_logged_in()) {
-                    /** @var \WP_User $user */
-                    $user = wp_get_current_user();
-                    $date = $user->user_registered ? date('Ymd', strtotime($user->user_registered)) : null;
-                    $riskData->setRegistrationLevel(1);
-                    $riskData->setRegistrationDate($date);
-                } else {
-                    $riskData->setRegistrationLevel(0);
+            $authorization = (new PaymentService())->performAuthorizationForOrder(
+                $order_id,
+                $this,
+                $_POST['unzer-invoice-id'],
+                function (Authorization $authorization) {
+                    AbstractGateway::addRiskDataToAuthorization($authorization);
                 }
-                $authorization->setRiskData($riskData);
-            });
+            );
         } catch (UnzerApiException $e) {
             throw new Exception($e->getClientMessage() ?: $e->getMessage());
         }

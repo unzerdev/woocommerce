@@ -23,6 +23,7 @@
  *
  * @package  UnzerSDK\test\integration\PaymentTypes
  */
+
 namespace UnzerSDK\test\integration\PaymentTypes;
 
 use UnzerSDK\Exceptions\UnzerApiException;
@@ -30,10 +31,17 @@ use UnzerSDK\Resources\AbstractUnzerResource;
 use UnzerSDK\Resources\PaymentTypes\InstallmentSecured;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 use UnzerSDK\test\BaseIntegrationTest;
+use UnzerSDK\test\Helper\TestEnvironmentService;
+
 use function count;
 
 class HirePurchaseTest extends BaseIntegrationTest
 {
+    protected function setUp(): void
+    {
+        $this->getUnzerObject(TestEnvironmentService::getLegacyTestPrivateKey());
+    }
+
     /**
      * Verify, backwards compatibility regarding fetching payment type and map it to invoice secured class.
      *
@@ -74,12 +82,12 @@ class HirePurchaseTest extends BaseIntegrationTest
         // When
         /** @var InstallmentSecured $hddMock */
         $this->unzer->createPaymentType($hddMock);
-        $this->assertRegExp('/^s-hdd-[.]*/', $hddMock->getId());
+        $this->assertMatchesRegularExpression('/^s-hdd-[.]*/', $hddMock->getId());
 
         // Then
         $fetchedType = $this->unzer->fetchPaymentType($hddMock->getId());
         $this->assertInstanceOf(InstallmentSecured::class, $fetchedType);
-        $this->assertRegExp('/^s-hdd-[.]*/', $fetchedType->getId());
+        $this->assertMatchesRegularExpression('/^s-hdd-[.]*/', $fetchedType->getId());
 
         return $fetchedType;
     }

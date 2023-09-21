@@ -24,6 +24,7 @@ class OrderService
     const ORDER_STATUS_CANCELLED = 'wc-cancelled';
     const ORDER_STATUS_CHARGEBACK = 'wc-unzer-chargeback';
     const ORDER_STATUS_AUTHORIZED = 'wc-unzer-authorized';
+    const ORDER_STATUS_WAITING_FOR_PAYMENT = 'wc-unzer-waiting';
     /**
      * @var LogService
      */
@@ -93,6 +94,7 @@ class OrderService
                 $amountDiscountNet = (float)$coupon->get_discount();
                 $discountTax = (float)$coupon->get_discount_tax();
                 $amountDiscount = $amountDiscountNet + $discountTax;
+
                 if (round($amountDiscount, 2) <= 0) {
                     if (!$isVoucherDeducted) {
                         $isVoucherDeducted = true;
@@ -101,6 +103,16 @@ class OrderService
                         $amountDiscount = $amountDiscountNet + $discountTax;
                     }
                 }
+
+                if (round($amountDiscount, 2) <= 0) {
+                    $couponEntity = new \WC_Coupon($coupon->get_code());
+                    if ($couponEntity->get_amount()) {
+                        $amountDiscount = $couponEntity->get_amount();
+                        $amountDiscountNet = $amountDiscount;
+                        $discountTax = 0;
+                    }
+                }
+
 
                 if (round($amountDiscount, 2) <= 0) {
                     continue;

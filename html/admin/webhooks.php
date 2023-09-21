@@ -13,10 +13,10 @@ $slug = isset($slug)?$slug:'';
         <th style="width:5%;">
             Event
         </th>
-        <th>
+        <th style="width:75%;">
             URL
         </th>
-        <th>
+        <th style="width:5%;">
 
         </th>
         </thead>

@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocMissingThrowsInspection */
 /**
@@ -22,12 +23,14 @@
  *
  * @package  UnzerSDK\test\integration
  */
+
 namespace UnzerSDK\test\integration;
 
 use UnzerSDK\Constants\CancelReasonCodes;
 use UnzerSDK\Resources\PaymentTypes\Invoice;
 use UnzerSDK\Resources\PaymentTypes\InvoiceSecured;
 use UnzerSDK\test\BaseIntegrationTest;
+use UnzerSDK\test\Helper\TestEnvironmentService;
 
 class PaymentCancelTest extends BaseIntegrationTest
 {
@@ -64,6 +67,7 @@ class PaymentCancelTest extends BaseIntegrationTest
      */
     public function cancelOnChargeAndDoubleCancel(): void
     {
+        $this->useLegacyKey();
         $charge = $this->createCharge(123.44);
         $payment = $this->unzer->fetchPayment($charge->getPaymentId());
         $this->assertTrue($payment->isCompleted());
@@ -122,6 +126,7 @@ class PaymentCancelTest extends BaseIntegrationTest
      */
     public function partialCancelAndFullCancelOnSingleCharge(): void
     {
+        $this->useLegacyKey();
         $charge = $this->createCharge(222.33);
         $payment = $this->unzer->fetchPayment($charge->getPaymentId());
         $this->assertTrue($payment->isCompleted());
@@ -349,7 +354,7 @@ class PaymentCancelTest extends BaseIntegrationTest
      */
     public function fullCancelOnInitialInvoiceCharge($amount): void
     {
-        $this->useNon3dsKey();
+        $this->getUnzerObject()->setKey(TestEnvironmentService::getLegacyTestPrivateKey());
         /** @var Invoice $invoice */
         $invoice = $this->unzer->createPaymentType(new Invoice());
         $charge = $invoice->charge(100.0, 'EUR', self::RETURN_URL);
@@ -370,7 +375,7 @@ class PaymentCancelTest extends BaseIntegrationTest
      */
     public function partCancelOnInitialInvoiceChargeShouldBePossible(): void
     {
-        $this->useNon3dsKey();
+        $this->getUnzerObject()->setKey(TestEnvironmentService::getLegacyTestPrivateKey());
         /** @var Invoice $invoice */
         $invoice = $this->unzer->createPaymentType(new Invoice());
         $charge = $invoice->charge(100.0, 'EUR', self::RETURN_URL);
@@ -390,6 +395,7 @@ class PaymentCancelTest extends BaseIntegrationTest
      */
     public function partCancelOnInitialInvoiceSecuredChargeShouldCancelMaxUnpaidAmount(): void
     {
+        $this->getUnzerObject()->setKey(TestEnvironmentService::getLegacyTestPrivateKey());
         /** @var InvoiceSecured $invoiceSecured */
         $invoiceSecured = $this->unzer->createPaymentType(new InvoiceSecured());
 
@@ -426,6 +432,7 @@ class PaymentCancelTest extends BaseIntegrationTest
      */
     public function fullCancelOnPaidInvoiceSecuredPaymentShouldBePossible(): void
     {
+        $this->getUnzerObject()->setKey(TestEnvironmentService::getLegacyTestPrivateKey());
         /** @var InvoiceSecured $invoiceSecured */
         $invoiceSecured = $this->unzer->createPaymentType(new InvoiceSecured());
 
@@ -464,6 +471,7 @@ class PaymentCancelTest extends BaseIntegrationTest
      */
     public function cancelMoreThanWasCharged(): void
     {
+        $this->useLegacyKey();
         $charge = $this->createCharge(50.0);
         $payment = $this->unzer->fetchPayment($charge->getPaymentId());
         $this->assertTrue($payment->isCompleted());

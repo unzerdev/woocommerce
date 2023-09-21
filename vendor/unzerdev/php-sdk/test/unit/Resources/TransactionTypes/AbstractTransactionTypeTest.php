@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocMissingThrowsInspection */
 /**
@@ -96,7 +97,7 @@ class AbstractTransactionTypeTest extends BasePaymentTest
         $this->assertSame('myUniqueId', $transactionType->getUniqueId());
         $this->assertSame('myTraceId', $transactionType->getTraceId());
         $this->assertNotNull($transactionType->getAdditionalTransactionData());
-        $this->assertObjectHasAttribute('someDataKey', $transactionType->getAdditionalTransactionData());
+        $this->assertTrue(property_exists($transactionType->getAdditionalTransactionData(), 'someDataKey'));
 
         $message = $transactionType->getMessage();
         $this->assertSame('1234', $message->getCode());
