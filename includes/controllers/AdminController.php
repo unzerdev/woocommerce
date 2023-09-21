@@ -4,6 +4,7 @@ namespace UnzerPayments\Controllers;
 
 use Exception;
 use UnzerPayments\Gateways\ApplePay;
+use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
 use UnzerPayments\Main;
 use UnzerPayments\SdkExtension\Resource\ApplePayCertificate;
@@ -170,18 +171,28 @@ class AdminController
 
     public function validateKeypair()
     {
-        $paymentService = new PaymentService();
-        if (!empty($_POST['slug'])) {
-            $invoiceGateway = new Invoice();
-            $privateKey = $invoiceGateway->get_option('private_key_' . $_POST['slug']);
-            $publicKey = $invoiceGateway->get_option('public_key_' . $_POST['slug']);
-            $unzerManager = new Unzer($privateKey);
-        } else {
-            $unzerManager = $paymentService->getUnzerManager(null);
-            $publicKey = get_option('unzer_public_key');
-        }
-
         try {
+            $paymentService = new PaymentService();
+            if (!empty($_POST['slug']) && !empty($_POST['gateway'])) {
+                if ($_POST['gateway'] === 'unzer_installment') {
+                    $paymentGateway = new Installment();
+                } elseif ($_POST['gateway'] === 'unzer_invoice') {
+                    $paymentGateway = new Invoice();
+                } else {
+                    throw new Exception('unknown payment method');
+                }
+                $privateKey = $paymentGateway->get_option('private_key_' . $_POST['slug']);
+                $publicKey = $paymentGateway->get_option('public_key_' . $_POST['slug']);
+                if (empty($privateKey) || empty($publicKey)) {
+                    throw new Exception('missing key');
+                }
+                $unzerManager = new Unzer($privateKey);
+            } else {
+                $unzerManager = $paymentService->getUnzerManager(null);
+                $publicKey = get_option('unzer_public_key');
+            }
+
+
             $keyPair = $unzerManager->fetchKeypair();
             if (!empty($keyPair->getPublicKey()) && $keyPair->getPublicKey() === $publicKey) {
                 $this->renderJson([
@@ -193,6 +204,7 @@ class AdminController
         } catch (Exception $e) {
             $this->renderJson([
                 'isValid' => 0,
+                'msg'=>$e->getMessage()
             ]);
         }
     }

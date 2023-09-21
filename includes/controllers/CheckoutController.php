@@ -4,7 +4,7 @@ namespace UnzerPayments\Controllers;
 
 use Exception;
 use UnzerPayments\Gateways\ApplePay;
-use UnzerPayments\Gateways\Invoice;
+use UnzerPayments\Gateways\Prepayment;
 use UnzerPayments\Main;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\OrderService;
@@ -93,7 +93,7 @@ class CheckoutController
     public static function checkoutSuccess($order)
     {
         if ($paymentInstructions = get_post_meta($order->get_id(), Main::ORDER_META_KEY_PAYMENT_INSTRUCTIONS, true)) {
-            if($order->get_payment_method() === Invoice::GATEWAY_ID){
+            if ($order->get_payment_method() !== Prepayment::GATEWAY_ID) {
                 return;
             }
             echo '<div id="unzer-payment-instructions" style="margin:20px 0;">' . $paymentInstructions . '</div>';

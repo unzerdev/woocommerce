@@ -20,11 +20,15 @@
  *
  * @package  UnzerSDK\Services
  */
+
 namespace UnzerSDK\Services;
 
 use DateTime;
 use UnzerSDK\Constants\TransactionTypes;
 use UnzerSDK\Exceptions\UnzerApiException;
+use UnzerSDK\Resources\EmbeddedResources\Paylater\InstallmentPlansQuery;
+use UnzerSDK\Resources\PaylaterInstallmentPlans;
+use UnzerSDK\Resources\PaymentTypes\PaylaterInstallment;
 use UnzerSDK\Unzer;
 use UnzerSDK\Interfaces\PaymentServiceInterface;
 use UnzerSDK\Resources\AbstractUnzerResource;
@@ -57,8 +61,6 @@ class PaymentService implements PaymentServiceInterface
         $this->unzer       = $unzer;
     }
 
-    //<editor-fold desc="Getters/Setters"
-
     /**
      * @return Unzer
      */
@@ -85,12 +87,6 @@ class PaymentService implements PaymentServiceInterface
     {
         return $this->getUnzer()->getResourceService();
     }
-
-    //</editor-fold>
-
-    //<editor-fold desc="Transactions">
-
-    //<editor-fold desc="Authorize transaction">
 
     public function performAuthorization(
         Authorization $authorization,
@@ -159,10 +155,6 @@ class PaymentService implements PaymentServiceInterface
         $this->performAuthorization($authorization, $paymentType, $customer, $metadata, $basket);
         return $authorization;
     }
-
-    //</editor-fold>
-
-    //<editor-fold desc="Charge transaction">
 
     /**
      * {@inheritDoc}
@@ -277,10 +269,6 @@ class PaymentService implements PaymentServiceInterface
         return $charge;
     }
 
-    //</editor-fold>
-
-    //<editor-fold desc="Payout transactions">
-
     /**
      * {@inheritDoc}
      */
@@ -307,10 +295,6 @@ class PaymentService implements PaymentServiceInterface
         return $payout;
     }
 
-    //</editor-fold>
-
-    //<editor-fold desc="Shipment transaction">
-
     /**
      * {@inheritDoc}
      */
@@ -322,12 +306,6 @@ class PaymentService implements PaymentServiceInterface
         $this->getResourceService()->createResource($shipment);
         return $shipment;
     }
-
-    //</editor-fold>
-
-    //</editor-fold>
-
-    //<editor-fold desc="Paypage">
 
     /**
      * {@inheritDoc}
@@ -353,10 +331,6 @@ class PaymentService implements PaymentServiceInterface
         return $this->initPayPage($paypage, TransactionTypes::AUTHORIZATION, $customer, $basket, $metadata);
     }
 
-    //</editor-fold>
-
-    //<editor-fold desc="Installment Secured">
-
     /**
      * {@inheritDoc}
      */
@@ -373,9 +347,16 @@ class PaymentService implements PaymentServiceInterface
         return $plans;
     }
 
-    //</editor-fold>
-
-    //<editor-fold desc="Helpers">
+    /**
+     * {@inheritDoc}
+     */
+    public function fetchPaylaterInstallmentPlans(
+        InstallmentPlansQuery $paylaterInstallmentPlansQuery
+    ): PaylaterInstallmentPlans {
+        $paylaterInstallment = (new PaylaterInstallment(null, null, null, null))->setParentResource($this->unzer);
+        $plans = (new PaylaterInstallmentPlans())->setQueryParameter($paylaterInstallmentPlansQuery)->setParentResource($paylaterInstallment);
+        return $this->unzer->getResourceService()->fetchResource($plans);
+    }
 
     /**
      * Creates the PayPage for the requested transaction method.
@@ -423,6 +404,4 @@ class PaymentService implements PaymentServiceInterface
     {
         return (new Payment($this->unzer))->setPaymentType($paymentType);
     }
-
-    //</editor-fold>
 }

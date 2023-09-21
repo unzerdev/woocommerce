@@ -1,13 +1,15 @@
 function unzerProcessSubKeyCheck(container) {
     const url = container.getAttribute('data-url');
     console.log(url);
+    const formData = new FormData();
+    formData.append('slug', container.getAttribute('data-slug'));
+    formData.append('gateway', container.getAttribute('data-gateway'));
+
     fetch(url,
         {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'slug=' + container.getAttribute('data-slug')
+            body: formData
+
         })
         .then(response => response.json())
         .then(data => {

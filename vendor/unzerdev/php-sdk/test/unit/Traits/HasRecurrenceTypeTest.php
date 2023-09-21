@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocMissingThrowsInspection */
 /**
@@ -22,6 +23,7 @@
  *
  * @package  UnzerSDK\test\unit
  */
+
 namespace UnzerSDK\test\unit\Traits;
 
 use UnzerSDK\Constants\RecurrenceTypes;
@@ -56,8 +58,8 @@ class HasRecurrenceTypeTest extends BasePaymentTest
 
         // Check correct data structure.
         $this->assertNotNull($charge->getAdditionalTransactionData());
-        $this->assertObjectHasAttribute('card', $charge->getAdditionalTransactionData());
-        $this->assertObjectHasAttribute('recurrenceType', $charge->getAdditionalTransactionData()->card);
+        $this->assertTrue(property_exists($charge->getAdditionalTransactionData(), 'card'));
+        $this->assertTrue(property_exists($charge->getAdditionalTransactionData()->card, 'recurrenceType'));
 
         // Recurrence type can be updated correctly.
         $this->assertEquals('oneclick', $charge->getRecurrenceType());

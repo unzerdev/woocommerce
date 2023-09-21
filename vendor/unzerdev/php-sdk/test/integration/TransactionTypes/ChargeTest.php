@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocMissingThrowsInspection */
 /**
@@ -22,6 +23,7 @@
  *
  * @package  UnzerSDK\test\integration\TransactionTypes
  */
+
 namespace UnzerSDK\test\integration\TransactionTypes;
 
 use UnzerSDK\Constants\RecurrenceTypes;
@@ -32,6 +34,7 @@ use UnzerSDK\Resources\PaymentTypes\InvoiceSecured;
 use UnzerSDK\Resources\PaymentTypes\SepaDirectDebit;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 use UnzerSDK\test\BaseIntegrationTest;
+use UnzerSDK\test\Helper\TestEnvironmentService;
 
 class ChargeTest extends BaseIntegrationTest
 {
@@ -42,6 +45,7 @@ class ChargeTest extends BaseIntegrationTest
      */
     public function chargeShouldWorkWithTypeId(): void
     {
+        $this->useLegacyKey();
         $paymentType = $this->unzer->createPaymentType(new SepaDirectDebit('DE89370400440532013000'));
         $charge = $this->unzer->charge(100.0, 'EUR', $paymentType->getId(), self::RETURN_URL);
         $this->assertTransactionResourceHasBeenCreated($charge);
@@ -57,6 +61,7 @@ class ChargeTest extends BaseIntegrationTest
      */
     public function chargeShouldWorkWithTypeObject(): void
     {
+        $this->useLegacyKey();
         $paymentType = $this->unzer->createPaymentType(new SepaDirectDebit('DE89370400440532013000'));
         $charge = $this->unzer->charge(100.0, 'EUR', $paymentType, self::RETURN_URL);
         $this->assertTransactionResourceHasBeenCreated($charge);
@@ -72,6 +77,7 @@ class ChargeTest extends BaseIntegrationTest
      */
     public function chargeStatusIsSetCorrectly(): void
     {
+        $this->useLegacyKey();
         $this->assertSuccess($this->createCharge());
     }
 
@@ -184,6 +190,7 @@ class ChargeTest extends BaseIntegrationTest
      */
     public function chargeWithCustomerShouldAcceptAllParameters(): void
     {
+        $this->getUnzerObject()->setKey(TestEnvironmentService::getLegacyTestPrivateKey());
         // prepare test data
         /** @var InvoiceSecured $ivg */
         $ivg = $this->unzer->createPaymentType(new InvoiceSecured());

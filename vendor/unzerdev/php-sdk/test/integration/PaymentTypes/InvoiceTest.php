@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocMissingThrowsInspection */
 /**
@@ -22,19 +23,20 @@
  *
  * @package  UnzerSDK\test\integration\PaymentTypes
  */
+
 namespace UnzerSDK\test\integration\PaymentTypes;
 
 use UnzerSDK\Constants\ApiResponseCodes;
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\PaymentTypes\Invoice;
-use UnzerSDK\Services\EnvironmentService;
 use UnzerSDK\test\BaseIntegrationTest;
+use UnzerSDK\test\Helper\TestEnvironmentService;
 
 class InvoiceTest extends BaseIntegrationTest
 {
     protected function setUp(): void
     {
-        $this->getUnzerObject(EnvironmentService::getTestPrivateKey(true));
+        $this->getUnzerObject(TestEnvironmentService::getLegacyTestPrivateKey());
     }
 
     /**

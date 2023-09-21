@@ -5,6 +5,7 @@ namespace UnzerPayments\Services;
 
 use Exception;
 use UnzerPayments\Gateways\AbstractGateway;
+use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
 use UnzerPayments\Main;
 use UnzerPayments\Util;
@@ -46,6 +47,14 @@ class PaymentService
             $isB2B = !empty($order->get_billing_company());
             $currency = $order->get_currency();
             $optionKey = 'private_key_' . strtolower($currency) . '_' . ($isB2B ? 'b2b' : 'b2c');
+            $specialPrivateKey = $paymentGateway->get_option($optionKey);
+            if (!empty($specialPrivateKey)) {
+                $privateKey = $specialPrivateKey;
+            }
+        }elseif ($paymentGateway instanceof Installment) {
+            //B2C only
+            $currency = $order->get_currency();
+            $optionKey = 'private_key_' . strtolower($currency) . '_b2c';
             $specialPrivateKey = $paymentGateway->get_option($optionKey);
             if (!empty($specialPrivateKey)) {
                 $privateKey = $specialPrivateKey;
@@ -111,7 +120,7 @@ class PaymentService
      * @param callable|null $transactionEditor
      * @param string $type
      * @return Charge|Authorization
-     * @throws UnzerApiException
+     * @throws UnzerApiException|Exception
      */
     protected function performChargeOrAuthorizationForOrder(
         $orderId,
@@ -127,6 +136,15 @@ class PaymentService
         $this->logger->debug('start authorization/charge for #' . $orderId . ' with ' . $order->get_payment_method());
         $basket = (new OrderService())->getBasket($order);
         $customer = (new CustomerService())->getCustomerFromOrder($order);
+
+        if($paymentGateway instanceof Installment){
+            $shippingAddress  = $customer->getShippingAddress();
+            $billingAddress = $customer->getBillingAddress();
+            if($shippingAddress->getName() !== $billingAddress->getName()){
+                throw new Exception(__('Installment payment is only available for shipping and billing address with the same name', 'unzer-payments'));
+            }
+        }
+
         $unzer = $this->getUnzerManagerForOrder($order);
         $paymentType = class_exists($paymentType) ? $unzer->createPaymentType(new $paymentType) : $paymentType;
 
@@ -208,6 +226,7 @@ class PaymentService
      */
     public function performRefundOrReversal($orderId, AbstractGateway $paymentGateway, $amount): AbstractUnzerResource
     {
+        $errorMessages = [];
         $amount = (float)$amount;
         $unzer = $this->getUnzerManagerForOrder(wc_get_order($orderId));
         $paymentId = get_post_meta($orderId, Main::ORDER_META_KEY_PAYMENT_ID, true);
@@ -232,16 +251,23 @@ class PaymentService
                     return $charge->cancel($amount, null, 'fromWordpressOrder' . $orderId . '_' . uniqid());
                 } catch (Exception $e) {
                     $this->logger->warning('refund on charge not possible: ' . $e->getMessage());
+                    $errorMessages[] = $e->getMessage();
                 }
             }
         }
         try {
             $authorization = $unzer->fetchAuthorization($paymentId);
+
             return $authorization->cancel($amount);
         } catch (Exception $e) {
             $this->logger->warning('refund on authorization not possible: ' . $e->getMessage());
+            $errorMessages[] = $e->getMessage();
         }
-        throw new Exception(sprintf(__('Unable to do refund: Maximum amount for single refund is %s.'), html_entity_decode(strip_tags(wc_price($maxCaptureRefund, ['currency' => $payment->getCurrency()])))) . ($numberOfRefundsPossible > 1 ? ' ' . sprintf(__('However, you may refund in up to %s smaller chunks.'), $numberOfRefundsPossible) : ''));
+        throw new Exception(
+            sprintf(__('Unable to do refund: Maximum amount for single refund is %s.'), html_entity_decode(strip_tags(wc_price($maxCaptureRefund, ['currency' => $payment->getCurrency()])))) .
+            ($numberOfRefundsPossible > 1 ? ' ' . sprintf(__('However, you may refund in up to %s smaller chunks.'), $numberOfRefundsPossible) : '').
+            ($errorMessages?"\n\n". __('Original error message: ', 'unzer-payments') . implode(' ', $errorMessages):'')
+        );
     }
 
     /**

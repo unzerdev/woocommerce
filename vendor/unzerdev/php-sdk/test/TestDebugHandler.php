@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocMissingThrowsInspection */
 /**
@@ -22,10 +23,10 @@
  *
  * @package  UnzerSDK\test\integration
  */
+
 namespace UnzerSDK\test;
 
 use UnzerSDK\Interfaces\DebugHandlerInterface;
-use UnzerSDK\Services\EnvironmentService;
 
 class TestDebugHandler implements DebugHandlerInterface
 {
@@ -39,7 +40,7 @@ class TestDebugHandler implements DebugHandlerInterface
     {
         $logMessage = 'Unzer debug message: ' . $message . "\n";
 
-        if (EnvironmentService::isTestLoggingActive()) {
+        if (Helper\TestEnvironmentService::isTestLoggingActive()) {
             // Echo log messages directly.
             echo $logMessage;
         } else {
