@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         target.style.display = target.style.display === 'none'?'':'none';
     });
 
-    const savePaymentInstrumentSelect = document.querySelector('#unzer-paymentsunzer_card_save_instruments, #unzer-paymentsunzer_paypal_save_instruments, #unzer-paymentsunzer_paypal_save_instruments');
+    const savePaymentInstrumentSelect = document.querySelector('#unzer-paymentsunzer_card_save_instruments, #unzer-paymentsunzer_paypal_save_instruments, #unzer-paymentsunzer_paypal_save_instruments, #unzer-paymentsunzer_direct_debit_save_instruments');
     if(savePaymentInstrumentSelect){
         savePaymentInstrumentSelect.addEventListener('change', (e)=>{
             const value = e.target.value;

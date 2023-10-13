@@ -95,6 +95,7 @@ class Main
         add_action('woocommerce_after_edit_account_form', [new AccountController(), 'accountPaymentInstruments']);
         add_action('woocommerce_update_options_payment_gateways_unzer_card', [$this, 'savePaymentMethodSettingsCard']);
         add_action('woocommerce_update_options_payment_gateways_unzer_paypal', [$this, 'savePaymentMethodSettingsPaypal']);
+        add_action('woocommerce_update_options_payment_gateways_unzer_direct_debit', [$this, 'savePaymentMethodSettingsDirectDebit']);
         add_action('woocommerce_update_options_payment_gateways_unzer_apple_pay', [$this, 'savePaymentMethodSettingsApplePay']);
         add_action('admin_notices', [new DashboardService(), 'showNotifications']);
         add_action('admin_enqueue_scripts', function () {
@@ -150,6 +151,14 @@ class Main
         $paypalGateway = new Paypal();
         if ($_POST['unzer-paymentsunzer_paypal_save_instruments'] === 'no') {
             $paypalGateway->deleteAllSavedPaymentInstruments();
+        }
+    }
+
+    public function savePaymentMethodSettingsDirectDebit(): void
+    {
+        $gateway = new DirectDebit();
+        if ($_POST['unzer-paymentsunzer_direct_debit_save_instruments'] === 'no') {
+            $gateway->deleteAllSavedPaymentInstruments();
         }
     }
 

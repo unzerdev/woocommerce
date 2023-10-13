@@ -5,6 +5,11 @@ namespace UnzerPayments\Gateways;
 
 use Exception;
 use UnzerPayments\Services\PaymentService;
+use UnzerPayments\Traits\SavePaymentInstrumentTrait;
+use UnzerSDK\Constants\RecurrenceTypes;
+use UnzerSDK\Resources\PaymentTypes\SepaDirectDebit;
+use UnzerSDK\Resources\TransactionTypes\Authorization;
+use UnzerSDK\Resources\TransactionTypes\Charge;
 use WC_Order;
 
 if (!defined('ABSPATH')) {
@@ -13,6 +18,9 @@ if (!defined('ABSPATH')) {
 
 class DirectDebit extends AbstractGateway
 {
+    use SavePaymentInstrumentTrait;
+
+    public $paymentTypeResource = SepaDirectDebit::class;
     const GATEWAY_ID = 'unzer_direct_debit';
     public $method_title = 'Unzer Direct Debit';
     public $method_description;
@@ -43,7 +51,8 @@ class DirectDebit extends AbstractGateway
         if ($description) {
             echo wpautop(wptexturize($description));
         }
-        ?>
+
+        $form = '
         <div id="unzer-direct-debit-form" class="unzerUI form">
             <input type="hidden" id="unzer-direct-debit-id" name="unzer-direct-debit-id" value=""/>
             <div class="field">
@@ -51,7 +60,8 @@ class DirectDebit extends AbstractGateway
                 </div>
             </div>
         </div>
-        <?php
+        ';
+        echo $this->renderSavedInstrumentsSelection($form);
     }
 
     public function payment_scripts()
@@ -92,6 +102,17 @@ class DirectDebit extends AbstractGateway
                     'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
                     'default' => '',
                 ],
+                AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => [
+                    'title' => __('Save bank details for registered customers', 'unzer-payments'),
+                    'label' => __('&nbsp;', 'unzer-payments'),
+                    'type' => 'select',
+                    'description' => '',
+                    'default' => 'no',
+                    'options' => [
+                        'no' => __('No', 'unzer-payments'),
+                        'yes' => __('Yes', 'unzer-payments'),
+                    ],
+                ],
             ]
         );
     }
@@ -102,18 +123,25 @@ class DirectDebit extends AbstractGateway
         $return = [
             'result' => 'success',
         ];
-        $charge = (new PaymentService())->performChargeForOrder($order_id, $this, $_POST['unzer-direct-debit-id']);
+
+        $savePaymentInstrument = !empty($_POST['unzer-save-payment-instrument-' . $this->id]);
+        WC()->session->set('save_payment_instrument', $savePaymentInstrument);
+        $transactionEditorFunction = null;
+
+        $directDebitId = !empty($_POST[static::GATEWAY_ID . '_payment_instrument']) ? $_POST[static::GATEWAY_ID . '_payment_instrument'] : $_POST['unzer-direct-debit-id'];
+        $charge = (new PaymentService())->performChargeForOrder($order_id, $this, $directDebitId, $transactionEditorFunction);
 
         if (!($charge->isPending() || $charge->isSuccess())) {
             throw new Exception($charge->getMessage()->getCustomer());
         }
-        if($charge->isSuccess()){
+        if ($charge->isSuccess()) {
             $order = wc_get_order($order_id);
             $order->payment_complete($charge->getPayment()->getId());
-        }else{
+        } else {
             $this->set_order_transaction_number(wc_get_order($order_id), $charge->getPayment()->getId());
         }
-        $return['redirect'] = $this->get_return_url(wc_get_order($order_id));
+        WC()->session->set('unzer_confirm_order_id', $order_id);
+        $return['redirect'] = $this->get_confirm_url();
         return $return;
     }
 

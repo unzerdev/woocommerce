@@ -25,6 +25,11 @@ class CheckoutController
         $logger->debug('CheckoutController::confirm()');
         $orderId = (int)WC()->session->get('order_awaiting_payment');
         if (empty($orderId)) {
+            $logger->debug('order id from unzer_confirm_order_id');
+            $orderId = (int)WC()->session->get('unzer_confirm_order_id');
+            WC()->session->set('unzer_confirm_order_id', null);
+        }
+        if (empty($orderId)) {
             $logger->error('empty order id for confirmation endpoint');
             wp_redirect(wc_get_checkout_url());
             die;
