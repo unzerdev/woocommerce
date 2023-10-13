@@ -67,65 +67,77 @@ class Invoice extends AbstractGateway
                     'title' => __('Public Key EUR/B2C', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'private_key_eur_b2c' => [
                     'title' => __('Private Key EUR/B2C', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'key_check_eur_b2c' => [
                     'title' => __('Key Check EUR/B2C', 'unzer-payments'),
                     'type' => 'key_check',
                     'slug' => 'eur_b2c',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'public_key_eur_b2b' => [
                     'title' => __('Public Key EUR/B2B', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'private_key_eur_b2b' => [
                     'title' => __('Private Key EUR/B2B', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'key_check_eur_b2b' => [
                     'title' => __('Key Check EUR/B2B', 'unzer-payments'),
                     'type' => 'key_check',
                     'slug' => 'eur_b2b',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'public_key_chf_b2c' => [
                     'title' => __('Public Key CHF/B2C', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'private_key_chf_b2c' => [
                     'title' => __('Private Key CHF/B2C', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'key_check_chf_b2c' => [
                     'title' => __('Key Check CHF/B2C', 'unzer-payments'),
                     'type' => 'key_check',
                     'slug' => 'chf_b2c',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'public_key_chf_b2b' => [
                     'title' => __('Public Key CHF/B2B', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'private_key_chf_b2b' => [
                     'title' => __('Private Key CHF/B2B', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'key_check_chf_b2b' => [
                     'title' => __('Key Check CHF/B2B', 'unzer-payments'),
                     'type' => 'key_check',
                     'slug' => 'chf_b2b',
                     'desc' => '',
+                    'default' => '',
                 ],
             ]
         );
@@ -145,7 +157,7 @@ class Invoice extends AbstractGateway
         ?>
         <div class="unzer-checkout-field-row form-row">
             <label><?php echo esc_html(__('Date of birth', 'unzer-payments')); ?></label>
-            <input type="date" id="unzer-invoice-dob" name="unzer-invoice-dob" class="input-text" value="" max="<?php echo date('Y-m-d'); ?>"/>
+            <input type="date" id="unzer-invoice-dob" name="unzer-invoice-dob" class="input-text" value="<?php echo esc_attr($this->getUserBirthDate()); ?>" max="<?php echo date('Y-m-d'); ?>"/>
         </div>
         <div class="unzer-checkout-field-row form-row b2b" id="unzer-invoice-company-type-container">
             <label><?php echo esc_html(__('Type of company', 'unzer-payments')); ?></label>

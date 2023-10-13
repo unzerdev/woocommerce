@@ -5,6 +5,9 @@ namespace UnzerPayments\Gateways;
 
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Traits\SavePaymentInstrumentTrait;
+use UnzerSDK\Constants\RecurrenceTypes;
+use UnzerSDK\Resources\PaymentTypes\Paypal as PaypalResource;
+use UnzerSDK\Resources\TransactionTypes\Charge;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -14,6 +17,7 @@ class Paypal extends AbstractGateway
 {
     use SavePaymentInstrumentTrait;
 
+    public $paymentTypeResource = PaypalResource::class;
     const GATEWAY_ID = 'unzer_paypal';
     public $method_title = 'Unzer PayPal';
     public $method_description;
@@ -97,12 +101,16 @@ class Paypal extends AbstractGateway
             'result' => 'success',
         ];
 
-        $paymentMean = empty($_POST['unzer_paypal_payment_instrument'])?\UnzerSDK\Resources\PaymentTypes\Paypal::class:$_POST['unzer_paypal_payment_instrument'];
-        WC()->session->set('save_payment_instrument', !empty($_POST['unzer-save-payment-instrument']));
+        $paymentMean = empty($_POST['unzer_paypal_payment_instrument'])? PaypalResource::class:$_POST['unzer_paypal_payment_instrument'];
+
+        $savePaymentInstrument = !empty($_POST['unzer-save-payment-instrument-' . $this->id]);
+        WC()->session->set('save_payment_instrument', $savePaymentInstrument);
+        $transactionEditorFunction = null;
+
         if ($this->get_option('transaction_type') === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE) {
-            $transaction = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $paymentMean);
+            $transaction = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $paymentMean, $transactionEditorFunction);
         } else {
-            $transaction = (new PaymentService())->performChargeForOrder($order_id, $this, $paymentMean);
+            $transaction = (new PaymentService())->performChargeForOrder($order_id, $this, $paymentMean, $transactionEditorFunction);
         }
 
         if ($transaction->getPayment()->getRedirectUrl()) {

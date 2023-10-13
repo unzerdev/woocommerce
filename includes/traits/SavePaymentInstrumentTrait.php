@@ -20,7 +20,7 @@ trait SavePaymentInstrumentTrait{
         if($this->isSaveInstruments()){
             $originalForm .= '<div class="unzer-save-new-payment-instrument">
                                    <label>
-                                        <input type="checkbox" name="unzer-save-payment-instrument" value="1" class="unzer-save-payment-instrument-checkbox" '.(WC()->session->get('save_payment_instrument')?'checked ':'').'/>
+                                        <input type="checkbox" name="unzer-save-payment-instrument-'.$this->id.'" value="1" class="unzer-save-payment-instrument-checkbox" '.(WC()->session->get('save_payment_instrument')?'checked ':'').'/>
                                         <span class="label">'.esc_html(__('Save this for my next purchase', 'unzer-payments')).'</span>
                                    </label>
                               </div>';

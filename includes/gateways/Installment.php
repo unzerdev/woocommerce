@@ -4,6 +4,7 @@ namespace UnzerPayments\Gateways;
 
 
 use Exception;
+use UnzerPayments\Main;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
 use UnzerSDK\Exceptions\UnzerApiException;
@@ -51,7 +52,7 @@ class Installment extends AbstractGateway
         ?>
         <div class="unzer-checkout-field-row form-row">
             <label><?php echo esc_html(__('Date of birth', 'unzer-payments')); ?></label>
-            <input type="date" id="unzer-installment-dob" name="unzer-installment-dob" class="input-text" value="" max="<?php echo date('Y-m-d'); ?>"/>
+            <input type="date" id="unzer-installment-dob" name="unzer-installment-dob" class="input-text" value="<?php echo esc_attr($this->getUserBirthDate()); ?>" max="<?php echo date('Y-m-d'); ?>"/>
         </div>
         <div id="unzer-installment-form" class="unzerUI form">
             <input type="hidden" id="unzer-installment-id" name="unzer-installment-id" value=""/>
@@ -111,33 +112,39 @@ class Installment extends AbstractGateway
                     'title' => __('Public Key EUR/B2C', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'private_key_eur_b2c' => [
                     'title' => __('Private Key EUR/B2C', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'key_check_eur_b2c' => [
                     'title' => __('Key Check EUR/B2C', 'unzer-payments'),
                     'type' => 'key_check',
                     'slug' => 'eur_b2c',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'public_key_chf_b2c' => [
                     'title' => __('Public Key CHF/B2C', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'private_key_chf_b2c' => [
                     'title' => __('Private Key CHF/B2C', 'unzer-payments'),
                     'type' => 'text',
                     'desc' => '',
+                    'default' => '',
                 ],
                 'key_check_chf_b2c' => [
                     'title' => __('Key Check CHF/B2C', 'unzer-payments'),
                     'type' => 'key_check',
                     'slug' => 'chf_b2c',
                     'desc' => '',
+                    'default' => '',
                 ],
             ]
         );

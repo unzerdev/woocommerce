@@ -6,6 +6,9 @@ namespace UnzerPayments\Gateways;
 use Exception;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Traits\SavePaymentInstrumentTrait;
+use UnzerSDK\Constants\RecurrenceTypes;
+use UnzerSDK\Resources\TransactionTypes\Authorization;
+use UnzerSDK\Resources\TransactionTypes\Charge;
 use WC_Order;
 
 if (!defined('ABSPATH')) {
@@ -48,7 +51,7 @@ class Card extends AbstractGateway
             echo wpautop(wptexturize($description));
         }
         $form = '
-            <input type="hidden" id="unzer-card-id" name="unzer-card-id" value=""/>
+        <input type="hidden" id="unzer-card-id" name="unzer-card-id" value=""/>
         <div id="unzer-card-form" class="unzerUI form">
             
             <div class="field">
@@ -158,13 +161,27 @@ class Card extends AbstractGateway
         ];
 
         // for saved payment instruments
-        $cardId = !empty($_POST[static::GATEWAY_ID . '_payment_instrument']) ? $_POST[static::GATEWAY_ID . '_payment_instrument'] : $_POST['unzer-card-id'];
-        WC()->session->set('save_payment_instrument', !empty($_POST['unzer-save-payment-instrument']));
+        $isSavedPaymentInstrument = !empty($_POST[static::GATEWAY_ID . '_payment_instrument']);
+        $cardId = $isSavedPaymentInstrument ? $_POST[static::GATEWAY_ID . '_payment_instrument'] : $_POST['unzer-card-id'];
+        $savePaymentInstrument = !empty($_POST['unzer-save-payment-instrument-'.$this->id]);
+
+        WC()->session->set('save_payment_instrument', $savePaymentInstrument);
+        $transactionEditorFunction = null;
+        if ($savePaymentInstrument || $isSavedPaymentInstrument) {
+            /**
+             * @param Charge|Authorization $transaction
+             * @return void
+             */
+            $transactionEditorFunction = function ($transaction) {
+                $transaction->setRecurrenceType(RecurrenceTypes::ONE_CLICK);
+            };
+        }
+
 
         if ($this->get_option('transaction_type') === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE) {
-            $transaction = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $cardId);
+            $transaction = (new PaymentService())->performAuthorizationForOrder($order_id, $this, $cardId, $transactionEditorFunction);
         } else {
-            $transaction = (new PaymentService())->performChargeForOrder($order_id, $this, $cardId);
+            $transaction = (new PaymentService())->performChargeForOrder($order_id, $this, $cardId, $transactionEditorFunction);
         }
 
         if ($transaction->getPayment()->getRedirectUrl()) {

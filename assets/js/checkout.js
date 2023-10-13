@@ -175,6 +175,10 @@ const UnzerManager = {
         });
         jQuery('.woocommerce-checkout').off('checkout_place_order_unzer_direct_debit');
         jQuery('.woocommerce-checkout').on('checkout_place_order_unzer_direct_debit', function () {
+            const selectedSavedCard = document.querySelector('[name="unzer_direct_debit_payment_instrument"]:checked');
+            if (selectedSavedCard && selectedSavedCard.value) {
+                return true;
+            }
             if (document.getElementById('unzer-direct-debit-id').value) {
                 return true;
             }

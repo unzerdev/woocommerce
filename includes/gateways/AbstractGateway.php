@@ -232,6 +232,24 @@ HTML;
             throw new Exception(__('Please check your date of birth', 'unzer-payments'));
         }
         $order->update_meta_data(Main::ORDER_META_KEY_DATE_OF_BIRTH, date('Y-m-d', strtotime($dateOfBirth)));
+
+        $user = wp_get_current_user();
+        if ($user->ID) {
+            update_user_meta($user->ID, Main::ORDER_META_KEY_DATE_OF_BIRTH, date('Y-m-d', strtotime($dateOfBirth)));
+        }
+    }
+
+    protected function getUserBirthDate(): string
+    {
+        $dob = '';
+        $user = wp_get_current_user();
+        if ($user->ID) {
+            $dobFromUser = get_user_meta($user->ID, Main::ORDER_META_KEY_DATE_OF_BIRTH, true);
+            if ($dobFromUser) {
+                $dob = date('Y-m-d', strtotime($dobFromUser));
+            }
+        }
+        return $dob;
     }
 
     protected function addCheckoutAssets()
