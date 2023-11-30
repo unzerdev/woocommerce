@@ -277,7 +277,7 @@ class Invoice extends AbstractGateway
             . "IBAN: %s<br/>"
             . "BIC: %s<br/><br/>"
             . "<i>Please use only this identification number as the descriptor: </i><br/>"
-            . "%s"),
+            . "%s", 'unzer-payments'),
             wc_price($chargeOrAuthorization->getAmount(), ['currency' => $chargeOrAuthorization->getCurrency()]),
             $chargeOrAuthorization->getHolder(),
             $chargeOrAuthorization->getIban(),

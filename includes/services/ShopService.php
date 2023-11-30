@@ -11,7 +11,7 @@ class ShopService
     public function getMetadata(): Metadata
     {
         return (new Metadata())
-            ->addMetadata('pluginType', 'Unzer Payments')
+            ->addMetadata('pluginType', 'unzerdev/woocommerce')
             ->addMetadata('pluginVersion', UNZER_VERSION)
             ->setShopType('WooCommerce')
             ->setShopVersion(WC()->version);
