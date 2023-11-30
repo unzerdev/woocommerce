@@ -62,6 +62,8 @@ class WebhookController
             return;
         }
 
+        sleep(2);
+
         switch ($data['event']) {
             case WebhookEvents::CHARGE_CANCELED:
             case WebhookEvents::AUTHORIZE_CANCELED:
@@ -107,7 +109,6 @@ class WebhookController
 
     private function handleCancel($paymentId, $orderId)
     {
-        sleep(2);
         $this->logger->debug('webhook handleCancel', ['paymentId' => $paymentId, 'orderId' => $orderId]);
         $this->orderService->updateRefunds($paymentId, $orderId);
     }

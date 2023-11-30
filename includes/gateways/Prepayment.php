@@ -91,7 +91,7 @@ class Prepayment extends AbstractGateway
             . "IBAN: %s<br/>"
             . "BIC: %s<br/><br/>"
             . "<i>Please use only this identification number as the descriptor: </i><br/>"
-            . "%s"),
+            . "%s", 'unzer-payments'),
             wc_price($charge->getAmount(), ['currency' => $charge->getCurrency()]),
             $charge->getHolder(),
             $charge->getIban(),
