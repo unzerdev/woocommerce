@@ -2,17 +2,17 @@
     "packages": [
         {
             "name": "unzerdev/php-sdk",
-            "version": "3.3.0",
-            "version_normalized": "3.3.0.0",
+            "version": "3.4.1",
+            "version_normalized": "3.4.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/unzerdev/php-sdk.git",
-                "reference": "2854951496a7021e3f27fadefe7c35046669edab"
+                "reference": "df721cabfcfb7a95160de720ec3239bd3d6177da"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/unzerdev/php-sdk/zipball/2854951496a7021e3f27fadefe7c35046669edab",
-                "reference": "2854951496a7021e3f27fadefe7c35046669edab",
+                "url": "https://api.github.com/repos/unzerdev/php-sdk/zipball/df721cabfcfb7a95160de720ec3239bd3d6177da",
+                "reference": "df721cabfcfb7a95160de720ec3239bd3d6177da",
                 "shasum": ""
             },
             "require": {
@@ -26,7 +26,7 @@
             "suggest": {
                 "ext-curl": "*"
             },
-            "time": "2023-09-04T12:55:24+00:00",
+            "time": "2023-12-04T14:05:49+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -42,7 +42,7 @@
             "description": "This is the php sdk to connect to the Unzer rest api.",
             "support": {
                 "email": "support@unzer.com",
-                "source": "https://github.com/unzerdev/php-sdk/tree/3.3.0"
+                "source": "https://github.com/unzerdev/php-sdk/tree/3.4.1"
             },
             "install-path": "../unzerdev/php-sdk"
         }

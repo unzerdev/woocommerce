@@ -5,6 +5,7 @@ namespace UnzerPayments\Services;
 
 use Exception;
 use UnzerPayments\Gateways\AbstractGateway;
+use UnzerPayments\Gateways\DirectDebitSecured;
 use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
 use UnzerPayments\Main;
@@ -20,6 +21,8 @@ use WC_Order;
 
 class PaymentService
 {
+    protected LogService $logger;
+
     public function __construct()
     {
         $this->logger = new LogService();
@@ -51,10 +54,17 @@ class PaymentService
             if (!empty($specialPrivateKey)) {
                 $privateKey = $specialPrivateKey;
             }
-        }elseif ($paymentGateway instanceof Installment) {
+        } elseif ($paymentGateway instanceof Installment) {
             //B2C only
             $currency = $order->get_currency();
             $optionKey = 'private_key_' . strtolower($currency) . '_b2c';
+            $specialPrivateKey = $paymentGateway->get_option($optionKey);
+            if (!empty($specialPrivateKey)) {
+                $privateKey = $specialPrivateKey;
+            }
+        } elseif ($paymentGateway instanceof DirectDebitSecured) {
+            //B2C EUR only
+            $optionKey = 'private_key_eur_b2c';
             $specialPrivateKey = $paymentGateway->get_option($optionKey);
             if (!empty($specialPrivateKey)) {
                 $privateKey = $specialPrivateKey;
@@ -137,10 +147,10 @@ class PaymentService
         $basket = (new OrderService())->getBasket($order);
         $customer = (new CustomerService())->getCustomerFromOrder($order);
 
-        if($paymentGateway instanceof Installment){
-            $shippingAddress  = $customer->getShippingAddress();
+        if ($paymentGateway instanceof Installment) {
+            $shippingAddress = $customer->getShippingAddress();
             $billingAddress = $customer->getBillingAddress();
-            if($shippingAddress->getName() !== $billingAddress->getName()){
+            if ($shippingAddress->getName() !== $billingAddress->getName()) {
                 throw new Exception(__('Installment payment is only available for shipping and billing address with the same name', 'unzer-payments'));
             }
         }
@@ -160,6 +170,7 @@ class PaymentService
                 update_post_meta($order->get_id(), Main::ORDER_META_KEY_AUTHORIZATION_ID, $authorization->getId());
                 update_post_meta($order->get_id(), Main::ORDER_META_KEY_PAYMENT_ID, $authorization->getPayment()->getId());
                 update_post_meta($order->get_id(), Main::ORDER_META_KEY_PAYMENT_SHORT_ID, $authorization->getShortId());
+                $order->add_order_note(__('Unzer Payment ID: ', 'unzer-payments') . $authorization->getPayment()->getId());
                 if (method_exists($paymentGateway, 'get_payment_information')) {
                     update_post_meta($order->get_id(), Main::ORDER_META_KEY_PAYMENT_INSTRUCTIONS, $paymentGateway->get_payment_information($authorization));
                 }
@@ -175,6 +186,7 @@ class PaymentService
                 update_post_meta($order->get_id(), Main::ORDER_META_KEY_CHARGE_ID, $charge->getId());
                 update_post_meta($order->get_id(), Main::ORDER_META_KEY_PAYMENT_ID, $charge->getPayment()->getId());
                 update_post_meta($order->get_id(), Main::ORDER_META_KEY_PAYMENT_SHORT_ID, $charge->getShortId());
+                $order->add_order_note(__('Unzer Payment ID: ', 'unzer-payments') . $charge->getPayment()->getId());
                 if (method_exists($paymentGateway, 'get_payment_information')) {
                     update_post_meta($order->get_id(), Main::ORDER_META_KEY_PAYMENT_INSTRUCTIONS, $paymentGateway->get_payment_information($charge));
                 }
@@ -184,6 +196,7 @@ class PaymentService
 
         } catch (Exception $e) {
             $this->logger->error('authorization/charge failed for #' . $orderId . ' with ' . $order->get_payment_method(), ['msg' => $e->getMessage(), 'code' => $e->getCode(), 'trace' => $e->getTraceAsString()]);
+            $order->add_order_note('authorization/charge with ' . $order->get_payment_method(). ' failed: ' . $e->getMessage());
             throw $e;
         }
         return $return;
@@ -265,8 +278,8 @@ class PaymentService
         }
         throw new Exception(
             sprintf(__('Unable to do refund: Maximum amount for single refund is %s.'), html_entity_decode(strip_tags(wc_price($maxCaptureRefund, ['currency' => $payment->getCurrency()])))) .
-            ($numberOfRefundsPossible > 1 ? ' ' . sprintf(__('However, you may refund in up to %s smaller chunks.'), $numberOfRefundsPossible) : '').
-            ($errorMessages?"\n\n". __('Original error message: ', 'unzer-payments') . implode(' ', $errorMessages):'')
+            ($numberOfRefundsPossible > 1 ? ' ' . sprintf(__('However, you may refund in up to %s smaller chunks.'), $numberOfRefundsPossible) : '') .
+            ($errorMessages ? "\n\n" . __('Original error message: ', 'unzer-payments') . implode(' ', $errorMessages) : '')
         );
     }
 

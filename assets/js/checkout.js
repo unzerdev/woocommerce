@@ -20,6 +20,9 @@ const UnzerConfig = {
             return unzer_parameters.publicKey_installment_chf_b2c;
         }
         return null;
+    },
+    getPublicKeyForDirectDebitSecured() {
+        return unzer_parameters.publicKey_directdebitsecured_eur_b2c;
     }
 }
 
@@ -61,6 +64,17 @@ const UnzerManager = {
                     showNotify: false
                 });
             }
+            if (UnzerConfig.getPublicKeyForDirectDebitSecured()) {
+                UnzerManager.instanceDirectDebitSecured = UnzerManager.instanceDirectDebitSecured || new unzer(UnzerConfig.getPublicKeyForDirectDebitSecured(), {
+                    locale: UnzerConfig.getLocale(),
+                    showNotify: false
+                });
+            }
+
+            document.addEventListener('unzer_country_changed', function(){
+                UnzerManager.toggleDirectDebitSecuredDisplay();
+                UnzerManager.toggleInstallmentDisplay();
+            });
 
             UnzerManager.initCard();
             UnzerManager.initDirectDebit();
@@ -179,6 +193,13 @@ const UnzerManager = {
             if (selectedSavedCard && selectedSavedCard.value) {
                 return true;
             }
+            const sepaMandateCheckbox = document.getElementById('unzer-accept-sepa-mandate-checkbox');
+            if(sepaMandateCheckbox && !sepaMandateCheckbox.checked){
+                UnzerManager.error(unzer_i18n.errorSepaMandate || 'Please accept the SEPA mandate');
+                return false;
+            }
+
+
             if (document.getElementById('unzer-direct-debit-id').value) {
                 return true;
             }
@@ -202,12 +223,15 @@ const UnzerManager = {
         if (document.getElementById('unzer-direct-debit-secured-form').getAttribute('is-init')) {
             return;
         }
+        if(!UnzerManager.instanceDirectDebitSecured){
+            return;
+        }
         document.getElementById('unzer-direct-debit-secured-form').setAttribute('is-init', true);
+        UnzerManager.toggleDirectDebitSecuredDisplay();
 
-
-        const directDebitSecuredInstance = UnzerManager.instance.SepaDirectDebitSecured();
-        directDebitSecuredInstance.create('sepa-direct-debit-secured', {
-            containerId: 'unzer-direct-debit-secured-iban'
+        const directDebitSecuredInstance = UnzerManager.instanceDirectDebitSecured.PaylaterDirectDebit();
+        directDebitSecuredInstance.create('paylater-direct-debit', {
+            containerId: 'unzer-direct-debit-secured-form'
         });
         document.getElementById('unzer-direct-debit-secured-id').value = '';
         jQuery(document.body).on('checkout_error', () => {
@@ -316,6 +340,23 @@ const UnzerManager = {
             paymentMethodContainer.style.display = 'none';
             //uncheck radio button
             document.getElementById('payment_method_unzer_installment').checked = false;
+            return false;
+        } else {
+            paymentMethodContainer.style.display = '';
+            return true;
+        }
+    },
+
+    toggleDirectDebitSecuredDisplay() {
+        const paymentMethodContainer = document.querySelector('.wc_payment_method.payment_method_unzer_direct_debit_secured');
+        if (!paymentMethodContainer) {
+            return false;
+        }
+
+        if (UnzerManager.isB2B() || ['DE', 'AT'].indexOf(UnzerManager.country) === -1) {
+            paymentMethodContainer.style.display = 'none';
+            //uncheck radio button
+            document.getElementById('payment_method_unzer_direct_debit_secured').checked = false;
             return false;
         } else {
             paymentMethodContainer.style.display = '';
@@ -627,6 +668,7 @@ jQuery(() => {
             UnzerManager.b2bState = UnzerManager.isB2B();
             UnzerManager.rerenderInvoice();
             UnzerManager.toggleInstallmentDisplay();
+            UnzerManager.toggleDirectDebitSecuredDisplay();
         }
 
         UnzerManager.checkCountry();

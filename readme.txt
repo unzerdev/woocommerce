@@ -3,7 +3,7 @@ Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
 Tested up to: 6.3
-Stable tag: 1.4.2
+Stable tag: 1.5.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Author URI: https://unzer.com
@@ -38,6 +38,7 @@ Use Unzer plugin for WooCommerce to provide an easy-to-install and use payment g
 • Alipay
 • Bancontact
 • Direct Debit
+• Direct Debit Secured
 • PostFinance Card
 • PostFinance E-Finance
 • Prepayment
@@ -53,6 +54,11 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth - online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 == Changelog ==
+
+= 1.5.0 =
+- Direct Debit Secured as a new payment method
+- SEPA mandate is now available for Direct Debit
+- Missing Payment ID with redirect payment methods is now fixed
 
 = 1.4.2 =
 - Sending metadata for the plugin with shop and plugin version

@@ -13,6 +13,7 @@ use UnzerPayments\Gateways\ApplePay;
 use UnzerPayments\Gateways\Bancontact;
 use UnzerPayments\Gateways\Card;
 use UnzerPayments\Gateways\DirectDebit;
+use UnzerPayments\Gateways\DirectDebitSecured;
 use UnzerPayments\Gateways\Eps;
 use UnzerPayments\Gateways\Giropay;
 use UnzerPayments\Gateways\Ideal;
@@ -73,6 +74,7 @@ class Main
         add_filter('woocommerce_get_settings_checkout', [$this, 'addGlobalSettings'], 10, 3);
         add_filter('woocommerce_payment_gateways', [$this, 'addPaymentGateways']);
         add_filter('is_protected_meta', [$this, 'setMetaProtected'], 10, 3);
+        add_filter('woocommerce_valid_order_statuses_for_payment_complete', [$this, 'addOrderStatusesForPaymentComplete']);
 
         add_action('woocommerce_api_' . AdminController::GET_ORDER_TRANSACTIONS_ROUTE_SLUG, [new AdminController(), 'getOrderTransactions']);
         add_action('woocommerce_api_' . AdminController::CHARGE_ROUTE_SLUG, [new AdminController(), 'doCharge']);
@@ -294,6 +296,14 @@ class Main
         return $settings;
     }
 
+    public function addOrderStatusesForPaymentComplete($statuses): array
+    {
+        if(get_option('unzer_authorized_order_status')) {
+            $statuses[] = get_option('unzer_authorized_order_status');
+        }
+        return $statuses;
+    }
+
     public function addPaymentGateways($gateways): array
     {
         return array_merge($gateways, array_values($this->getPaymentGateways()));
@@ -314,7 +324,7 @@ class Main
             //Klarna::GATEWAY_ID => Klarna::class,
             //Pis::GATEWAY_ID => Pis::class,
             DirectDebit::GATEWAY_ID => DirectDebit::class,
-            //DirectDebitSecured::GATEWAY_ID => DirectDebitSecured::class,
+            DirectDebitSecured::GATEWAY_ID => DirectDebitSecured::class,
             Invoice::GATEWAY_ID => Invoice::class,
             Installment::GATEWAY_ID => Installment::class,
             Prepayment::GATEWAY_ID => Prepayment::class,

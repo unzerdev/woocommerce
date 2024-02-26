@@ -4,6 +4,7 @@ namespace UnzerPayments\Controllers;
 
 use Exception;
 use UnzerPayments\Gateways\ApplePay;
+use UnzerPayments\Gateways\DirectDebitSecured;
 use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
 use UnzerPayments\Main;
@@ -174,10 +175,12 @@ class AdminController
         try {
             $paymentService = new PaymentService();
             if (!empty($_POST['slug']) && !empty($_POST['gateway'])) {
-                if ($_POST['gateway'] === 'unzer_installment') {
+                if ($_POST['gateway'] === Installment::GATEWAY_ID) {
                     $paymentGateway = new Installment();
-                } elseif ($_POST['gateway'] === 'unzer_invoice') {
+                } elseif ($_POST['gateway'] === Invoice::GATEWAY_ID) {
                     $paymentGateway = new Invoice();
+                }elseif ($_POST['gateway'] === DirectDebitSecured::GATEWAY_ID) {
+                    $paymentGateway = new DirectDebitSecured();
                 } else {
                     throw new Exception('unknown payment method');
                 }

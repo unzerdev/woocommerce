@@ -100,7 +100,7 @@ class WebhookController
             if ($orderStatus) {
                 $order->update_status($orderStatus, __('Chargeback received', 'unzer-payments'));
             }
-        }else{
+        } else {
             $this->logger->debug('no order for chargeback', ['orderId' => $orderId]);
         }
         //trigger admin notice
@@ -126,10 +126,11 @@ class WebhookController
     {
         $this->logger->debug('webhook handleChargeSucceeded', ['paymentId' => $paymentId, 'orderId' => $orderId]);
         $order = wc_get_order($orderId);
-        if (empty($order->get_transaction_id())) {
-            $order->payment_complete($paymentId);
-            $order->set_transaction_id($paymentId);
-            $order->save();
+        $order->payment_complete($paymentId);
+        $order->set_transaction_id($paymentId);
+        if (get_option('unzer_captured_order_status')) {
+            $order->set_status(get_option('unzer_captured_order_status'));
         }
+        $order->save();
     }
 }
