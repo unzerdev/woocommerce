@@ -1,0 +1,18 @@
+#unzer-direct-debit-sepa-mandate-container{
+    margin-top: 0.5em;
+}
+
+#unzer-direct-debit-sepa-mandate-complete{
+    margin: 0.5em 0;
+}
+
+.payment_method_unzer_direct_debit #unzer-direct-debit-sepa-mandate-container label,
+.payment_method_unzer_direct_debit .unzer-save-new-payment-instrument label{
+    display:flex;
+    align-items: baseline;
+}
+
+.payment_method_unzer_direct_debit #unzer-direct-debit-sepa-mandate-container label :first-child,
+.payment_method_unzer_direct_debit .unzer-save-new-payment-instrument label :first-child{
+    flex-basis: 0;
+}

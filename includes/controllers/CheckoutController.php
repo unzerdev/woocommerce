@@ -68,22 +68,11 @@ class CheckoutController
             }
         }
         $orderService = new OrderService();
-        if ($orderService->areAmountsEqual($order, $transaction->getPayment())) {
-            if ($transaction instanceof Authorization) {
-                $logger->debug('CheckoutController::confirm() - set authorized');
-                $orderService->setOrderAuthorized($order, $transaction->getPayment()->getId());
-            } else {
-                $logger->debug('CheckoutController::confirm() - payment_complete');
-                $order->payment_complete($transaction->getPayment()->getId());
-                $order->set_transaction_id($transaction->getPayment()->getId());
-                if (get_option('unzer_captured_order_status')) {
-                    $order->set_status(get_option('unzer_captured_order_status'));
-                }
-                $order->save();
-            }
+        try{
+            $orderService->processPaymentStatus($transaction, $order);
             wp_redirect($order->get_checkout_order_received_url());
-        } else {
-            $logger->error('amounts do not match', ['charged' => $transaction->getPayment()->getAmount()->getCharged(), 'invoiced' => $order->get_total()]);
+        }catch (Exception $e) {
+            $logger->error('exception in trying to process payment status', ['orderId'=>$order->get_id(), 'transaction'=>$transaction->expose(), 'exception'=>$e->getMessage()]);
             wc_add_notice(__('Payment error', 'unzer-payments'), 'error');
             wp_redirect(wc_get_checkout_url());
         }

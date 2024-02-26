@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 class Installment extends AbstractGateway
 {
     const GATEWAY_ID = 'unzer_installment';
-    public $method_title = 'Unzer Installment (Paylater)';
+    public $method_title = 'Unzer Installment';
     public $method_description;
     public $title = 'Installment';
     public $description = '';
@@ -34,7 +34,7 @@ class Installment extends AbstractGateway
     public function __construct()
     {
         parent::__construct();
-        $this->method_title = __('Unzer Installment (Paylater)', 'unzer-payments');
+        $this->method_title = __('Unzer Installment', 'unzer-payments');
         add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
     }
 
@@ -67,20 +67,7 @@ class Installment extends AbstractGateway
 
     public function payment_scripts()
     {
-        if (!is_cart() && !is_checkout() && !isset($_GET['pay_for_order'])) {
-            return;
-        }
-
-        if (!$this->is_enabled()) {
-            return;
-        }
-
-        if (empty(WC()->session->get('unzerThreatMetrixId'))) {
-            WC()->session->set('unzerThreatMetrixId', uniqid('unzer_tm_'));
-        }
-        wp_enqueue_script('unzer_threat_metrix_js', 'https://h.online-metrix.net/fp/tags.js?org_id=363t8kgq&session_id=' . WC()->session->get('unzerThreatMetrixId'));
-
-        $this->addCheckoutAssets();
+        $this->threatmetrix_payment_scripts();
     }
 
     public function get_form_fields()
@@ -159,14 +146,7 @@ class Installment extends AbstractGateway
      */
     public function process_refund($order_id, $amount = null, $reason = '')
     {
-        try {
-            $paymentService = new PaymentService();
-            $cancellation = $paymentService->performRefundOrReversalOnPayment($order_id, $amount);
-            return $cancellation->isSuccess();
-        } catch (\Exception $e) {
-            $this->logger->error('refund error: ' . $e->getMessage(), ['orderId' => $order_id, 'amount' => $amount]);
-            throw $e;
-        }
+        return $this->process_refund_on_payment($order_id, $amount, $reason);
     }
 
 
@@ -208,6 +188,7 @@ class Installment extends AbstractGateway
             $this->set_order_transaction_number(wc_get_order($order_id), $authorization->getPayment()->getId());
         }
         $return['redirect'] = $this->get_return_url(wc_get_order($order_id));
+        AbstractGateway::removeRiskDataFromSession();
         return $return;
     }
 

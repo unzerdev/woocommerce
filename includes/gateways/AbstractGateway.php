@@ -123,6 +123,18 @@ abstract class AbstractGateway extends WC_Payment_Gateway
         }
     }
 
+    public function process_refund_on_payment($order_id, $amount = null, $reason = '')
+    {
+        try {
+            $paymentService = new PaymentService();
+            $cancellation = $paymentService->performRefundOrReversalOnPayment($order_id, $amount);
+            return $cancellation->isSuccess();
+        } catch (\Exception $e) {
+            $this->logger->error('refund error: ' . $e->getMessage(), ['orderId' => $order_id, 'amount' => $amount]);
+            throw $e;
+        }
+    }
+
     public function get_confirm_url(): string
     {
         return WC()->api_request_url(static::CONFIRMATION_ROUTE_SLUG);
@@ -256,11 +268,13 @@ HTML;
     {
         wp_enqueue_script('unzer_js', 'https://static.unzer.com/v1/unzer.js');
         wp_enqueue_style('unzer_css', 'https://static.unzer.com/v1/unzer.css');
+        wp_enqueue_style('woocommerce_unzer_css', UNZER_PLUGIN_URL . '/assets/css/checkout.css');
         wp_register_script('woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', ['unzer_js', 'jquery']);
 
         // for separate api keys
         $paylaterGateway = new Invoice();
         $installmentGateway = new Installment();
+        $directDebitSecuredGateway = new DirectDebitSecured();
 
         wp_localize_script('woocommerce_unzer', 'unzer_parameters', [
             'publicKey' => $this->get_public_key(),
@@ -270,6 +284,7 @@ HTML;
             'publicKey_chf_b2c' => $paylaterGateway->get_option('public_key_chf_b2c'),
             'publicKey_installment_eur_b2c' => $installmentGateway->get_option('public_key_eur_b2c'),
             'publicKey_installment_chf_b2c' => $installmentGateway->get_option('public_key_chf_b2c'),
+            'publicKey_directdebitsecured_eur_b2c' => $directDebitSecuredGateway->get_option('public_key_eur_b2c'),
             'generic_error_message' => __('An error occurred while processing your payment. Please try another payment method.', 'unzer-payments'),
             'locale' => get_locale(),
             'store_name' => get_bloginfo('name'),
@@ -280,6 +295,7 @@ HTML;
         wp_localize_script('woocommerce_unzer', 'unzer_i18n', [
             'errorDob' => __('Please enter your date of birth', 'unzer-payments'),
             'errorCompanyType' => __('Please enter your company type', 'unzer-payments'),
+            'errorSepaMandate' => __('Please accept the SEPA mandate', 'unzer-payments'),
         ]);
         wp_enqueue_script('woocommerce_unzer');
 
@@ -289,7 +305,6 @@ HTML;
     {
         $riskData = new RiskData();
         $riskData->setThreatMetrixId(WC()->session->get('unzerThreatMetrixId'));
-        WC()->session->set('unzerThreatMetrixId', '');
         if (is_user_logged_in()) {
             /** @var \WP_User $user */
             $user = wp_get_current_user();
@@ -300,5 +315,29 @@ HTML;
             $riskData->setRegistrationLevel(0);
         }
         $authorization->setRiskData($riskData);
+    }
+
+    public static function removeRiskDataFromSession()
+    {
+        WC()->session->set('unzerThreatMetrixId', null);
+    }
+
+
+    protected function threatmetrix_payment_scripts()
+    {
+        if (!is_cart() && !is_checkout() && !isset($_GET['pay_for_order'])) {
+            return;
+        }
+
+        if (!$this->is_enabled()) {
+            return;
+        }
+
+        if (empty(WC()->session->get('unzerThreatMetrixId'))) {
+            WC()->session->set('unzerThreatMetrixId', uniqid('unzer_tm_'));
+        }
+        wp_enqueue_script('unzer_threat_metrix_js', 'https://h.online-metrix.net/fp/tags.js?org_id=363t8kgq&session_id=' . WC()->session->get('unzerThreatMetrixId'));
+
+        $this->addCheckoutAssets();
     }
 }

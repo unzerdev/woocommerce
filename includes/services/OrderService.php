@@ -14,7 +14,9 @@ use UnzerSDK\Resources\EmbeddedResources\BasketItem;
 use UnzerSDK\Resources\EmbeddedResources\CompanyInfo;
 use UnzerSDK\Resources\Payment;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
+use UnzerSDK\Resources\TransactionTypes\Authorization;
 use UnzerSDK\Resources\TransactionTypes\Cancellation;
+use UnzerSDK\Resources\TransactionTypes\Charge;
 use WC_Order;
 use WC_Order_Item_Coupon;
 use WC_Order_Refund;
@@ -244,6 +246,32 @@ class OrderService
 
         $this->setAddresses($customer, $order);
         return $customer;
+    }
+
+    /**
+     * @param Authorization|Charge $transaction
+     * @return void
+     * @throws \WC_Data_Exception
+     * @throws Exception
+     */
+    public function processPaymentStatus(AbstractTransactionType $transaction, WC_Order $order){
+        if(!$this->areAmountsEqual($order, $transaction->getPayment())){
+            $this->logger->error('amounts do not match', ['transaction' => $transaction->expose(), 'orderId'=>$order->get_id(), 'orderAmount' => $order->get_total()]);
+            throw new Exception('amounts do not match: '.$transaction->getPayment()->getAmount()->getTotal().' vs '.$order->get_total());
+        }
+        $logger = (new LogService());
+        if ($transaction instanceof Authorization) {
+            $logger->debug('OrderService::processPaymentStatus() - set authorized');
+            $this->setOrderAuthorized($order, $transaction->getPayment()->getId());
+        } else {
+            $logger->debug('OrderService::processPaymentStatus() - payment_complete');
+            $order->payment_complete($transaction->getPayment()->getId());
+            $order->set_transaction_id($transaction->getPayment()->getId());
+            if (get_option('unzer_captured_order_status')) {
+                $order->set_status(get_option('unzer_captured_order_status'));
+            }
+            $order->save();
+        }
     }
 
     /**
