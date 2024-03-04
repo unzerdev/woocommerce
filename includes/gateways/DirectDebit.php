@@ -33,14 +33,14 @@ class DirectDebit extends AbstractGateway
 
     public function __construct()
     {
-        parent::__construct();
-        $this->method_title = __('Unzer SEPA Direct Debit', 'unzer-payments');
-        add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
         $this->defaultMandateText = __('By signing this mandate form, you authorize %merchant% to send instructions to your bank to debit your account and your bank to debit your account in accordance with the instructions from %merchant%.
 
 Note: As part of your rights, you are entitled to a refund from your bank under the terms and conditions of your agreement with your bank. A refund must be claimed within 8 weeks starting from the date on which your account was debited. Your rights regarding this SEPA mandate are explained in a statement that you can obtain from your bank.
 
 In case of refusal or rejection of direct debit payment I instruct my bank irrevocably to inform %merchant% or any third party upon request about my name, address and date of birth.', 'unzer-payments');
+        parent::__construct();
+        $this->method_title = __('Unzer SEPA Direct Debit', 'unzer-payments');
+        add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
     }
 
     public function has_fields()
