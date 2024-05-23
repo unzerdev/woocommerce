@@ -24,6 +24,7 @@ class IdStrings
     public const CARD = 'crd';
     public const EPS = 'eps';
     public const GIROPAY = 'gro';
+    public const GOOGLE_PAY = 'gop';
     public const HIRE_PURCHASE_DIRECT_DEBIT = 'hdd';
     public const IDEAL = 'idl';
     public const INSTALLMENT_SECURED = 'ins';
@@ -47,6 +48,7 @@ class IdStrings
     public const SEPA_DIRECT_DEBIT_GUARANTEED = 'ddg';
     public const SEPA_DIRECT_DEBIT_SECURED = 'dds';
     public const SOFORT = 'sft';
+    public const TWINT = 'twt';
     public const WECHATPAY = 'wcp';
 
     // Resources
@@ -63,6 +65,7 @@ class IdStrings
         self::CARD,
         self::EPS,
         self::GIROPAY,
+        self::GOOGLE_PAY,
         self::HIRE_PURCHASE_DIRECT_DEBIT,
         self::IDEAL,
         self::INSTALLMENT_SECURED,
@@ -86,6 +89,7 @@ class IdStrings
         self::SEPA_DIRECT_DEBIT_GUARANTEED,
         self::SEPA_DIRECT_DEBIT_SECURED,
         self::SOFORT,
+        self::TWINT,
         self::WECHATPAY,
     ];
 }

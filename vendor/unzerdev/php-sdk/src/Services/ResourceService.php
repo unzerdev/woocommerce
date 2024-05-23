@@ -10,6 +10,7 @@ use UnzerSDK\Constants\IdStrings;
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\Config;
 use UnzerSDK\Resources\PaymentTypes\Applepay;
+use UnzerSDK\Resources\PaymentTypes\Googlepay;
 use UnzerSDK\Resources\PaymentTypes\Klarna;
 use UnzerSDK\Resources\PaymentTypes\PaylaterDirectDebit;
 use UnzerSDK\Resources\PaymentTypes\PaylaterInstallment;
@@ -17,6 +18,7 @@ use UnzerSDK\Resources\PaymentTypes\Paypage;
 use UnzerSDK\Resources\PaymentTypes\PayU;
 use UnzerSDK\Resources\PaymentTypes\PostFinanceCard;
 use UnzerSDK\Resources\PaymentTypes\PostFinanceEfinance;
+use UnzerSDK\Resources\PaymentTypes\Twint;
 use UnzerSDK\Resources\TransactionTypes\Chargeback;
 use UnzerSDK\Unzer;
 use UnzerSDK\Interfaces\ResourceServiceInterface;
@@ -820,6 +822,9 @@ class ResourceService implements ResourceServiceInterface
             case IdStrings::GIROPAY:
                 $paymentType = new Giropay();
                 break;
+            case IdStrings::GOOGLE_PAY:
+                $paymentType = new Googlepay();
+                break;
             case IdStrings::HIRE_PURCHASE_DIRECT_DEBIT:
             case IdStrings::INSTALLMENT_SECURED:
                 $paymentType = new InstallmentSecured();
@@ -877,6 +882,9 @@ class ResourceService implements ResourceServiceInterface
                 break;
             case IdStrings::SOFORT:
                 $paymentType = new Sofort();
+                break;
+            case IdStrings::TWINT:
+                $paymentType = new Twint();
                 break;
             case IdStrings::WECHATPAY:
                 $paymentType = new Wechatpay();

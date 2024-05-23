@@ -5,53 +5,46 @@ namespace UnzerPayments\SdkExtension\Resource;
 use UnzerSDK\Adapter\HttpAdapterInterface;
 use UnzerSDK\Resources\AbstractUnzerResource;
 
-class ApplePayPrivateKey extends AbstractUnzerResource
-{
-    /** @var string */
-    protected $format = 'PEM';
-    /** @var string */
-    protected $type = 'private-key';
-    /** @var string */
-    protected $certificate;
+class ApplePayPrivateKey extends AbstractUnzerResource {
 
-    public function getFormat(): string
-    {
-        return $this->format;
-    }
+	/** @var string */
+	protected $format = 'PEM';
+	/** @var string */
+	protected $type = 'private-key';
+	/** @var string */
+	protected $certificate;
 
-    public function setFormat(string $format): self
-    {
-        $this->format = $format;
+	public function getFormat(): string {
+		return $this->format;
+	}
 
-        return $this;
-    }
+	public function setFormat( string $format ): self {
+		$this->format = $format;
 
-    public function getType(): string
-    {
-        return $this->type;
-    }
+		return $this;
+	}
 
-    public function setType(string $type): self
-    {
-        $this->type = $type;
+	public function getType(): string {
+		return $this->type;
+	}
 
-        return $this;
-    }
+	public function setType( string $type ): self {
+		$this->type = $type;
 
-    public function getCertificate(): string
-    {
-        return $this->certificate;
-    }
+		return $this;
+	}
 
-    public function setCertificate(string $certificate): self
-    {
-        $this->certificate = $certificate;
+	public function getCertificate(): string {
+		return $this->certificate;
+	}
 
-        return $this;
-    }
+	public function setCertificate( string $certificate ): self {
+		$this->certificate = $certificate;
 
-    protected function getResourcePath($httpMethod = HttpAdapterInterface::REQUEST_GET): string
-    {
-        return 'keypair/applepay/privatekeys';
-    }
+		return $this;
+	}
+
+	protected function getResourcePath( $httpMethod = HttpAdapterInterface::REQUEST_GET ): string {
+		return 'keypair/applepay/privatekeys';
+	}
 }
