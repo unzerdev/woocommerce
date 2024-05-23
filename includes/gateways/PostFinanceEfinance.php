@@ -2,53 +2,51 @@
 
 namespace UnzerPayments\Gateways;
 
-
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
-class PostFinanceEfinance extends AbstractGateway
-{
-    const GATEWAY_ID = 'unzer_postfinance_efinance';
-    public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\PostFinanceEfinance::class;
-    public $method_title = 'Unzer Post Finance eFinance';
-    public $method_description;
-    public $title = 'Post Finance eFinance';
-    public $description = '';
-    public $id = self::GATEWAY_ID;
-    public $plugin_id;
-    public $supports = [
-        'products',
-        'refunds',
-    ];
-    public $allowedCurrencies = ['CHF'];
+class PostFinanceEfinance extends AbstractGateway {
 
-    public function get_form_fields()
-    {
-        return apply_filters(
-            'wc_unzer_settings',
-            [
+	const GATEWAY_ID            = 'unzer_postfinance_efinance';
+	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\PostFinanceEfinance::class;
+	public $method_title        = 'Unzer Post Finance eFinance';
+	public $method_description;
+	public $title       = 'Post Finance eFinance';
+	public $description = '';
+	public $id          = self::GATEWAY_ID;
+	public $plugin_id;
+	public $supports          = array(
+		'products',
+		'refunds',
+	);
+	public $allowedCurrencies = array( 'CHF' );
 
-                'enabled' => [
-                    'title' => __('Enable/Disable', 'unzer-payments'),
-                    'label' => __('Enable Unzer Post Finance eFinance', 'unzer-payments'),
-                    'type' => 'checkbox',
-                    'description' => '',
-                    'default' => 'no',
-                ],
-                'title' => [
-                    'title' => __('Title', 'unzer-payments'),
-                    'type' => 'text',
-                    'description' => __('This controls the title which the user sees during checkout.', 'unzer-payments'),
-                    'default' => __('Post Finance eFinance', 'unzer-payments'),
-                ],
-                'description' => [
-                    'title' => __('Description', 'unzer-payments'),
-                    'type' => 'text',
-                    'description' => __('This controls the description which the user sees during checkout.', 'unzer-payments'),
-                    'default' => '',
-                ],
-            ]
-        );
-    }
+	public function get_form_fields() {
+		return apply_filters(
+			'wc_unzer_settings',
+			array(
+
+				'enabled'     => array(
+					'title'       => __( 'Enable/Disable', 'unzer-payments' ),
+					'label'       => __( 'Enable Unzer Post Finance eFinance', 'unzer-payments' ),
+					'type'        => 'checkbox',
+					'description' => '',
+					'default'     => 'no',
+				),
+				'title'       => array(
+					'title'       => __( 'Title', 'unzer-payments' ),
+					'type'        => 'text',
+					'description' => __( 'This controls the title which the user sees during checkout.', 'unzer-payments' ),
+					'default'     => __( 'Post Finance eFinance', 'unzer-payments' ),
+				),
+				'description' => array(
+					'title'       => __( 'Description', 'unzer-payments' ),
+					'type'        => 'text',
+					'description' => __( 'This controls the description which the user sees during checkout.', 'unzer-payments' ),
+					'default'     => '',
+				),
+			)
+		);
+	}
 }

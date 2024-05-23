@@ -1,130 +1,130 @@
 #unzer-webhook-container,
 .unzer-webhook-container{
-    padding: 20px;
-    background: #fff;
-    margin: 10px 0;
+	padding: 20px;
+	background: #fff;
+	margin: 10px 0;
 }
 
 .forminp .unzer-webhook-container{
-    padding:10px 0;
-    background:transparent;
+	padding:10px 0;
+	background:transparent;
 }
 #unzer-webhooks td, #unzer-webhooks th,
 .unzer-webhooks td, .unzer-webhooks th{
-    padding: 6px;
-    margin: 0;
-    border: 0;
+	padding: 6px;
+	margin: 0;
+	border: 0;
 }
 
 #unzer-webhooks thead,
 .unzer-webhooks thead,
 #unzer-webhooks thead th,
 .unzer-webhooks thead th{
-    background: #FC1154 !important;
-    color: #fff !important;
+	background: #FC1154 !important;
+	color: #fff !important;
 }
 
 .unzer-webhooks td:first-child{
-    white-space: nowrap;
+	white-space: nowrap;
 }
 
 .unzer-dropdown-icon{
-    width:18px;
-    height:18px;
-    color:#FC1154;
-    transform:rotate(-90deg);
-    background: url('data:image/svg+xml,%3Csvg xmlns="http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24"%3E%3Cpath fill="%23FC1154" d="m12 15.5l4.5-4.5l-1.425-1.4L12 12.675L8.925 9.6L7.5 11Zm0 6.5q-2.075 0-3.9-.788q-1.825-.787-3.175-2.137q-1.35-1.35-2.137-3.175Q2 14.075 2 12t.788-3.9q.787-1.825 2.137-3.175q1.35-1.35 3.175-2.138Q9.925 2 12 2t3.9.787q1.825.788 3.175 2.138q1.35 1.35 2.137 3.175Q22 9.925 22 12t-.788 3.9q-.787 1.825-2.137 3.175q-1.35 1.35-3.175 2.137Q14.075 22 12 22Z"%2F%3E%3C%2Fsvg%3E') center center;
-    background-size:contain;
-    display:inline-block;
-    transition: all 0.3s ease;
-    cursor:pointer;
-    position:relative;
-    top:2px;
+	width:18px;
+	height:18px;
+	color:#FC1154;
+	transform:rotate(-90deg);
+	background: url('data:image/svg+xml,%3Csvg xmlns="http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24"%3E%3Cpath fill="%23FC1154" d="m12 15.5l4.5-4.5l-1.425-1.4L12 12.675L8.925 9.6L7.5 11Zm0 6.5q-2.075 0-3.9-.788q-1.825-.787-3.175-2.137q-1.35-1.35-2.137-3.175Q2 14.075 2 12t.788-3.9q.787-1.825 2.137-3.175q1.35-1.35 3.175-2.138Q9.925 2 12 2t3.9.787q1.825.788 3.175 2.138q1.35 1.35 2.137 3.175Q22 9.925 22 12t-.788 3.9q-.787 1.825-2.137 3.175q-1.35 1.35-3.175 2.137Q14.075 22 12 22Z"%2F%3E%3C%2Fsvg%3E') center center;
+	background-size:contain;
+	display:inline-block;
+	transition: all 0.3s ease;
+	cursor:pointer;
+	position:relative;
+	top:2px;
 }
 
 .unzer-dropdown-icon.active{
-    transform:rotate(0);
+	transform:rotate(0);
 }
 
 .unzer-payment-navigation{
-    font-size:12px;
-    line-height:1.1em;
-    padding:10px;
-    border:1px solid #ddd;
-    display:inline-block;
-    box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
-    border-radius:3px;
-    position: absolute;
-    margin-top: -10px;
-    z-index: 10;
-    background: #fff;
+	font-size:12px;
+	line-height:1.1em;
+	padding:10px;
+	border:1px solid #ddd;
+	display:inline-block;
+	box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
+	border-radius:3px;
+	position: absolute;
+	margin-top: -10px;
+	z-index: 10;
+	background: #fff;
 }
 
 .unzer-payment-navigation a{
-    text-decoration:none;
-    color:#FC1154;
-    padding:5px;
-    display:block;
+	text-decoration:none;
+	color:#FC1154;
+	padding:5px;
+	display:block;
 }
 
 .unzer-payment-navigation a:hover{
-    background:#eee
+	background:#eee
 }
 .unzer-payment-navigation li{
-    margin:0;
-    padding:0;
+	margin:0;
+	padding:0;
 }
 
 .unzer-status-circle{
-    width: 10px;
-    height: 10px;
-    display: inline-block;
-    border-radius: 5px;
-    margin-right: 5px;
-    background: #999;
+	width: 10px;
+	height: 10px;
+	display: inline-block;
+	border-radius: 5px;
+	margin-right: 5px;
+	background: #999;
 }
 
 .unzer-status-circle.success{
-    background: #00a800;
+	background: #00a800;
 }
 
 .unzer-status-circle.error{
-    background: #cc0000;
+	background: #cc0000;
 }
 
 .unzer-spinner {
-    width: 56px;
-    height: 56px;
-    display: grid;
-    border: 4.5px solid #0000;
-    border-radius: 50%;
-    border-color: rgba(252, 18, 84, 0.59) #0000;
-    animation: spinner-e04l1k 1s infinite linear;
-    margin:auto;
+	width: 56px;
+	height: 56px;
+	display: grid;
+	border: 4.5px solid #0000;
+	border-radius: 50%;
+	border-color: rgba(252, 18, 84, 0.59) #0000;
+	animation: spinner-e04l1k 1s infinite linear;
+	margin:auto;
 }
 
 .unzer-spinner::before,
 .unzer-spinner::after {
-    content: "";
-    grid-area: 1/1;
-    margin: 2.2px;
-    border: inherit;
-    border-radius: 50%;
+	content: "";
+	grid-area: 1/1;
+	margin: 2.2px;
+	border: inherit;
+	border-radius: 50%;
 }
 
 .unzer-spinner::before {
-    border-color: #fc1154 #0000;
-    animation: inherit;
-    animation-duration: 0.5s;
-    animation-direction: reverse;
+	border-color: #fc1154 #0000;
+	animation: inherit;
+	animation-duration: 0.5s;
+	animation-direction: reverse;
 }
 
 .unzer-spinner::after {
-    margin: 8.9px;
+	margin: 8.9px;
 }
 
 @keyframes spinner-e04l1k {
-    100% {
-        transform: rotate(1turn);
-    }
+	100% {
+		transform: rotate(1turn);
+	}
 }
