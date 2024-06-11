@@ -3,8 +3,8 @@
 use UnzerPayments\Controllers\AdminController;
 use UnzerPayments\Util;
 
-wp_enqueue_style( 'unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css' );
-wp_enqueue_script( 'unzer_admin_apple_pay_js', UNZER_PLUGIN_URL . '/assets/js/admin_apple_pay.js' );
+wp_enqueue_style( 'unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css', array(), UNZER_VERSION );
+wp_enqueue_script( 'unzer_admin_apple_pay_js', UNZER_PLUGIN_URL . '/assets/js/admin_apple_pay.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 $removeKeyUrl  = WC()->api_request_url( AdminController::APPLE_PAY_REMOVE_KEY_ROUTE_SLUG );
 $validationUrl = WC()->api_request_url( AdminController::APPLE_PAY_VALIDATE_CREDENTIALS_ROUTE_SLUG );
 ?>

@@ -85,7 +85,7 @@ class GooglePay extends AbstractGateway {
 		}
 
 		$this->addCheckoutAssets();
-		wp_enqueue_script( 'unzer_google_pay_js', 'https://pay.google.com/gp/p/js/pay.js' );
+		wp_enqueue_script( 'unzer_google_pay_js', 'https://pay.google.com/gp/p/js/pay.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 	}
 
 	public function get_form_fields() {

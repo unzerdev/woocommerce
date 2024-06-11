@@ -1,5 +1,5 @@
 <?php
-wp_enqueue_style( 'unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css' );
+wp_enqueue_style( 'unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css', array(), UNZER_VERSION );
 ?>
 <img src="<?php echo esc_url( UNZER_PLUGIN_URL ); ?>/assets/img/logo.svg" width="150" alt="Unzer" style="margin-bottom: 10px;"/>
 <div style="background: #fff; padding:20px;">

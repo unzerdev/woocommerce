@@ -791,12 +791,19 @@ const UnzerManager = {
 							function (result) {
 								document.getElementById( 'unzer-google-pay-id' ).value = result.id;
 								UnzerManager.getCheckoutForm().trigger( 'submit' );
+								return {
+									status: 'success'
+								}
 							}
 						)
 						.catch(
 							function (error) {
 								const errorMessage = error.customerMessage || error.message || 'Error';
 								UnzerManager.error( errorMessage );
+								return {
+									status: 'error',
+									message: errorMessage || 'Unexpected error'
+								}
 							}
 						)
 				}

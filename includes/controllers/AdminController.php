@@ -304,7 +304,7 @@ class AdminController {
 						throw new Exception( __( 'Unable to read certificate', 'unzer-payments' ) );
 					}
 					if ( $certificateData['subject']['UID'] !== $paymentGateway->get_option( 'merchant_id' ) ) {
-						throw new Exception( __( 'Certificate does not match merchant id: ' . $certificateData['subject']['UID'], 'unzer-payments' ) );
+						throw new Exception( __( 'Certificate does not match merchant id: ', 'unzer-payments' ) . $certificateData['subject']['UID'] );
 					}
 				} elseif ( ! str_starts_with( $certificate, '-----BEGIN CERTIFICATE-----' ) ) {
 						throw new Exception( __( 'Not a valid certificate', 'unzer-payments' ) );
@@ -392,7 +392,7 @@ class AdminController {
 
 	protected function renderJson( array $data ) {
 		header( 'Content-Type: application/json' );
-		echo json_encode( $data );
+		echo wp_json_encode( $data );
 		die;
 	}
 }

@@ -103,7 +103,7 @@ class Main {
 		add_action(
 			'admin_enqueue_scripts',
 			function () {
-				wp_enqueue_script( 'unzer_global_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin_global.js' );
+				wp_enqueue_script( 'unzer_global_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin_global.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 			}
 		);
 		add_filter(
