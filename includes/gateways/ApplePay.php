@@ -63,7 +63,7 @@ class ApplePay extends AbstractGateway {
 		}
 
 		$this->addCheckoutAssets();
-		wp_enqueue_script( 'unzer_apple_pay_js', 'https://applepay.cdn-apple.com/jsapi/v1/apple-pay-sdk.js' );
+		wp_enqueue_script( 'unzer_apple_pay_js', 'https://applepay.cdn-apple.com/jsapi/v1/apple-pay-sdk.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 	}
 
 	public function get_form_fields() {

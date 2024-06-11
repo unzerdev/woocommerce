@@ -148,14 +148,14 @@ class CheckoutController {
 				);
 			}
 		} finally {
-			unlink( $keyTempPath );
-			unlink( $certificateTempPath );
+			wp_delete_file( $keyTempPath );
+			wp_delete_file( $certificateTempPath );
 		}
 	}
 
 	protected function renderJson( array $data ) {
 		header( 'Content-Type: application/json' );
-		echo json_encode( $data );
+		echo wp_json_encode( $data );
 		die;
 	}
 }

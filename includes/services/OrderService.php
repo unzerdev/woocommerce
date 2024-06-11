@@ -18,6 +18,7 @@ use UnzerSDK\Resources\TransactionTypes\Cancellation;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 use WC_Order;
 use WC_Order_Item_Coupon;
+use WC_Order_Item_Fee;
 use WC_Order_Refund;
 
 class OrderService {
@@ -107,14 +108,14 @@ class OrderService {
 					}
 				}
 
-				if ( round( $amountDiscount, 2 ) <= 0 ) {
-					$couponEntity = new \WC_Coupon( $coupon->get_code() );
-					if ( $couponEntity->get_amount() ) {
-						$amountDiscount    = $couponEntity->get_amount();
-						$amountDiscountNet = $amountDiscount;
-						$discountTax       = 0;
-					}
-				}
+				// if ( round( $amountDiscount, 2 ) <= 0 ) {
+				// $couponEntity = new \WC_Coupon( $coupon->get_code() );
+				// if ( $couponEntity->get_amount() ) {
+				// $amountDiscount    = $couponEntity->get_amount();
+				// $amountDiscountNet = $amountDiscount;
+				// $discountTax       = 0;
+				// }
+				// }
 
 				if ( round( $amountDiscount, 2 ) <= 0 ) {
 					continue;
@@ -131,6 +132,35 @@ class OrderService {
 				$basketItems[] = $basketItem;
 			}
 		}
+
+		$fees = $order->get_fees();
+		if ( $fees ) {
+			/** @var WC_Order_Item_Fee $fee */
+			foreach ( $fees as $fee ) {
+				$feeAmountNet   = (float) $fee->get_total();
+				$feeAmountTax   = (float) $fee->get_total_tax();
+				$feeAmountTotal = $feeAmountNet + $feeAmountTax;
+
+				if ( Util::safeCompareAmount( $feeAmountTotal, 0 ) ) {
+					continue;
+				}
+
+				$vatRate = Util::round( abs( $feeAmountTax / $feeAmountNet * 100 ), 1 );
+
+				$basketItem = ( new BasketItem() )
+					->setTitle( $fee->get_name() )
+					->setQuantity( 1 )
+					->setType( $feeAmountTotal > 0 ? BasketItemTypes::GOODS : BasketItemTypes::VOUCHER )
+					->setVat( $vatRate );
+				if ( $feeAmountTotal > 0 ) {
+					$basketItem->setAmountPerUnitGross( Util::round( abs( $feeAmountTotal ) ) );
+				} else {
+					$basketItem->setAmountDiscountPerUnitGross( Util::round( abs( $feeAmountTotal ) ) );
+				}
+				$basketItems[] = $basketItem;
+			}
+		}
+
 		$totalLeft = $order->get_total();
 		foreach ( $basketItems as $basketItem ) {
 			$totalLeft -= $basketItem->getAmountPerUnitGross() * $basketItem->getQuantity();

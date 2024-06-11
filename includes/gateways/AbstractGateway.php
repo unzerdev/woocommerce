@@ -23,6 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 abstract class AbstractGateway extends WC_Payment_Gateway {
 
 
+
 	const CONFIRMATION_ROUTE_SLUG = 'unzer-confirm';
 
 	const TRANSACTION_TYPE_AUTHORIZE = 'authorize';
@@ -145,8 +146,8 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	}
 
 	public function admin_options() {
-		wp_enqueue_style( 'unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css' );
-		wp_register_script( 'unzer_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin.js' );
+		wp_enqueue_style( 'unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css', array(), UNZER_VERSION );
+		wp_register_script( 'unzer_admin_js', UNZER_PLUGIN_URL . '/assets/js/admin.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 		wp_localize_script(
 			'unzer_admin_js',
 			'unzer_i18n',
@@ -179,8 +180,8 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		$title         = wp_kses_post( $data['title'] );
 		$isInvalidText = esc_html__( 'Keys are not valid', 'unzer-payments' );
 		$isValidText   = esc_html__( 'Keys are valid', 'unzer-payments' );
-		wp_enqueue_script( 'unzer_admin_key_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_key_management.js' );
-		wp_enqueue_script( 'unzer_admin_webhook_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_webhook_management.js' );
+		wp_enqueue_script( 'unzer_admin_key_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_key_management.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
+		wp_enqueue_script( 'unzer_admin_webhook_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_webhook_management.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 
 		$webhookHtml = '';
 		if ( $this->get_option( 'private_key_' . $slug ) && $this->get_option( 'public_key_' . $slug ) ) {
@@ -228,7 +229,7 @@ HTML;
 		?>
 		<tr valign="top">
 			<th scope="row" class="titledesc">
-				<label for="<?php echo esc_attr( $field_key ); ?>"><?php echo wp_kses_post( $data['title'] ); ?> <?php echo wp_kses_post( $this->get_tooltip_html( $data ) ); ?></label>
+				<label for="<?php echo esc_attr( $field_key ); ?>"><?php echo wp_kses_post( $data['title'] ); ?><?php echo wp_kses_post( $this->get_tooltip_html( $data ) ); ?></label>
 			</th>
 			<td class="forminp">
 				<fieldset>
@@ -306,10 +307,10 @@ HTML;
 	}
 
 	protected function addCheckoutAssets() {
-		wp_enqueue_script( 'unzer_js', 'https://static.unzer.com/v1/unzer.js' );
-		wp_enqueue_style( 'unzer_css', 'https://static.unzer.com/v1/unzer.css' );
-		wp_enqueue_style( 'woocommerce_unzer_css', UNZER_PLUGIN_URL . '/assets/css/checkout.css' );
-		wp_register_script( 'woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', array( 'unzer_js', 'jquery' ) );
+		wp_enqueue_script( 'unzer_js', 'https://static.unzer.com/v1/unzer.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
+		wp_enqueue_style( 'unzer_css', 'https://static.unzer.com/v1/unzer.css', array(), UNZER_VERSION );
+		wp_enqueue_style( 'woocommerce_unzer_css', UNZER_PLUGIN_URL . '/assets/css/checkout.css', array(), UNZER_VERSION );
+		wp_register_script( 'woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', array( 'unzer_js', 'jquery' ), UNZER_VERSION, array( 'in_footer' => false ) );
 
 		// for separate api keys
 		$paylaterGateway           = new Invoice();
@@ -398,7 +399,7 @@ HTML;
 		if ( empty( WC()->session->get( 'unzerThreatMetrixId' ) ) ) {
 			WC()->session->set( 'unzerThreatMetrixId', uniqid( 'unzer_tm_' ) );
 		}
-		wp_enqueue_script( 'unzer_threat_metrix_js', 'https://h.online-metrix.net/fp/tags.js?org_id=363t8kgq&session_id=' . WC()->session->get( 'unzerThreatMetrixId' ) );
+		wp_enqueue_script( 'unzer_threat_metrix_js', 'https://h.online-metrix.net/fp/tags.js?org_id=363t8kgq&session_id=' . WC()->session->get( 'unzerThreatMetrixId' ), array(), UNZER_VERSION, array( 'in_footer' => false ) );
 
 		$this->addCheckoutAssets();
 	}
