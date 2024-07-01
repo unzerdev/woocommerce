@@ -376,7 +376,7 @@ class Main {
 			WeChatPay::GATEWAY_ID           => WeChatPay::class,
 			Alipay::GATEWAY_ID              => Alipay::class,
 			Eps::GATEWAY_ID                 => Eps::class,
-			Giropay::GATEWAY_ID             => Giropay::class,
+			// Giropay::GATEWAY_ID             => Giropay::class,
 			Sofort::GATEWAY_ID              => Sofort::class,
 			// Klarna::GATEWAY_ID => Klarna::class,
 			// Pis::GATEWAY_ID => Pis::class,

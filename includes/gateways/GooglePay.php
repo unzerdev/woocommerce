@@ -173,8 +173,6 @@ class GooglePay extends AbstractGateway {
 					'type'        => 'multiselect',
 					'description' => '',
 					'options'     => array(
-						'DISCOVER'   => 'DISCOVER',
-						'JCB'        => 'JCB',
 						'MASTERCARD' => 'MASTERCARD',
 						'VISA'       => 'VISA',
 					),
