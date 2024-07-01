@@ -2,13 +2,12 @@
 
 namespace UnzerPayments\Gateways;
 
-use UnzerPayments\Services\PaymentService;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 class Giropay extends AbstractGateway {
+
 
 	const GATEWAY_ID            = 'unzer_giropay';
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Giropay::class;
@@ -22,6 +21,10 @@ class Giropay extends AbstractGateway {
 		'products',
 		'refunds',
 	);
+
+	public function is_available() {
+		return false;
+	}
 
 	public function get_form_fields() {
 		return apply_filters(
