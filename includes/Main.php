@@ -14,7 +14,6 @@ use UnzerPayments\Gateways\Card;
 use UnzerPayments\Gateways\DirectDebit;
 use UnzerPayments\Gateways\DirectDebitSecured;
 use UnzerPayments\Gateways\Eps;
-use UnzerPayments\Gateways\Giropay;
 use UnzerPayments\gateways\GooglePay;
 use UnzerPayments\Gateways\Ideal;
 use UnzerPayments\Gateways\Installment;
@@ -25,6 +24,7 @@ use UnzerPayments\Gateways\PostFinanceEfinance;
 use UnzerPayments\Gateways\Prepayment;
 use UnzerPayments\Gateways\Przelewy24;
 use UnzerPayments\Gateways\Sofort;
+use UnzerPayments\gateways\Twint;
 use UnzerPayments\Gateways\WeChatPay;
 use UnzerPayments\SdkExtension\Resource\ApplePayCertificate;
 use UnzerPayments\SdkExtension\Resource\ApplePayPrivateKey;
@@ -34,7 +34,6 @@ use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
 
 class Main {
-
 
 	public static $instance;
 	const ORDER_META_KEY_AUTHORIZATION_ID     = 'unzer_authorization_id';
@@ -390,6 +389,7 @@ class Main {
 			PostFinanceCard::GATEWAY_ID     => PostFinanceCard::class,
 			ApplePay::GATEWAY_ID            => ApplePay::class,
 			GooglePay::GATEWAY_ID           => GooglePay::class,
+			Twint::GATEWAY_ID               => Twint::class,
 		);
 	}
 
