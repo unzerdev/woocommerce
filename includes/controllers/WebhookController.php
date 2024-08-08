@@ -5,6 +5,7 @@ namespace UnzerPayments\Controllers;
 use UnzerPayments\Services\DashboardService;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\OrderService;
+use UnzerPayments\Util;
 use UnzerSDK\Constants\WebhookEvents;
 
 class WebhookController {
@@ -36,10 +37,15 @@ class WebhookController {
 
 	public function receiveWebhook() {
 		$data = json_decode( file_get_contents( 'php://input' ), true );
+
 		if ( empty( $data ) ) {
-			$this->logger->debug( 'empty webhook', array( 'server' => $_SERVER ) );
+			$this->logger->debug( 'empty webhook' );
 			status_header( 404 );
 			wp_die();
+		}
+
+		foreach ( $data as $key => $value ) {
+			$data[ $key ] = is_string( $value ) ? wp_kses_post( $value ) : '__array__';
 		}
 
 		if ( ! in_array( $data['event'], self::REGISTERED_EVENTS, true ) ) {
@@ -101,7 +107,7 @@ class WebhookController {
 
 	protected function renderJson( array $data ) {
 		header( 'Content-Type: application/json' );
-		echo wp_json_encode( $data );
+		echo wp_json_encode( Util::escape_array_html( $data ) );
 		die;
 	}
 

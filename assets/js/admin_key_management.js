@@ -21,12 +21,12 @@ function unzerProcessSubKeyCheck(container) {
 			function (data) {
 				container.querySelectorAll( '.is-success' ).forEach(
 					function (el) {
-						el.style.display = data.isValid === 0 ? 'none' : 'block';
+						el.style.display = data.isValid === "0" ? 'none' : 'block';
 					}
 				);
 				container.querySelectorAll( '.is-error' ).forEach(
 					function (el) {
-						el.style.display = data.isValid === 0 ? 'block' : 'none';
+						el.style.display = data.isValid === "0" ? 'block' : 'none';
 					}
 				);
 			}

@@ -344,7 +344,7 @@ class OrderService {
 					'error' => $e,
 				)
 			);
-			$order->add_order_note( __( 'Payment complete event failed.', 'woocommerce' ) . ' ' . $e->getMessage() );
+			$order->add_order_note( __( 'Payment complete event failed.', 'unzer-payments' ) . ' ' . $e->getMessage() );
 			return false;
 		}
 		return true;

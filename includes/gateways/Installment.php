@@ -34,7 +34,6 @@ class Installment extends AbstractGateway {
 	public function __construct() {
 		parent::__construct();
 		$this->method_title = __( 'Unzer Installment', 'unzer-payments' );
-		add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
 	}
 
 	public function has_fields() {

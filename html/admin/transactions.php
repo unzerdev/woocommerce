@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly
+}
 
 use UnzerPayments\Controllers\AdminController;
 use UnzerPayments\Main;
@@ -68,15 +71,18 @@ $ajaxUrl  = WC()->api_request_url( AdminController::GET_ORDER_TRANSACTIONS_ROUTE
 $ajaxUrl .= ( strpos( $ajaxUrl, '?' ) === false ? '?' : '&' ) . 'order_id=' . $order->get_id();
 
 $chargeUrl = WC()->api_request_url( AdminController::CHARGE_ROUTE_SLUG );
+
+// build JS
+ob_start();
 ?>
-<script>
+
 	const unzerOrderId = <?php echo (int) $order->get_id(); ?>;
 
 	function unzerRefreshData() {
 		fetch('<?php echo esc_url( $ajaxUrl ); ?>')
 			.then(response => response.json())
 			.then(data => {
-
+				data.remainingPlain = (data.remainingPlain?parseFloat(data.remainingPlain):0);
 				if (data.transactions) {
 					let tHtml = '';
 					for (const transaction of data.transactions) {
@@ -142,4 +148,8 @@ $chargeUrl = WC()->api_request_url( AdminController::CHARGE_ROUTE_SLUG );
 			})
 
 	}
-</script>
+<?php
+$script = ob_get_clean();
+wp_enqueue_script( 'unzer_admin_webhook_management_js', 'inline-only', array(), UNZER_VERSION, array( 'in_footer' => true ) );
+wp_add_inline_script( 'unzer_admin_webhook_management_js', $script );
+

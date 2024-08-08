@@ -26,7 +26,6 @@ class GooglePay extends AbstractGateway {
 
 	public function __construct() {
 		parent::__construct();
-		add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
 	}
 
 	public function admin_options() {

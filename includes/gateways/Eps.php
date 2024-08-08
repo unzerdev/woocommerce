@@ -72,7 +72,7 @@ class Eps extends AbstractGateway {
 	public function process_payment( $order_id ) {
 		$epsId = Util::getNonceCheckedPostValue( 'unzer-eps-id' );
 		if ( empty( $epsId ) ) {
-			throw new \Exception( esc_html__( 'Please select your bank' ) );
+			throw new \Exception( esc_html__( 'Please select your bank', 'unzer-payments' ) );
 		}
 		$this->logger->debug( 'start payment for #' . $order_id . ' with ' . self::GATEWAY_ID );
 		$return      = array(

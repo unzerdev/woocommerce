@@ -297,8 +297,8 @@ class PaymentService {
 			$errorMessages[] = $e->getMessage();
 		}
 		throw new Exception(
-			wp_kses_post( sprintf( __( 'Unable to do refund: Maximum amount for single refund is %s.' ), html_entity_decode( wp_strip_all_tags( wc_price( $maxCaptureRefund, array( 'currency' => $payment->getCurrency() ) ) ) ) ) ) .
-			( $numberOfRefundsPossible > 1 ? ' ' . esc_html( sprintf( __( 'However, you may refund in up to %s smaller chunks.' ), $numberOfRefundsPossible ) ) : '' ) .
+			wp_kses_post( sprintf( __( 'Unable to do refund: Maximum amount for single refund is %s.', 'unzer-payments' ), html_entity_decode( wp_strip_all_tags( wc_price( $maxCaptureRefund, array( 'currency' => $payment->getCurrency() ) ) ) ) ) ) .
+			( $numberOfRefundsPossible > 1 ? ' ' . esc_html( sprintf( __( 'However, you may refund in up to %s smaller chunks.', 'unzer-payments' ), $numberOfRefundsPossible ) ) : '' ) .
 			( $errorMessages ? "\n\n" . esc_html__( 'Original error message: ', 'unzer-payments' ) . esc_html( implode( ' ', $errorMessages ) ) : '' )
 		);
 	}

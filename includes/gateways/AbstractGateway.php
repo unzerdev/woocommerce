@@ -57,6 +57,17 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
 		$this->title       = $this->get_option( 'title' );
 		$this->description = $this->get_option( 'description' );
+		add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
+	}
+	public function payment_scripts() {
+		if ( ! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
+			return;
+		}
+
+		if ( ! $this->is_enabled() ) {
+			return;
+		}
+		$this->addCheckoutAssets();
 	}
 
 	public function get_private_key() {
@@ -160,7 +171,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		echo '<div>' . wp_kses_post( wpautop( $this->get_method_description() ) ) . '</div>';
 		echo '<div class="unzer-content-container">';
 		echo '<h2><span class="unzer-dropdown-icon unzer-content-toggler" data-target=".unzer-payment-navigation" title="' . esc_html__( 'Select another Unzer payment method', 'unzer-payments' ) . '"></span> ' . esc_html( $this->get_method_title() );
-		wc_back_link( __( 'Return to payments', 'woocommerce' ), admin_url( 'admin.php?page=wc-settings&tab=checkout' ) );
+		wc_back_link( __( 'Return to payments', 'unzer-payments' ), admin_url( 'admin.php?page=wc-settings&tab=checkout' ) );
 		echo '</h2>';
 		echo '<style id="unzer-payment-navigation-temp-style">.unzer-payment-navigation { display:none !important; }</style>';
 		echo wp_kses_post( $this->getCompletePaymentMethodListHtml() );
@@ -191,7 +202,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 			ob_end_clean();
 		}
 		$ajaxUrl    = WC()->api_request_url( AdminController::KEY_VALIDATION_ROUTE_SLUG );
-		$returnHtml = <<<HTML
+		$returnHtml = '
             <tr valign="top">
                 <th scope="row" class="titledesc">
                     <label for="$key">$title</label>
@@ -204,8 +215,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
                     $webhookHtml
                 </td>
             </tr>
-            
-HTML;
+            ';
 		return $returnHtml;
 	}
 

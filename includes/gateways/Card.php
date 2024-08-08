@@ -33,10 +33,6 @@ class Card extends AbstractGateway {
 		'refunds',
 	);
 
-	public function __construct() {
-		parent::__construct();
-		add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
-	}
 
 	public function has_fields() {
 		return true;
@@ -52,12 +48,6 @@ class Card extends AbstractGateway {
 		$form = '
         <input type="hidden" id="unzer-card-id" name="unzer-card-id" value=""/>
         <div id="unzer-card-form" class="unzerUI form">
-            
-            <div class="field">
-                <div id="unzer-card-form-holder" class="unzerInput">
-                    <!-- Card holder UI Element is inserted here. -->
-                </div>
-            </div>
             <div class="field">
                 <div id="unzer-card-form-number" class="unzerInput">
                     <!-- Card number UI Element will be inserted here. -->
@@ -75,20 +65,14 @@ class Card extends AbstractGateway {
                     </div>
                 </div>
             </div>
+            <div class="field">
+                <div id="unzer-card-form-holder" class="unzerInput">
+                    <!-- Card holder UI Element is inserted here. -->
+                </div>
+            </div>
         </div>
         ';
 		echo wp_kses_post( $this->renderSavedInstrumentsSelection( $form ) );
-	}
-
-	public function payment_scripts() {
-		if ( ! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
-			return;
-		}
-
-		if ( ! $this->is_enabled() ) {
-			return;
-		}
-		$this->addCheckoutAssets();
 	}
 
 	public function get_form_fields() {
