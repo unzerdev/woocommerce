@@ -3,9 +3,9 @@ Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
 Tested up to: 6.5
-Stable tag: 1.7.0
-License: GPLv3
-License URI: https://www.gnu.org/licenses/gpl-3.0.html
+Stable tag: 1.7.1
+License: Apache-2.0
+License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
 Attributions: unzer
 
@@ -56,6 +56,9 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth - online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 == Changelog ==
+
+= 1.7.1 =
+- Added cardholder name to creditcard checkout
 
 = 1.7.0 =
 - Added TWINT as a new payment method

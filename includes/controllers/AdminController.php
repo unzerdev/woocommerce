@@ -392,7 +392,7 @@ class AdminController {
 
 	protected function renderJson( array $data ) {
 		header( 'Content-Type: application/json' );
-		echo wp_json_encode( $data );
+		echo wp_json_encode( Util::escape_array_html( $data ) );
 		die;
 	}
 }

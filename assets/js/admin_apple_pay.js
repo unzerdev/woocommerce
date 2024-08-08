@@ -36,8 +36,8 @@ document.addEventListener(
 			}
 		);
 
-		if (unzerApplePayValidationUrl) {
-			fetch( unzerApplePayValidationUrl )
+		if (unzerApplePay && unzerApplePay.validationUrl) {
+			fetch( unzerApplePay.validationUrl )
 			.then(
 				function (response) {
 					return response.json()
@@ -51,7 +51,7 @@ document.addEventListener(
 								const statusIndicator = container.querySelector( '.unzer-status-circle' );
 								const message         = container.querySelector( '.unzer-status-text' );
 
-								if (data.status[key] === 0) {
+								if (data.status[key] === "0") {
 									statusIndicator.classList.remove( 'success' );
 									statusIndicator.classList.add( 'error' );
 								} else {

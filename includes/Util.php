@@ -7,6 +7,7 @@ use Automattic\WooCommerce\Utilities\OrderUtil;
 class Util {
 
 
+
 	public const NONCE_NAME  = 'unzer_nonce';
 	protected static $nonces = array();
 
@@ -39,12 +40,12 @@ class Util {
 	public static function getNonceField( $doPrint = true, string $action = '' ) {
 		$action        = $action ?: self::NONCE_NAME;
 		$nameAttribute = esc_attr( $action );
-		$html          = '<input type="hidden" class="nonce-input--' . $nameAttribute . '" name="' . $nameAttribute . '" value="' . self::getNonce( $action ) . '" />';
+		$html          = '<input type="hidden" class="nonce-input--' . $nameAttribute . '" name="' . $nameAttribute . '" value="' . esc_attr( self::getNonce( $action ) ) . '" />';
 		if ( $doPrint ) {
 			// this is safe because the html is static and attributes are escaped
             // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
             //@codingStandardsIgnoreLine
-			echo $html;
+            echo $html;
 		} else {
 			return $html;
 		}
@@ -70,5 +71,19 @@ class Util {
 			}
 		}
 		return null;
+	}
+
+	public static function escape_array_html( $data ) {
+		if ( is_array( $data ) ) {
+			foreach ( $data as $key => $value ) {
+				// Recursively escape the value
+				$data[ $key ] = self::escape_array_html( $value );
+			}
+		} elseif ( is_scalar( $data ) ) {
+			// Escape the string
+			$data = wp_kses_post( (string) $data );
+		}
+
+		return $data;
 	}
 }

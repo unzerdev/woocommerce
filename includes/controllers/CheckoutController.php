@@ -13,10 +13,10 @@ use UnzerPayments\Util;
 use UnzerSDK\Adapter\ApplepayAdapter;
 use UnzerSDK\Constants\PaymentState;
 use UnzerSDK\Resources\ExternalResources\ApplepaySession;
-use UnzerSDK\Resources\TransactionTypes\Authorization;
 use WC_Order;
 
 class CheckoutController {
+
 
 	const APPLE_PAY_MERCHANT_VALIDATION_ROUTE_SLUG = 'unzer_apple_pay_merchant_validation';
 
@@ -143,7 +143,6 @@ class CheckoutController {
 					array(
 						'error'                 => $e->getMessage(),
 						'merchantValidationUrl' => $merchantValidationUrl,
-						'GET'                   => print_r( $_GET, true ),
 					)
 				);
 			}
@@ -155,7 +154,7 @@ class CheckoutController {
 
 	protected function renderJson( array $data ) {
 		header( 'Content-Type: application/json' );
-		echo wp_json_encode( $data );
+		echo wp_json_encode( Util::escape_array_html( $data ) );
 		die;
 	}
 }

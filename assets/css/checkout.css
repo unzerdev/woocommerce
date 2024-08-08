@@ -16,3 +16,10 @@
 .payment_method_unzer_direct_debit .unzer-save-new-payment-instrument label :first-child{
 	flex-basis: 0;
 }
+apple-pay-button {
+	--apple-pay-button-width: 100%;
+	--apple-pay-button-height: 30px;
+	--apple-pay-button-border-radius: 5px;
+	--apple-pay-button-padding: 5px 0px;
+	margin-top:10px;
+}
