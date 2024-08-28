@@ -95,7 +95,6 @@ const UnzerManager = {
 				UnzerManager.initDirectDebit();
 				UnzerManager.initDirectDebitSecured();
 				UnzerManager.initInstallment();
-				UnzerManager.initEps();
 				UnzerManager.initIdeal();
 				UnzerManager.initInvoice();
 				UnzerManager.initApplePay();
@@ -517,63 +516,6 @@ const UnzerManager = {
 					.then(
 						function (result) {
 							document.getElementById( 'unzer-invoice-id' ).value = result.id;
-							UnzerManager.getCheckoutForm().trigger( 'submit' );
-						}
-					)
-					.catch(
-						function (error) {
-							console.warn( error );
-							UnzerManager.error( error.customerMessage || error.message );
-						}
-					)
-				return false;
-			}
-		);
-	},
-
-	initEps() {
-		if ( ! document.getElementById( 'unzer-eps-form' )) {
-			return;
-		}
-		if (document.getElementById( 'unzer-eps-form' ).getAttribute( 'is-init' )) {
-			return;
-		}
-		document.getElementById( 'unzer-eps-form' ).setAttribute( 'is-init', true );
-
-		// Create an Unzer instance with your public key
-
-		const epsInstance = UnzerManager.instance.EPS();
-
-		epsInstance.create(
-			'eps',
-			{
-				containerId: 'unzer-eps'
-			}
-		);
-		epsInstance.addEventListener(
-			'change',
-			function () {
-				document.getElementById( 'unzer-eps-id' ).value = '';
-			}
-		);
-		document.getElementById( 'unzer-eps-id' ).value = '';
-		jQuery( document.body ).on(
-			'checkout_error',
-			function () {
-				document.getElementById( 'unzer-eps-id' ).value = '';
-			}
-		);
-		jQuery( '.woocommerce-checkout' ).off( 'checkout_place_order_unzer_eps' );
-		jQuery( '.woocommerce-checkout' ).on(
-			'checkout_place_order_unzer_eps',
-			function () {
-				if (document.getElementById( 'unzer-eps-id' ).value) {
-					return true;
-				}
-				epsInstance.createResource()
-					.then(
-						function (result) {
-							document.getElementById( 'unzer-eps-id' ).value = result.id;
 							UnzerManager.getCheckoutForm().trigger( 'submit' );
 						}
 					)

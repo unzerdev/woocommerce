@@ -11,8 +11,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Eps extends AbstractGateway {
 
-	const GATEWAY_ID     = 'unzer_eps';
-	public $method_title = 'Unzer EPS';
+	const GATEWAY_ID            = 'unzer_eps';
+	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\EPS::class;
+	public $method_title        = 'Unzer EPS';
 	public $method_description;
 	public $title       = 'EPS';
 	public $description = '';
@@ -22,24 +23,6 @@ class Eps extends AbstractGateway {
 		'products',
 		'refunds',
 	);
-
-	public function has_fields() {
-		return true;
-	}
-
-	public function payment_fields() {
-		$description = $this->get_description();
-		if ( $description ) {
-			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
-		}
-		Util::getNonceField();
-		?>
-		<div id="unzer-eps-form" class="unzerUI form" novalidate>
-			<input type="hidden" id="unzer-eps-id" name="unzer-eps-id" value=""/>
-			<div id="unzer-eps" class="field"></div>
-		</div>
-		<?php
-	}
 
 	public function get_form_fields() {
 		return apply_filters(
@@ -67,21 +50,5 @@ class Eps extends AbstractGateway {
 				),
 			)
 		);
-	}
-
-	public function process_payment( $order_id ) {
-		$epsId = Util::getNonceCheckedPostValue( 'unzer-eps-id' );
-		if ( empty( $epsId ) ) {
-			throw new \Exception( esc_html__( 'Please select your bank', 'unzer-payments' ) );
-		}
-		$this->logger->debug( 'start payment for #' . $order_id . ' with ' . self::GATEWAY_ID );
-		$return      = array(
-			'result' => 'success',
-		);
-		$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $epsId );
-		if ( $transaction->getPayment()->getRedirectUrl() ) {
-			$return['redirect'] = $transaction->getPayment()->getRedirectUrl();
-		}
-		return $return;
 	}
 }
