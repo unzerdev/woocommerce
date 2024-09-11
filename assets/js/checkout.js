@@ -134,13 +134,15 @@ const UnzerManager = {
 	},
 
 	initCard() {
-		if ( ! document.getElementById( 'unzer-card-form' )) {
+		const cardForm = document.getElementById( 'unzer-card-form' );
+		if ( ! cardForm) {
 			return;
 		}
-		if (document.getElementById( 'unzer-card-form' ).getAttribute( 'is-init' )) {
+		if (cardForm.getAttribute( 'is-init' )) {
 			return;
 		}
-		document.getElementById( 'unzer-card-form' ).setAttribute( 'is-init', true );
+		cardForm.setAttribute( 'is-init', true );
+		const cardFormId = cardForm.getAttribute( 'data-form-id' );
 
 		// Create an Unzer instance with your public key
 
@@ -148,28 +150,28 @@ const UnzerManager = {
 		cardInstance.create(
 			'holder',
 			{
-				containerId: 'unzer-card-form-holder',
+				containerId: 'unzer-card-form-holder-' + cardFormId,
 				onlyIframe: false
 			}
 		);
 		cardInstance.create(
 			'number',
 			{
-				containerId: 'unzer-card-form-number',
+				containerId: 'unzer-card-form-number-' + cardFormId,
 				onlyIframe: false
 			}
 		);
 		cardInstance.create(
 			'expiry',
 			{
-				containerId: 'unzer-card-form-expiry',
+				containerId: 'unzer-card-form-expiry-' + cardFormId,
 				onlyIframe: false
 			}
 		);
 		cardInstance.create(
 			'cvc',
 			{
-				containerId: 'unzer-card-form-cvc',
+				containerId: 'unzer-card-form-cvc-' + cardFormId,
 				onlyIframe: false
 			}
 		);
