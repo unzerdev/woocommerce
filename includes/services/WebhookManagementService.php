@@ -62,6 +62,6 @@ class WebhookManagementService {
 	}
 
 	public static function getWebhookUrl(): string {
-		return str_replace( 'http://', 'https://', WC()->api_request_url( WebhookController::WEBHOOK_ROUTE_SLUG ) ); // TODO only testing
+		return str_replace( 'http://', 'https://', WC()->api_request_url( WebhookController::WEBHOOK_ROUTE_SLUG ) );
 	}
 }

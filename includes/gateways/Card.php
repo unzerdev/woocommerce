@@ -45,28 +45,29 @@ class Card extends AbstractGateway {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
 		Util::getNonceField();
-		$form = '
+		$formId = uniqid();
+		$form   = '
         <input type="hidden" id="unzer-card-id" name="unzer-card-id" value=""/>
-        <div id="unzer-card-form" class="unzerUI form">
+        <div id="unzer-card-form" class="unzerUI form" data-form-id="' . $formId . '">
             <div class="field">
-                <div id="unzer-card-form-number" class="unzerInput">
+                <div id="unzer-card-form-number-' . $formId . '" class="unzerInput">
                     <!-- Card number UI Element will be inserted here. -->
                 </div>
             </div>
             <div class="two fields">
                 <div class="field ten wide">
-                    <div id="unzer-card-form-expiry" class="unzerInput">
+                    <div id="unzer-card-form-expiry-' . $formId . '" class="unzerInput">
                         <!-- Card expiry date UI Element will be inserted here. -->
                     </div>
                 </div>
                 <div class="field six wide">
-                    <div id="unzer-card-form-cvc" class="unzerInput">
+                    <div id="unzer-card-form-cvc-' . $formId . '" class="unzerInput">
                         <!-- Card CVC UI Element will be inserted here. -->
                     </div>
                 </div>
             </div>
             <div class="field">
-                <div id="unzer-card-form-holder" class="unzerInput">
+                <div id="unzer-card-form-holder-' . $formId . '" class="unzerInput">
                     <!-- Card holder UI Element is inserted here. -->
                 </div>
             </div>
