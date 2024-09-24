@@ -173,7 +173,6 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		echo '<h2><span class="unzer-dropdown-icon unzer-content-toggler" data-target=".unzer-payment-navigation" title="' . esc_html__( 'Select another Unzer payment method', 'unzer-payments' ) . '"></span> ' . esc_html( $this->get_method_title() );
 		wc_back_link( __( 'Return to payments', 'unzer-payments' ), admin_url( 'admin.php?page=wc-settings&tab=checkout' ) );
 		echo '</h2>';
-		echo '<style id="unzer-payment-navigation-temp-style">.unzer-payment-navigation { display:none !important; }</style>';
 		echo wp_kses_post( $this->getCompletePaymentMethodListHtml() );
 		// escaping $this->generate_settings_html would break the form html, using default WooCommerce method here
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -212,7 +211,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
                         <div class="is-error" style="color:#dc1b1b; display:none;"><span class="unzer-status-circle" style="background:#cc0000;"></span>$isInvalidText</div>
                         <div class="is-success" style=" display:none;"><span class="unzer-status-circle" style="background:#00a800;"></span>$isValidText</div>
                     </div>
-                    $webhookHtml
+                    ' . $webhookHtml . '
                 </td>
             </tr>
             ';
