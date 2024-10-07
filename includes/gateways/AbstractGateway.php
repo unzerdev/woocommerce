@@ -52,13 +52,14 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		if ( $this->get_public_key() && $this->get_private_key() ) {
 			$this->method_description = sprintf( __( 'The Unzer API settings can be adjusted <a href="%s">here</a>', 'unzer-payments' ), admin_url( 'admin.php?page=wc-settings&tab=checkout&section=unzer_general' ) );
 		} else {
-			$this->method_description = '<div class="error" style="padding:10px;">' . sprintf( __( 'To start using Unzer payment methods, please enter your credentials first. <br><a href="%s" class="button-primary">API settings</a>', 'unzer-payments' ), admin_url( 'admin.php?page=wc-settings&tab=checkout&section=unzer_general' ) ) . '</div>';
+			$this->method_description = '<div class="error inline" style="padding:10px;">' . sprintf( __( 'To start using Unzer payment methods, please enter your credentials first. <br><a href="%s" class="button-primary">API settings</a>', 'unzer-payments' ), admin_url( 'admin.php?page=wc-settings&tab=checkout&section=unzer_general' ) ) . '</div>';
 		}
 		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
 		$this->title       = $this->get_option( 'title' );
 		$this->description = $this->get_option( 'description' );
 		add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
 	}
+
 	public function payment_scripts() {
 		if ( ! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
 			return;
@@ -173,7 +174,6 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		echo '<h2><span class="unzer-dropdown-icon unzer-content-toggler" data-target=".unzer-payment-navigation" title="' . esc_html__( 'Select another Unzer payment method', 'unzer-payments' ) . '"></span> ' . esc_html( $this->get_method_title() );
 		wc_back_link( __( 'Return to payments', 'unzer-payments' ), admin_url( 'admin.php?page=wc-settings&tab=checkout' ) );
 		echo '</h2>';
-		echo '<style id="unzer-payment-navigation-temp-style">.unzer-payment-navigation { display:none !important; }</style>';
 		echo wp_kses_post( $this->getCompletePaymentMethodListHtml() );
 		// escaping $this->generate_settings_html would break the form html, using default WooCommerce method here
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -186,11 +186,8 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 
 
 	public function generate_key_check_html( $key, $data ) {
-		$slug          = $data['slug'];
-		$gateway       = esc_attr( $this->id );
-		$title         = wp_kses_post( $data['title'] );
-		$isInvalidText = esc_html__( 'Keys are not valid', 'unzer-payments' );
-		$isValidText   = esc_html__( 'Keys are valid', 'unzer-payments' );
+		$slug  = $data['slug'];
+		$title = $data['title'] ?? '';
 		wp_enqueue_script( 'unzer_admin_key_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_key_management.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 		wp_enqueue_script( 'unzer_admin_webhook_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_webhook_management.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 
@@ -201,22 +198,21 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 			$webhookHtml = ob_get_contents();
 			ob_end_clean();
 		}
-		$ajaxUrl    = WC()->api_request_url( AdminController::KEY_VALIDATION_ROUTE_SLUG );
-		$returnHtml = '
+		$ajaxUrl = WC()->api_request_url( AdminController::KEY_VALIDATION_ROUTE_SLUG );
+		return '
             <tr valign="top">
                 <th scope="row" class="titledesc">
-                    <label for="$key">$title</label>
+                    <label for="$key">' . esc_html( $title ) . '</label>
                 </th>
                 <td class="forminp">
-                    <div id="unzer-key-status-$slug" class="unzer-key-status" data-slug="$slug" data-gateway="$gateway" data-url="$ajaxUrl" style="margin-bottom:20px;">
-                        <div class="is-error" style="color:#dc1b1b; display:none;"><span class="unzer-status-circle" style="background:#cc0000;"></span>$isInvalidText</div>
-                        <div class="is-success" style=" display:none;"><span class="unzer-status-circle" style="background:#00a800;"></span>$isValidText</div>
+                    <div id="unzer-key-status-' . esc_attr( $slug ) . '" class="unzer-key-status" data-slug="' . esc_attr( $slug ) . '" data-gateway="' . esc_attr( $this->id ) . '" data-url="' . esc_attr( $ajaxUrl ) . '" data-nonce="' . esc_attr( Util::getNonce() ) . '" style="margin-bottom:20px;">
+                        <div class="is-error" style="color:#dc1b1b; display:none;"><span class="unzer-status-circle" style="background:#cc0000;"></span>' . esc_html__( 'Keys are not valid', 'unzer-payments' ) . '</div>
+                        <div class="is-success" style=" display:none;"><span class="unzer-status-circle" style="background:#00a800;"></span>' . esc_html__( 'Keys are valid', 'unzer-payments' ) . '</div>
                     </div>
-                    $webhookHtml
+                    ' . $webhookHtml . '
                 </td>
             </tr>
             ';
-		return $returnHtml;
 	}
 
 	public function generate_readonly_html( $key, $data ) {

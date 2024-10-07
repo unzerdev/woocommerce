@@ -213,14 +213,15 @@ const UnzerManager = {
 	},
 
 	initDirectDebit() {
-		if ( ! document.getElementById( 'unzer-direct-debit-form' )) {
+		const form = document.getElementById( 'unzer-direct-debit-form' );
+		if ( ! form) {
 			return;
 		}
-		if (document.getElementById( 'unzer-direct-debit-form' ).getAttribute( 'is-init' )) {
+		if (form.getAttribute( 'is-init' )) {
 			return;
 		}
-		document.getElementById( 'unzer-direct-debit-form' ).setAttribute( 'is-init', true );
-
+		form.setAttribute( 'is-init', true );
+		const formId = form.getAttribute( 'data-form-id' );
 		// Create an Unzer instance with your public key
 
 		const directDebitInstance = UnzerManager.instance.SepaDirectDebit();
@@ -228,7 +229,7 @@ const UnzerManager = {
 		directDebitInstance.create(
 			'sepa-direct-debit',
 			{
-				containerId: 'unzer-direct-debit-iban'
+				containerId: 'unzer-direct-debit-iban-' + formId
 			}
 		);
 		document.getElementById( 'unzer-direct-debit-id' ).value = '';
@@ -274,23 +275,25 @@ const UnzerManager = {
 	},
 
 	initDirectDebitSecured() {
-		if ( ! document.getElementById( 'unzer-direct-debit-secured-form' )) {
+		const form = document.getElementById( 'unzer-direct-debit-secured-form' );
+		if ( ! form) {
 			return;
 		}
-		if (document.getElementById( 'unzer-direct-debit-secured-form' ).getAttribute( 'is-init' )) {
+		if (form.getAttribute( 'is-init' )) {
 			return;
 		}
 		if ( ! UnzerManager.instanceDirectDebitSecured) {
 			return;
 		}
-		document.getElementById( 'unzer-direct-debit-secured-form' ).setAttribute( 'is-init', true );
+		form.setAttribute( 'is-init', true );
+		const formId = form.getAttribute( 'data-form-id' );
 		UnzerManager.toggleDirectDebitSecuredDisplay();
 
 		const directDebitSecuredInstance = UnzerManager.instanceDirectDebitSecured.PaylaterDirectDebit();
 		directDebitSecuredInstance.create(
 			'paylater-direct-debit',
 			{
-				containerId: 'unzer-direct-debit-secured-form'
+				containerId: 'unzer-direct-debit-secured-form-ui-' + formId
 			}
 		);
 		document.getElementById( 'unzer-direct-debit-secured-id' ).value = '';

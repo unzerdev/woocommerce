@@ -57,11 +57,12 @@ In case of refusal or rejection of direct debit payment I instruct my bank irrev
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
 		Util::getNonceField();
-		$form = '
-        <div id="unzer-direct-debit-form" class="unzerUI form">
+		$formId = uniqid();
+		$form   = '
+        <div id="unzer-direct-debit-form" class="unzerUI form" data-form-id="' . $formId . '">
             <input type="hidden" id="unzer-direct-debit-id" name="unzer-direct-debit-id" value=""/>
             <div class="field">
-                <div id="unzer-direct-debit-iban" class="unzerInput">
+                <div id="unzer-direct-debit-iban-' . $formId . '" class="unzerInput">
                 </div>
             </div>
         </div>
