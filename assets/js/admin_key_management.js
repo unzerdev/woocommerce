@@ -3,6 +3,7 @@ function unzerProcessSubKeyCheck(container) {
 	const formData = new FormData();
 	formData.append( 'slug', container.getAttribute( 'data-slug' ) );
 	formData.append( 'gateway', container.getAttribute( 'data-gateway' ) );
+	formData.append( 'unzer_nonce', container.getAttribute( 'data-nonce' ) );
 
 	fetch(
 		url,

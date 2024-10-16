@@ -3,7 +3,7 @@ Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
 Tested up to: 6.5
-Stable tag: 1.7.3
+Stable tag: 1.7.6
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
@@ -15,6 +15,10 @@ Use Unzer plugin for WooCommerce to provide an easy-to-install and use payment g
 
 • Unzer Payments for WooCommerce payments by credit card, SOFORT, PayPal, Unzer Invoice (Paylater), iDEAL, EPS, and Giropay and many more
 • Easily accept digital payments in your online store with Unzer Plugins.
+• Unzer Payments is a 3rd party payment gateway plugin, https://docs.unzer.com/plugins/woocommerce and https://unzer.com/
+• Unzer Payments can use external JavaScripts for certain payment methods, Apple Pay https://applepay.cdn-apple.com/jsapi/v1/apple-pay-sdk.js, Google Pay https://pay.google.com/gp/p/js/pay.js, Unzer paylater payment methods https://h.online-metrix.net/fp/tags.js, Unzer UI components https://static.unzer.com/v1/unzer.js.
+• Unzer Payments use external CSS to style the UI components and prevent flickering of objects. For more information, please go to https://docs.unzer.com/online-payments/ui-component#content-security-policy-csp
+
 
 == Features ==
 
@@ -56,6 +60,16 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth - online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 == Changelog ==
+
+= 1.7.6 =
+- Place Order Button fix
+
+= 1.7.5 =
+- Update for wooCommerce requirements
+
+= 1.7.4 =
+- Make IBAN form IDs unique
+- Update for wooCommerce requirements
 
 = 1.7.3 =
 - Workarround for duplicate card fields with slow connections

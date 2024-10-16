@@ -128,3 +128,7 @@
 		transform: rotate(1turn);
 	}
 }
+
+.unzer-payment-navigation{
+	display:none;
+}

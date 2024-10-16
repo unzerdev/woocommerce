@@ -46,6 +46,7 @@ class DirectDebitSecured extends AbstractGateway {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
 		Util::getNonceField();
+		$formId = uniqid();
 		?>
 		<input type="hidden" id="unzer-direct-debit-secured-id" name="unzer-direct-debit-secured-id" value=""/>
 
@@ -53,7 +54,9 @@ class DirectDebitSecured extends AbstractGateway {
 			<label><?php echo esc_html__( 'Date of birth', 'unzer-payments' ); ?></label>
 			<input type="date" id="unzer-direct-debit-secured-dob" name="unzer-direct-debit-secured-dob" class="input-text" value="<?php echo esc_attr( $this->getUserBirthDate() ); ?>" max="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"/>
 		</div>
-		<div id="unzer-direct-debit-secured-form" class="unzerUI form"></div>
+		<div id="unzer-direct-debit-secured-form" data-form-id="<?php echo esc_attr( $formId ); ?>">
+			<div id="unzer-direct-debit-secured-form-ui-<?php echo esc_attr( $formId ); ?>" class="unzerUI form"></div>
+		</div>
 		<?php
 	}
 
