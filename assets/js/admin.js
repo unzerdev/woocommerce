@@ -4,10 +4,6 @@ document.addEventListener(
 		const paymentNavigation = document.querySelector( '.unzer-payment-navigation' );
 		if ( paymentNavigation) {
 			paymentNavigation.style.display = 'none';
-			const tempStyle                 = document.getElementById( 'unzer-payment-navigation-temp-style' );
-			if (tempStyle) {
-				tempStyle.remove();
-			}
 		}
 		const toggler = document.querySelector( '.unzer-content-toggler' );
 		if ( ! toggler) {
@@ -19,7 +15,7 @@ document.addEventListener(
 			function (e) {
 				e.preventDefault();
 				toggler.classList.toggle( 'active' );
-				target.style.display = target.style.display === 'none' ? '' : 'none';
+				target.style.display = target.style.display === 'none' ? 'initial' : 'none';
 			}
 		);
 

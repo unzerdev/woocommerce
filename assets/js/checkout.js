@@ -213,14 +213,15 @@ const UnzerManager = {
 	},
 
 	initDirectDebit() {
-		if ( ! document.getElementById( 'unzer-direct-debit-form' )) {
+		const form = document.getElementById( 'unzer-direct-debit-form' );
+		if ( ! form) {
 			return;
 		}
-		if (document.getElementById( 'unzer-direct-debit-form' ).getAttribute( 'is-init' )) {
+		if (form.getAttribute( 'is-init' )) {
 			return;
 		}
-		document.getElementById( 'unzer-direct-debit-form' ).setAttribute( 'is-init', true );
-
+		form.setAttribute( 'is-init', true );
+		const formId = form.getAttribute( 'data-form-id' );
 		// Create an Unzer instance with your public key
 
 		const directDebitInstance = UnzerManager.instance.SepaDirectDebit();
@@ -228,7 +229,7 @@ const UnzerManager = {
 		directDebitInstance.create(
 			'sepa-direct-debit',
 			{
-				containerId: 'unzer-direct-debit-iban'
+				containerId: 'unzer-direct-debit-iban-' + formId
 			}
 		);
 		document.getElementById( 'unzer-direct-debit-id' ).value = '';
@@ -274,23 +275,25 @@ const UnzerManager = {
 	},
 
 	initDirectDebitSecured() {
-		if ( ! document.getElementById( 'unzer-direct-debit-secured-form' )) {
+		const form = document.getElementById( 'unzer-direct-debit-secured-form' );
+		if ( ! form) {
 			return;
 		}
-		if (document.getElementById( 'unzer-direct-debit-secured-form' ).getAttribute( 'is-init' )) {
+		if (form.getAttribute( 'is-init' )) {
 			return;
 		}
 		if ( ! UnzerManager.instanceDirectDebitSecured) {
 			return;
 		}
-		document.getElementById( 'unzer-direct-debit-secured-form' ).setAttribute( 'is-init', true );
+		form.setAttribute( 'is-init', true );
+		const formId = form.getAttribute( 'data-form-id' );
 		UnzerManager.toggleDirectDebitSecuredDisplay();
 
 		const directDebitSecuredInstance = UnzerManager.instanceDirectDebitSecured.PaylaterDirectDebit();
 		directDebitSecuredInstance.create(
 			'paylater-direct-debit',
 			{
-				containerId: 'unzer-direct-debit-secured-form'
+				containerId: 'unzer-direct-debit-secured-form-ui-' + formId
 			}
 		);
 		document.getElementById( 'unzer-direct-debit-secured-id' ).value = '';
@@ -830,6 +833,26 @@ const UnzerManager = {
 			const event = new CustomEvent( 'unzer_country_changed', {detail: {country: value}} );
 			document.dispatchEvent( event );
 		}
+	},
+	customDebug( data ) {
+		if ( ! document.getElementById( 'unzer_debug' )) {
+			const debug                 = document.createElement( 'div' );
+			debug.id                    = 'unzer_debug';
+			debug.style.position        = 'fixed';
+			debug.style.top             = '0';
+			debug.style.right           = '0';
+			debug.style.zIndex          = '100000';
+			debug.style.padding         = '10px';
+			debug.style.backgroundColor = 'rgba(255,255,255,0.9)';
+			debug.style.border          = '1px solid #ccc';
+			debug.style.fontFamily      = 'monospace';
+			debug.style.fontSize        = '12px';
+			debug.style.maxWidth        = '300px';
+			debug.style.overflow        = 'auto';
+			debug.style.maxHeight       = '40vh';
+			document.body.appendChild( debug );
+		}
+		document.getElementById( 'unzer_debug' ).innerHTML += "\n\n" + JSON.stringify( data, null, 2 );
 	}
 }
 
@@ -866,11 +889,14 @@ jQuery(
 					companyTypeInputContainer.style.display = UnzerManager.isB2B() ? 'block' : 'none';
 				}
 
+				const placeOrderButton   = document.querySelector( '#place_order' );
+				let showPlaceOrderButton = true;
+
 				const applePayContainer = document.querySelector( '.payment_method_unzer_apple_pay' );
 				if (applePayContainer) {
 					if (window.ApplePaySession && window.ApplePaySession.canMakePayments() && window.ApplePaySession.supportsVersion( 6 )) {
 						applePayContainer.style.display = '';
-						const placeOrderButton          = document.querySelector( '#place_order' );
+
 						if (placeOrderButton) {
 							let applePayButton = document.getElementById( 'unzer_apple_pay_place_order' );
 							if ( ! applePayButton) {
@@ -881,11 +907,10 @@ jQuery(
 							}
 
 							if (document.getElementById( 'payment_method_unzer_apple_pay' ).checked) {
-								applePayButton.style.display   = '';
-								placeOrderButton.style.display = 'none';
+								applePayButton.style.display = '';
+								showPlaceOrderButton         = false;
 							} else {
-								applePayButton.style.display   = 'none';
-								placeOrderButton.style.display = '';
+								applePayButton.style.display = 'none';
 							}
 						}
 					} else {
@@ -895,15 +920,19 @@ jQuery(
 
 				const googlePayContainer = document.querySelector( '.payment_method_unzer_google_pay' );
 				const googlePayButton    = document.getElementById( 'unzer_google_pay_place_order' );
-				const placeOrderButton   = document.querySelector( '#place_order' );
 				if (googlePayContainer && googlePayButton && placeOrderButton) {
 					if (document.getElementById( 'payment_method_unzer_google_pay' ).checked) {
-						googlePayButton.style.display  = '';
-						placeOrderButton.style.display = 'none';
+						googlePayButton.style.display = '';
+						showPlaceOrderButton          = false;
 					} else {
-						googlePayButton.style.display  = 'none';
-						placeOrderButton.style.display = '';
+						googlePayButton.style.display = 'none';
 					}
+				}
+
+				if (showPlaceOrderButton) {
+					placeOrderButton.style.display = '';
+				} else {
+					placeOrderButton.style.display = 'none';
 				}
 			},
 			500
