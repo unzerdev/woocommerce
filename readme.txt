@@ -17,7 +17,8 @@ Use Unzer plugin for WooCommerce to provide an easy-to-install and use payment g
 • Easily accept digital payments in your online store with Unzer Plugins.
 • Unzer Payments is a 3rd party payment gateway plugin, https://docs.unzer.com/plugins/woocommerce and https://unzer.com/
 • Unzer Payments can use external JavaScripts for certain payment methods, Apple Pay https://applepay.cdn-apple.com/jsapi/v1/apple-pay-sdk.js, Google Pay https://pay.google.com/gp/p/js/pay.js, Unzer paylater payment methods https://h.online-metrix.net/fp/tags.js, Unzer UI components https://static.unzer.com/v1/unzer.js.
-• Unzer Payments use external CSS to style the UI components and prevent flickering of objects. For more information, please go to https://docs.unzer.com/online-payments/ui-component#content-security-policy-csp
+• Unzer Payments use external CSS (https://static.unzer.com/v1/unzer.css) to style the UI components and prevent flickering of objects. For more information, please go to https://docs.unzer.com/online-payments/ui-component#content-security-policy-csp
+
 
 
 == Features ==
