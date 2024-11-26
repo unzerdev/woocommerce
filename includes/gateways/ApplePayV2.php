@@ -1,6 +1,6 @@
 <?php
 
-namespace UnzerPayments\Gateways;
+namespace UnzerPayments\gateways;
 
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
@@ -9,10 +9,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class ApplePay extends AbstractGateway {
+class ApplePayV2 extends AbstractGateway {
 
-	const GATEWAY_ID     = 'unzer_apple_pay';
-	public $method_title = 'Unzer Apple Pay (Deprecated)';
+	const GATEWAY_ID     = 'unzer_apple_pay_v2';
+	public $method_title = 'Unzer Apple Pay';
 	public $method_description;
 	public $title       = 'Apple Pay';
 	public $description = '';
@@ -34,9 +34,9 @@ class ApplePay extends AbstractGateway {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
 		?>
-		<input type="hidden" id="unzer-apple-pay-id" name="unzer-apple-pay-id" value=""/>
-		<input type="hidden" id="unzer-apple-pay-nonce" name="unzer-apple-pay-nonce" value="<?php echo esc_attr( Util::getNonce() ); ?>"/>
-		<input type="hidden" id="unzer-apple-pay-amount" name="unzer-apple-pay-amount" value="<?php echo esc_attr( WC()->cart->get_total( 'plain' ) ); ?>"/>
+		<input type="hidden" id="unzer-apple-pay-v2-id" name="unzer-apple-pay-v2-id" value=""/>
+		<input type="hidden" id="unzer-apple-pay-v2-nonce" name="unzer-apple-pay-v2-nonce" value="<?php echo esc_attr( Util::getNonce() ); ?>"/>
+		<input type="hidden" id="unzer-apple-pay-v2-amount" name="unzer-apple-pay-v2-amount" value="<?php echo esc_attr( WC()->cart->get_total( 'plain' ) ); ?>"/>
 		<?php
 	}
 
@@ -50,7 +50,6 @@ class ApplePay extends AbstractGateway {
 		}
 
 		$this->addCheckoutAssets();
-		wp_enqueue_script( 'unzer_apple_pay_js', 'https://applepay.cdn-apple.com/jsapi/v1/apple-pay-sdk.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 	}
 
 	public function get_form_fields() {
@@ -88,12 +87,6 @@ class ApplePay extends AbstractGateway {
 					),
 					'default'     => 'charge',
 				),
-				'merchant_id'      => array(
-					'title'       => __( 'Merchant ID', 'unzer-payments' ),
-					'type'        => 'text',
-					'description' => '',
-					'default'     => '',
-				),
 			)
 		);
 	}
@@ -104,11 +97,11 @@ class ApplePay extends AbstractGateway {
 			'result' => 'success',
 		);
 
-		$applePayId = Util::getNonceCheckedPostValue( 'unzer-apple-pay-id' );
+		$applePayId = Util::getNonceCheckedPostValue( 'unzer-apple-pay-v2-id' );
 
 		if ( empty( $applePayId ) ) {
-			$this->logger->debug( 'apple pay empty id' );
-			$return['messages'] = '<!-- start-unzer-apple-pay -->';
+			$this->logger->debug( 'apple pay empty id', $_POST );
+			$return['messages'] = '<!-- start-unzer-apple-pay-v2 -->';
 			return $return;
 		}
 		if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
@@ -125,9 +118,5 @@ class ApplePay extends AbstractGateway {
 			$return['redirect'] = $this->get_confirm_url();
 		}
 		return $return;
-	}
-
-	public function get_additional_options_html() {
-		include UNZER_PLUGIN_PATH . 'html/admin/apple-pay-settings.php';
 	}
 }
