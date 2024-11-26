@@ -98,6 +98,7 @@ const UnzerManager = {
 				UnzerManager.initIdeal();
 				UnzerManager.initInvoice();
 				UnzerManager.initApplePay();
+				UnzerManager.initApplePayV2();
 				UnzerManager.initGooglePay();
 				UnzerManager.initSavedPaymentInstruments();
 			},
@@ -608,13 +609,16 @@ const UnzerManager = {
 					window.doNotStartApplePaySession = false;
 					return true;
 				}
+				console.log( 'start ap session' );
 				UnzerManager.startApplePaySession();
 				return true;
 			}
 		);
 
 		const unzerApplePayProcessingAction = function (msg) {
+			console.log( 'msg: ' + msg );
 			if (msg && msg.indexOf( '<!-- start-unzer-apple-pay -->' ) !== -1) {
+				console.log( 'begind ap session' );
 				UnzerManager.beginApplePaySession();
 			}
 		}
@@ -622,6 +626,7 @@ const UnzerManager = {
 		jQuery( document.body ).on(
 			'checkout_error',
 			function (e, msg) {
+				console.log( 'checkout_error:', msg );
 				unzerApplePayProcessingAction( msg );
 			}
 		);
@@ -636,6 +641,103 @@ const UnzerManager = {
 				unzerApplePayProcessingAction( event.detail.response.messages );
 			}
 		);
+
+	},
+
+	initApplePayV2() {
+		if ( ! document.getElementById( 'unzer-apple-pay-v2-id' )) {
+			return;
+		}
+		window.unzerApplePayV2Session = null;
+
+		jQuery( '.woocommerce-checkout' ).off( 'checkout_place_order_unzer_apple_pay_v2' );
+		jQuery( '.woocommerce-checkout' ).on(
+			'checkout_place_order_unzer_apple_pay_v2',
+			function () {
+				if (window.doNotStartApplePayV2Session) {
+					window.doNotStartApplePayV2Session = false;
+					return true;
+				}
+				UnzerManager.initApplePayV2Session();
+				return true;
+			}
+		);
+
+		const unzerApplePayV2ProcessingAction = function (msg) {
+			if (msg && msg.indexOf( '<!-- start-unzer-apple-pay-v2 -->' ) !== -1) {
+				if (window.unzerApplePayV2Session) {
+					window.unzerApplePayV2Session.begin();
+				} else {
+					console.error( 'Apple Pay V2: Session not initialized' );
+					UnzerManager.error( unzer_parameters.generic_error_message );
+				}
+			} else {
+				if (window.unzerApplePayV2Session) {
+					window.unzerApplePayV2Session.abort();
+					window.unzerApplePayV2Session = null;
+				}
+			}
+		}
+
+		jQuery( document.body ).on(
+			'checkout_error',
+			function (e, msg) {
+				unzerApplePayV2ProcessingAction( msg );
+			}
+		);
+
+		// for plugin CheckoutWC
+		window.addEventListener(
+			'cfw-checkout-failed-before-error-message',
+			function (event) {
+				if (typeof event.detail.response.messages === 'undefined') {
+					return;
+				}
+				unzerApplePayV2ProcessingAction( event.detail.response.messages );
+			}
+		);
+
+	},
+
+	initApplePayV2Session() {
+		const unzerApplePayV2Instance = UnzerManager.instance.ApplePay();
+
+		const applePayV2PaymentRequest = {
+			countryCode: unzer_parameters.store_country,
+			currencyCode: UnzerManager.currency,
+			supportedNetworks: ['VISA', 'MASTERCARD'],
+			merchantCapabilities: ['supports3DS'],
+			total: {
+				label: unzer_parameters.store_name,
+				amount: parseFloat( document.getElementById( 'unzer-apple-pay-v2-amount' ).value )
+			}
+		};
+
+		window.unzerApplePayV2Session                     = unzerApplePayV2Instance.initApplePaySession( applePayV2PaymentRequest );
+		window.unzerApplePayV2Session.onpaymentauthorized = function (event) {
+			let paymentData = event.payment.token.paymentData;
+			unzerApplePayV2Instance.createResource( paymentData )
+				.then(
+					function (createdResource) {
+						document.getElementById( 'unzer-apple-pay-v2-id' ).value = createdResource.id;
+						window.doNotStartApplePayV2Session                       = true;
+						UnzerManager.getCheckoutForm().trigger( 'submit' );
+						setTimeout(
+							function () {
+								window.doNotStartApplePayV2Session = false;
+							},
+							500
+						);
+					}
+				)
+				.catch(
+					function (error) {
+						UnzerManager.error( error.customerMessage || error.message || unzer_parameters.generic_error_message );
+						console.log( error );
+					}
+				)
+		}
+
 
 	},
 
@@ -698,8 +800,10 @@ const UnzerManager = {
 				)
 		}
 	},
+
+
 	beginApplePaySession() {
-		window.apsession.begin();
+		window.apsession.begin()
 	},
 
 
@@ -915,6 +1019,30 @@ jQuery(
 						}
 					} else {
 						applePayContainer.style.display = 'none';
+					}
+				}
+
+				const applePayV2Container = document.querySelector( '.payment_method_unzer_apple_pay_v2' );
+				if (applePayV2Container) {
+					if (window.ApplePaySession && window.ApplePaySession.canMakePayments() && window.ApplePaySession.supportsVersion( 6 )) {
+						if (placeOrderButton) {
+							let applePayV2Button = document.getElementById( 'unzer_apple_pay_v2_place_order' );
+							if ( ! applePayV2Button) {
+								applePayV2Button    = document.createElement( 'div' );
+								applePayV2Button.id = 'unzer_apple_pay_v2_place_order';
+								placeOrderButton.parentNode.appendChild( applePayV2Button );
+								applePayV2Button.innerHTML = '<div class="apple-pay-button apple-pay-button-black" lang="' + UnzerConfig.getLocale() + '" onclick="document.querySelector(\'#place_order\').click();" title="Start Apple Pay" role="link" tabindex="0"></div>';
+							}
+
+							if (document.getElementById( 'payment_method_unzer_apple_pay_v2' ).checked) {
+								applePayV2Button.style.display = '';
+								showPlaceOrderButton           = false;
+							} else {
+								applePayV2Button.style.display = 'none';
+							}
+						}
+					} else {
+						applePayV2Container.style.display = 'none';
 					}
 				}
 

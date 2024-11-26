@@ -9,6 +9,7 @@ use UnzerPayments\Controllers\WebhookController;
 use UnzerPayments\Gateways\AbstractGateway;
 use UnzerPayments\Gateways\Alipay;
 use UnzerPayments\Gateways\ApplePay;
+use UnzerPayments\gateways\ApplePayV2;
 use UnzerPayments\Gateways\Bancontact;
 use UnzerPayments\Gateways\Card;
 use UnzerPayments\Gateways\DirectDebit;
@@ -34,6 +35,7 @@ use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
 
 class Main {
+
 
 	public static $instance;
 	const ORDER_META_KEY_AUTHORIZATION_ID     = 'unzer_authorization_id';
@@ -97,6 +99,7 @@ class Main {
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_paypal', array( $this, 'savePaymentMethodSettingsPaypal' ) );
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_direct_debit', array( $this, 'savePaymentMethodSettingsDirectDebit' ) );
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_apple_pay', array( $this, 'savePaymentMethodSettingsApplePay' ) );
+		add_action( 'woocommerce_update_options_payment_gateways_unzer_apple_pay_v2', array( $this, 'savePaymentMethodSettingsApplePayV2' ) );
 		add_action( 'woocommerce_update_options_checkout_unzer_general', array( $this, 'saveGeneralSettings' ) );
 		add_action( 'admin_notices', array( new DashboardService(), 'showNotifications' ) );
 		add_action(
@@ -223,6 +226,19 @@ class Main {
 		}
 	}
 
+	public function savePaymentMethodSettingsApplePayV2(): void {
+		$dirExists = is_dir( ABSPATH . '.well-known' );
+		if ( ! $dirExists ) {
+			$dirExists = mkdir( ABSPATH . '.well-known' );
+		}
+		$targetFile = ABSPATH . '.well-known/apple-developer-merchantid-domain-association';
+		if ( $dirExists && ! file_exists( $targetFile ) ) {
+			copy( UNZER_PLUGIN_PATH . 'assets/txt/apple-developer-merchantid-domain-association', $targetFile );
+		}
+		if ( ! file_exists( $targetFile ) ) {
+			( new DashboardService() )->addError( 'apple_pay_id_file' );
+		}
+	}
 	public function savePaymentMethodSettingsApplePay(): void {
 		if ( empty( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'woocommerce-settings' ) ) {
 			return;
@@ -388,6 +404,7 @@ class Main {
 			PostFinanceEfinance::GATEWAY_ID => PostFinanceEfinance::class,
 			PostFinanceCard::GATEWAY_ID     => PostFinanceCard::class,
 			ApplePay::GATEWAY_ID            => ApplePay::class,
+			ApplePayV2::GATEWAY_ID          => ApplePayV2::class,
 			GooglePay::GATEWAY_ID           => GooglePay::class,
 			Twint::GATEWAY_ID               => Twint::class,
 		);

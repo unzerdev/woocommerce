@@ -31,6 +31,9 @@ class DashboardService {
 				case 'chargeback':
 					$message = sprintf( __( 'A chargeback has been received. Please check the payment details for order %s', 'unzer-payments' ), $notification['parameters'][0] );
 					break;
+				case 'apple_pay_id_file':
+					$message = __( 'Could not create apple-developer-merchantid-domain-association file', 'unzer-payments' );
+					break;
 			}
 			echo '<div class="notice notice-' . esc_attr( $notification['type'] ) . '">
                     <p>' . wp_kses_post( $message ) . '</p>
