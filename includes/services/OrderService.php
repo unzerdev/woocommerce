@@ -3,6 +3,7 @@
 namespace UnzerPayments\Services;
 
 use Exception;
+use UnzerPayments\Gateways\Prepayment;
 use UnzerPayments\Main;
 use UnzerPayments\Util;
 use UnzerSDK\Constants\BasketItemTypes;
@@ -475,5 +476,19 @@ class OrderService {
 			// silent
 		}
 		return $id;
+	}
+
+	/**
+	 * @param WC_Order $order
+	 * @return void
+	 */
+	public function printPaymentInstructionsHtml( $order ) {
+		$paymentInstructions = $order->get_meta( Main::ORDER_META_KEY_PAYMENT_INSTRUCTIONS, true );
+		if ( $paymentInstructions ) {
+			if ( $order->get_payment_method() !== Prepayment::GATEWAY_ID ) {
+				return;
+			}
+			echo '<div id="unzer-payment-instructions" style="margin:20px 0;">' . wp_kses_post( $paymentInstructions ) . '</div>';
+		}
 	}
 }
