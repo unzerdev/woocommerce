@@ -93,7 +93,8 @@ class Main {
 		add_action( 'woocommerce_settings_checkout', array( AdminController::class, 'renderGlobalSettingsStart' ) );
 		add_action( 'woocommerce_settings_tabs_checkout', array( AdminController::class, 'renderGlobalSettingsEnd' ), 10 );
 		add_action( 'woocommerce_settings_tabs_checkout', array( new AdminController(), 'renderWebhookManagement' ), 20 );
-		add_action( 'woocommerce_order_details_after_order_table', array( CheckoutController::class, 'checkoutSuccess' ), 10 );
+		add_action( 'woocommerce_order_details_after_order_table', array( CheckoutController::class, 'checkoutSuccess' ) );
+		add_action( 'woocommerce_email_after_order_table', array( $this, 'addOrderEmailData' ) );
 		add_action( 'woocommerce_after_edit_account_form', array( new AccountController(), 'accountPaymentInstruments' ) );
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_card', array( $this, 'savePaymentMethodSettingsCard' ) );
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_paypal', array( $this, 'savePaymentMethodSettingsPaypal' ) );
@@ -139,6 +140,10 @@ class Main {
 			10,
 			2
 		);
+	}
+
+	public function addOrderEmailData( $order ) {
+		( new OrderService() )->printPaymentInstructionsHtml( $order );
 	}
 
 	protected function registerOrderStatus(): void {
