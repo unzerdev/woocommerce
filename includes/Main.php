@@ -19,6 +19,7 @@ use UnzerPayments\gateways\GooglePay;
 use UnzerPayments\Gateways\Ideal;
 use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
+use UnzerPayments\gateways\OpenBanking;
 use UnzerPayments\Gateways\Paypal;
 use UnzerPayments\Gateways\PostFinanceCard;
 use UnzerPayments\Gateways\PostFinanceEfinance;
@@ -412,6 +413,7 @@ class Main {
 			ApplePayV2::GATEWAY_ID          => ApplePayV2::class,
 			GooglePay::GATEWAY_ID           => GooglePay::class,
 			Twint::GATEWAY_ID               => Twint::class,
+			OpenBanking::GATEWAY_ID         => OpenBanking::class,
 		);
 	}
 
