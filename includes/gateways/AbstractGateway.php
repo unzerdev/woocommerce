@@ -318,6 +318,23 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		wp_enqueue_style( 'woocommerce_unzer_css', UNZER_PLUGIN_URL . '/assets/css/checkout.css', array(), UNZER_VERSION );
 		wp_register_script( 'woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', array( 'unzer_js', 'jquery' ), UNZER_VERSION, array( 'in_footer' => false ) );
 
+		// TODO replace when minimum WP version is 6.5 (wp_enqueue_script_module)
+		add_filter(
+			'script_loader_tag',
+			function ( $tag, $handle, $src ) {
+				// if not your script, do nothing and return original $tag
+				if ( 'unzer_ui_v2_js' !== $handle ) {
+					return $tag;
+				}
+				// change the script tag by adding type="module" and return it.
+				$tag = '<script type="module" src="' . esc_url( $src ) . '"></script>';
+				return $tag;
+			},
+			10,
+			3
+		);
+		wp_enqueue_script( 'unzer_ui_v2_js', 'https://static-v2.unzer.com/v2/ui-components/index.js', array(), UNZER_VERSION, array( 'in_footer' => true ) );
+
 		// for separate api keys
 		$paylaterGateway           = new Invoice();
 		$installmentGateway        = new Installment();
