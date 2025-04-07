@@ -1,9 +1,9 @@
-## Unzer Payments ##
+=== Unzer Payments ===
 Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
-Tested up to: 6.7.2
-Stable tag: 1.8.0
+Tested up to: 6.7
+Stable tag: 1.8.1
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
@@ -30,7 +30,7 @@ Use Unzer plugin for WooCommerce to provide an easy-to-install and use payment g
 
 ## Available payment methods ##
 
-* Credit Cards 
+* Credit Cards
 * EPS
 * iDEAL
 * PayPal
