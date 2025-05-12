@@ -32,7 +32,9 @@ class PaymentService {
 	 * @return Unzer
 	 */
 	public function getUnzerManager( AbstractGateway $paymentGateway = null ): Unzer {
-		return new Unzer( $paymentGateway ? $paymentGateway->get_private_key() : get_option( 'unzer_private_key' ) );
+		$unzer = new Unzer( $paymentGateway ? $paymentGateway->get_private_key() : get_option( 'unzer_private_key' ) );
+        $unzer->setClientIp($_SERVER['REMOTE_ADDR'] ?? null);
+        return $unzer;
 	}
 
 	/**
@@ -67,7 +69,9 @@ class PaymentService {
 				$privateKey = $specialPrivateKey;
 			}
 		}
-		return new Unzer( $privateKey );
+		$unzer = new Unzer( $privateKey );
+        $unzer->setClientIp($_SERVER['REMOTE_ADDR'] ?? null);
+        return $unzer;
 	}
 
 	public function performChargeOnAuthorization( $orderId, $amount = null ) {
