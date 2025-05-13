@@ -153,7 +153,7 @@ class Invoice extends AbstractGateway {
 		}
 		Util::getNonceField();
 		?>
-		<div class="unzer-checkout-field-row form-row">
+		<div class="unzer-checkout-field-row form-row" id="unzer-checkout-dob-row">
 			<label><?php echo esc_html__( 'Date of birth', 'unzer-payments' ); ?></label>
 			<input type="date" id="unzer-invoice-dob" name="unzer-invoice-dob" class="input-text" value="<?php echo esc_attr( $this->getUserBirthDate() ); ?>" max="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"/>
 		</div>
@@ -194,15 +194,21 @@ class Invoice extends AbstractGateway {
 			'result' => 'success',
 		);
 		$order  = wc_get_order( $order_id );
-		$dob    = Util::getNonceCheckedPostValue( 'unzer-invoice-dob' );
-		$this->handleDateOfBirth( $order, $dob );
-		$_POST['unzer-dob'] = $dob; // for unified handling in CustomerService and OrderService
 
-		if ( $order->get_billing_company() ) {
+        if ( !$order->get_billing_company() ) {
+            $dob = Util::getNonceCheckedPostValue('unzer-invoice-dob');
+            $this->handleDateOfBirth($order, $dob);
+            $_POST['unzer-dob'] = $dob; // for unified handling in CustomerService and OrderService
+        } elseif ( $order->get_billing_company() ) {
 			$companyType = (string) Util::getNonceCheckedPostValue( 'unzer-invoice-company-type' );
 			if ( empty( $companyType ) ) {
 				throw new Exception( esc_html__( 'Please enter your company type', 'unzer-payments' ) );
 			}
+            if ($companyType === 'sole') {
+                $dob = Util::getNonceCheckedPostValue('unzer-invoice-dob');
+                $this->handleDateOfBirth($order, $dob);
+                $_POST['unzer-dob'] = $dob; // for unified handling in CustomerService and OrderService
+            }
 			$order->update_meta_data( Main::ORDER_META_KEY_COMPANY_TYPE, $companyType );
 		}
 		$order->save_meta_data();
