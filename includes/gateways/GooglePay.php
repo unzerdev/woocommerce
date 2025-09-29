@@ -70,7 +70,7 @@ class GooglePay extends AbstractGateway {
 		}
 		?>
 		<input type="hidden" id="unzer-google-pay-id" name="unzer-google-pay-id" value=""/>
-		<input type="hidden" id="unzer-google-pay-amount" name="unzer-google-pay-amount" value="<?php echo esc_attr( WC()->cart->get_total( 'plain' ) ); ?>"/>
+		<input type="hidden" id="unzer-google-pay-amount" name="unzer-google-pay-amount" value="<?php echo esc_attr( $this->get_amount() ); ?>"/>
 		<?php
 	}
 
