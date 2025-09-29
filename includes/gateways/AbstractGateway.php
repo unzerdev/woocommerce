@@ -71,6 +71,16 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		$this->addCheckoutAssets();
 	}
 
+	protected function get_amount() {
+		global $wp;
+		if ( ! empty( $wp->query_vars['order-pay'] ) ) {
+			$order = wc_get_order( $wp->query_vars['order-pay'] );
+			return $order->get_total();
+		} else {
+			return WC()->cart->get_total( 'plain' );
+		}
+	}
+
 	public function get_private_key() {
 		return get_option( 'unzer_private_key' );
 	}

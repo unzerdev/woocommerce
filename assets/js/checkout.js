@@ -514,7 +514,7 @@ const UnzerManager = {
 					UnzerManager.error( unzer_i18n.errorCompanyType || 'Please enter your company type' );
 					return false;
 				}
-				if (!UnzerManager.isB2B() || (UnzerManager.isB2B() && document.getElementById( 'unzer-invoice-company-type' ).value === 'sole')) {
+				if ( ! UnzerManager.isB2B() || (UnzerManager.isB2B() && document.getElementById( 'unzer-invoice-company-type' ).value === 'sole')) {
 					if ( ! document.getElementById( 'unzer-invoice-dob' ).value) {
 						UnzerManager.error( unzer_i18n.errorDob || 'Please enter your date of birth' );
 						return false;
@@ -991,32 +991,29 @@ jQuery(
 				UnzerManager.checkCountry();
 
 				const companyTypeInputContainer = document.getElementById( 'unzer-invoice-company-type-container' );
-				const birthdate_form = document.getElementById('unzer-checkout-dob-row');
-				const birthdate = document.getElementById('unzer-invoice-dob');
-				if (companyTypeInputContainer) {
-					companyTypeInputContainer.style.display = UnzerManager.isB2B() ? 'block' : 'none';
-					if (UnzerManager.isB2B()) {
-						if (document.getElementById('unzer-invoice-company-type').value === "sole") {
-							birthdate_form.style.display = "block";
-							birthdate.setAttribute("required", "required");
-							birthdate.name = "unzer-invoice-dob";
+				const birthdate_form            = document.getElementById( 'unzer-checkout-dob-row' );
+				const birthdate                 = document.getElementById( 'unzer-invoice-dob' );
+				if (birthdate_form && birthdate) {
+					if (companyTypeInputContainer) {
+						companyTypeInputContainer.style.display = UnzerManager.isB2B() ? 'block' : 'none';
+						if (UnzerManager.isB2B()) {
+							if (document.getElementById( 'unzer-invoice-company-type' ).value === "sole") {
+								birthdate_form.style.display = "block";
+								birthdate.setAttribute( "required", "required" );
+								birthdate.name = "unzer-invoice-dob";
+							} else {
+								birthdate_form.style.display = "none";
+								birthdate.removeAttribute( "required" );
+								birthdate.name = "";
+							}
 						} else {
-							birthdate_form.style.display = "none";
-							birthdate.removeAttribute("required");
-							birthdate.name = "";
+							birthdate_form.style.display = "block";
+							birthdate.setAttribute( "required", "required" );
+							birthdate.name = "unzer-invoice-dob";
 						}
 					} else {
 						birthdate_form.style.display = "block";
-						birthdate.setAttribute("required", "required");
-						birthdate.name = "unzer-invoice-dob";
-					}
-				} else {
-					if(birthdate_form) {
-						birthdate_form.style.display = "block";
-					}
-
-					if(birthdate) {
-						birthdate.setAttribute("required", "required");
+						birthdate.setAttribute( "required", "required" );
 						birthdate.name = "unzer-invoice-dob";
 					}
 				}

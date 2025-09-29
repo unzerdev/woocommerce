@@ -36,7 +36,7 @@ class ApplePay extends AbstractGateway {
 		?>
 		<input type="hidden" id="unzer-apple-pay-id" name="unzer-apple-pay-id" value=""/>
 		<input type="hidden" id="unzer-apple-pay-nonce" name="unzer-apple-pay-nonce" value="<?php echo esc_attr( Util::getNonce() ); ?>"/>
-		<input type="hidden" id="unzer-apple-pay-amount" name="unzer-apple-pay-amount" value="<?php echo esc_attr( WC()->cart->get_total( 'plain' ) ); ?>"/>
+		<input type="hidden" id="unzer-apple-pay-amount" name="unzer-apple-pay-amount" value="<?php echo esc_attr( $this->get_amount() ); ?>"/>
 		<?php
 	}
 

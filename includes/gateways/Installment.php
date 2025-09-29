@@ -53,7 +53,7 @@ class Installment extends AbstractGateway {
 		</div>
 		<div id="unzer-installment-form" class="unzerUI form">
 			<input type="hidden" id="unzer-installment-id" name="unzer-installment-id" value=""/>
-			<input type="hidden" id="unzer-installment-amount" name="unzer-installment-amount" value="<?php echo esc_attr( WC()->cart->get_total( 'plain' ) ); ?>"/>
+			<input type="hidden" id="unzer-installment-amount" name="unzer-installment-amount" value="<?php echo esc_attr( $this->get_amount() ); ?>"/>
 			<div class="field">
 				<div id="unzer-installment-fields">
 				</div>
