@@ -1011,9 +1011,14 @@ jQuery(
 						birthdate.name = "unzer-invoice-dob";
 					}
 				} else {
-					birthdate_form.style.display = "block";
-					birthdate.setAttribute("required", "required");
-					birthdate.name = "unzer-invoice-dob";
+					if(birthdate_form) {
+						birthdate_form.style.display = "block";
+					}
+
+					if(birthdate) {
+						birthdate.setAttribute("required", "required");
+						birthdate.name = "unzer-invoice-dob";
+					}
 				}
 
 				const placeOrderButton   = document.querySelector( '#place_order' );
