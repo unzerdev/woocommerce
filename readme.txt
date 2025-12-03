@@ -2,7 +2,7 @@
 Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
-Tested up to: 6.8
+Tested up to: 6.9
 Stable tag: 1.8.4
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
