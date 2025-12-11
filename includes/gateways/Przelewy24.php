@@ -2,6 +2,7 @@
 
 namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\Przelewy24Block;
 use UnzerPayments\Services\PaymentService;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,6 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Przelewy24 extends AbstractGateway {
 
 	const GATEWAY_ID            = 'unzer_przelewy24';
+	const BLOCK_CLASS           = Przelewy24Block::class;
+	public $allowedCountries    = array( 'PL' );
+	public $allowedCurrencies   = array( 'EUR', 'PLN' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Przelewy24::class;
 	public $method_title        = 'Unzer Przelewy24';
 	public $method_description;

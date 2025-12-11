@@ -3,13 +3,10 @@
 namespace UnzerPayments\Controllers;
 
 use Exception;
-use UnzerPayments\Gateways\ApplePay;
 use UnzerPayments\Gateways\DirectDebitSecured;
 use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
 use UnzerPayments\Main;
-use UnzerPayments\SdkExtension\Resource\ApplePayCertificate;
-use UnzerPayments\SdkExtension\Resource\ApplePayPrivateKey;
 use UnzerPayments\Services\DashboardService;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Services\WebhookManagementService;
@@ -23,13 +20,12 @@ use WP_Post;
 
 class AdminController {
 
-	const GET_ORDER_TRANSACTIONS_ROUTE_SLUG         = 'admin_unzer_get_order_transactions';
-	const CHARGE_ROUTE_SLUG                         = 'admin_unzer_charge';
-	const WEBHOOK_MANAGEMENT_ROUTE_SLUG             = 'admin_unzer_webhooks';
-	const KEY_VALIDATION_ROUTE_SLUG                 = 'admin_unzer_key_validation';
-	const NOTIFICATION_SLUG                         = 'admin_unzer_notification';
-	const APPLE_PAY_REMOVE_KEY_ROUTE_SLUG           = 'admin_unzer_apple_pay_remove_key';
-	const APPLE_PAY_VALIDATE_CREDENTIALS_ROUTE_SLUG = 'admin_unzer_apple_pay_validate_credentials';
+
+	const GET_ORDER_TRANSACTIONS_ROUTE_SLUG = 'admin_unzer_get_order_transactions';
+	const CHARGE_ROUTE_SLUG                 = 'admin_unzer_charge';
+	const WEBHOOK_MANAGEMENT_ROUTE_SLUG     = 'admin_unzer_webhooks';
+	const KEY_VALIDATION_ROUTE_SLUG         = 'admin_unzer_key_validation';
+	const NOTIFICATION_SLUG                 = 'admin_unzer_notification';
 
 	public function getOrderTransactions() {
 		try {
@@ -239,126 +235,6 @@ class AdminController {
 				)
 			);
 		}
-	}
-
-	public function applePayValidateCredentials() {
-		$paymentGateway = new ApplePay();
-		$status         = array(
-			'unzer_apple_pay_payment_certificate_id'  => 0,
-			'unzer_apple_pay_payment_key_id'          => 0,
-			'unzer_apple_pay_merchant_id_certificate' => 0,
-			'unzer_apple_pay_merchant_id_key'         => 0,
-		);
-		$messages       = array(
-			'unzer_apple_pay_payment_certificate_id'  => __( 'invalid', 'unzer-payments' ),
-			'unzer_apple_pay_payment_key_id'          => __( 'invalid', 'unzer-payments' ),
-			'unzer_apple_pay_merchant_id_certificate' => __( 'invalid', 'unzer-payments' ),
-			'unzer_apple_pay_merchant_id_key'         => __( 'invalid', 'unzer-payments' ),
-		);
-
-		$client = ( new PaymentService() )->getUnzerManager();
-
-		if ( get_option( 'unzer_apple_pay_payment_certificate_id' ) ) {
-			try {
-				$certificateResource = new ApplePayCertificate();
-				$certificateResource->setId( get_option( 'unzer_apple_pay_payment_certificate_id' ) );
-				$certificateResource->setParentResource( $client );
-				$submittedCertificate = $client->getResourceService()->fetchResource( $certificateResource );
-				if ( $submittedCertificate->getId() ) {
-					if ( $submittedCertificate->getActive() === false ) {
-						throw new Exception( __( 'The certificate is not active', 'unzer-payments' ) );
-					}
-					$status['unzer_apple_pay_payment_certificate_id']   = 1;
-					$messages['unzer_apple_pay_payment_certificate_id'] = __( 'valid', 'unzer-payments' );
-				}
-			} catch ( Exception $e ) {
-				$messages['unzer_apple_pay_payment_certificate_id'] = $e->getMessage();
-			}
-		}
-		//
-		// if ( get_option( 'unzer_apple_pay_payment_key_id' ) ) {
-		// try {
-		// $keyResource = new ApplePayPrivateKey();
-		// $keyResource->setId( get_option( 'unzer_apple_pay_payment_key_id' ) );
-		// $keyResource->setParentResource( $client );
-		// $submittedKey = $client->getResourceService()->fetchResource( $keyResource );
-		//
-		// if ( $submittedKey->getId() ) {
-		// if ( ! empty( $submittedCertificate ) && $submittedKey->getParentResource()->getKey() !== $submittedCertificate->getParentResource()->getKey() ) {
-		// throw new Exception( __( 'The certificate and the key do not match', 'unzer-payments' ) );
-		// }
-		// $status['unzer_apple_pay_payment_key_id']   = 1;
-		// $messages['unzer_apple_pay_payment_key_id'] = __( 'valid', 'unzer-payments' );
-		// }
-		// } catch ( Exception $e ) {
-		// $messages['unzer_apple_pay_payment_key_id'] = $e->getMessage();
-		// }
-		// }
-
-		if ( get_option( 'unzer_apple_pay_merchant_id_certificate' ) ) {
-			try {
-				$certificate = get_option( 'unzer_apple_pay_merchant_id_certificate' );
-				if ( extension_loaded( 'openssl' ) ) {
-					$certificateData = openssl_x509_parse( $certificate );
-					if ( ! is_array( $certificateData ) ) {
-						throw new Exception( __( 'Unable to read certificate', 'unzer-payments' ) );
-					}
-					if ( $certificateData['subject']['UID'] !== $paymentGateway->get_option( 'merchant_id' ) ) {
-						throw new Exception( __( 'Certificate does not match merchant id: ', 'unzer-payments' ) . $certificateData['subject']['UID'] );
-					}
-				} elseif ( ! str_starts_with( $certificate, '-----BEGIN CERTIFICATE-----' ) ) {
-						throw new Exception( __( 'Not a valid certificate', 'unzer-payments' ) );
-				}
-				$status['unzer_apple_pay_merchant_id_certificate']   = 1;
-				$messages['unzer_apple_pay_merchant_id_certificate'] = __( 'valid', 'unzer-payments' );
-			} catch ( Exception $e ) {
-				$messages['unzer_apple_pay_merchant_id_certificate'] = $e->getMessage();
-			}
-		}
-
-		if ( get_option( 'unzer_apple_pay_merchant_id_key' ) ) {
-			try {
-				$key = get_option( 'unzer_apple_pay_merchant_id_key' );
-				if ( extension_loaded( 'openssl' ) ) {
-					$keyIsValid = openssl_x509_check_private_key( $certificate, $key );
-					if ( ! $keyIsValid ) {
-						throw new Exception( __( 'Key does not match certificate', 'unzer-payments' ) );
-					}
-				} elseif ( ! str_starts_with( $certificate, '-----BEGIN PRIVATE KEY-----' ) ) {
-						throw new Exception( __( 'Not a valid private key', 'unzer-payments' ) );
-				}
-				$status['unzer_apple_pay_merchant_id_key']   = 1;
-				$messages['unzer_apple_pay_merchant_id_key'] = __( 'valid', 'unzer-payments' );
-			} catch ( Exception $e ) {
-				$messages['unzer_apple_pay_merchant_id_key'] = $e->getMessage();
-			}
-		}
-		$this->renderJson(
-			array(
-				'status'   => $status,
-				'messages' => $messages,
-			)
-		);
-	}
-
-	public function applePayRemoveKey() {
-		$key = Util::getNonceCheckedPostValue( 'key' );
-		if ( ! empty( $key ) ) {
-			$key = 'unzer_apple_pay_' . $key;
-			if ( get_option( $key ) ) {
-				delete_option( $key );
-				$this->renderJson(
-					array(
-						'success' => 1,
-					)
-				);
-			}
-		}
-		$this->renderJson(
-			array(
-				'success' => 0,
-			)
-		);
 	}
 
 	public static function renderTransactionTable( $postOrOrderObject ) {

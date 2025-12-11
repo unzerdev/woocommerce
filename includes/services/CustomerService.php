@@ -3,9 +3,8 @@
 namespace UnzerPayments\Services;
 
 use Exception;
-use UnzerPayments\Main;
+use UnzerPayments\Gateways\AbstractGateway;
 use UnzerPayments\Util;
-use UnzerSDK\Constants\CompanyRegistrationTypes;
 use UnzerSDK\Constants\ShippingTypes;
 use UnzerSDK\Resources\Customer;
 use UnzerSDK\Resources\EmbeddedResources\Address;
@@ -16,6 +15,8 @@ use WC_Order;
 class CustomerService {
 
 
+	public const SESSION_KEY_USER_ID = 'unzer_temp_user_id';
+
 	/**
 	 * @var LogService
 	 */
@@ -25,28 +26,140 @@ class CustomerService {
 		$this->logger = new LogService();
 	}
 
+	public function calculateCustomerNumber( ?int $customerId = null ) {
+		$prefix = 'wp-' . substr( md5( site_url() ), 0, 10 ) . '-';
+		if ( $customerId !== null ) {
+			return $prefix . $customerId;
+		} elseif ( is_user_logged_in() ) {
+			return $prefix . get_current_user_id();
+		} else {
+			static $sessionUserId;
+			if ( empty( $sessionUserId ) ) {
+				$sessionUserId = isset( $_COOKIE[ self::SESSION_KEY_USER_ID ] ) ? sanitize_text_field( $_COOKIE[ self::SESSION_KEY_USER_ID ] ) : null;
+				if ( empty( $sessionUserId ) ) {
+					$sessionUserId = uniqid();
+					setcookie( self::SESSION_KEY_USER_ID, $sessionUserId, time() + 3600, COOKIEPATH, COOKIE_DOMAIN );
+					WC()->session->set( self::SESSION_KEY_USER_ID, $sessionUserId );
+				}
+			}
+			return 'temp-' . $prefix . $sessionUserId;
+		}
+	}
+
+	public function getCustomerFromData( AbstractGateway $paymentGateway, array $data ) {
+		$customer       = null;
+		$paymentService = new PaymentService();
+		$unzer          = $paymentService->getUnzerManager( $paymentGateway, ! empty( $data['billing_company'] ), get_woocommerce_currency() );
+		$customerNumber = $this->calculateCustomerNumber();
+		try {
+			$customer = $unzer->fetchCustomerByExtCustomerId( $customerNumber );
+		} catch ( Exception $e ) {
+			// no worries, we cover this by creating a new customer
+		}
+
+		if ( empty( $customer ) ) {
+			$customer = new Customer();
+			$customer->setCustomerId( $customerNumber );
+		}
+
+		$billingAddress = $customer->getBillingAddress();
+
+		if ( ! empty( $data['billing_first_name'] ) && ! empty( $data['billing_last_name'] ) ) {
+			$customer->setFirstName( $data['billing_first_name'] );
+			$customer->setLastName( $data['billing_last_name'] );
+			$billingAddress->setName( $customer->getFirstname() . ' ' . $customer->getLastname() );
+		}
+
+		if ( isset( $data['billing_email'] ) ) {
+			$customer->setEmail( $data['billing_email'] );
+		}
+
+		$postBillingCompany = $data['billing_company'] ?? null;
+
+		if ( $postBillingCompany !== null ) {
+			$updatedCompany = false;
+			if ( $customer->getCompany() !== $postBillingCompany ) {
+				$customer->setCompany( $postBillingCompany );
+				$updatedCompany = true;
+			}
+
+			if ( empty( $customer->getCompany() ) ) {
+				$customer->setCompanyInfo( null );
+			} else {
+				$companyInfo = $customer->getCompanyInfo();
+				if ( empty( $companyInfo ) ) {
+					$companyInfo = new CompanyInfo();
+				}
+				if ( empty( $companyInfo->getCompanyType() ) || $updatedCompany ) {
+					$companyInfo->setCompanyType( 'Company Type' );
+				}
+				$customer->setCompanyInfo( $companyInfo );
+			}
+		}
+
+		if ( isset( $data['billing_address_1'] ) ) {
+			$billingAddress->setStreet( $data['billing_address_1'] );
+		}
+
+		if ( isset( $data['billing_city'] ) ) {
+			$billingAddress->setCity( $data['billing_city'] );
+		}
+
+		if ( isset( $data['billing_postcode'] ) ) {
+			$billingAddress->setZip( $data['billing_postcode'] );
+		}
+
+		if ( isset( $data['billing_country'] ) ) {
+			$billingAddress->setCountry( $data['billing_country'] );
+		}
+
+		if ( ! empty( $customer->getFirstname() ) && ! empty( $customer->getLastname() ) ) {
+			if ( empty( $customer->getId() ) ) {
+				try {
+					$customer = $unzer->createCustomer( $customer );
+				} catch ( Exception $e ) {
+					$this->logger->error( 'create customer failed: ' . $e->getMessage() );
+				}
+			} else {
+				try {
+					$customer = $unzer->updateCustomer( $customer );
+				} catch ( Exception $e ) {
+					$this->logger->error( 'update customer failed: ' . $e->getMessage() );
+				}
+			}
+		}
+
+		return $customer->getId() ? $customer : null;
+	}
+
+	public function getCustomerFromSession( AbstractGateway $paymentGateway, ?int $orderId = null ): ?Customer {
+		if ( ! empty( $orderId ) ) {
+			return $this->getCustomerFromOrder( $orderId );
+		}
+		$data = Util::getNonceCheckedBillingData();
+
+		return $this->getCustomerFromData( $paymentGateway, $data );
+	}
+
+
 	/**
 	 * @param int|WC_Order $order
 	 * @return Customer
 	 */
 	public function getCustomerFromOrder( $order ): Customer {
-		$order = is_object( $order ) ? $order : wc_get_order( $order );
-
-		if ( is_user_logged_in() ) {
-			$paymentService = new PaymentService();
-			$unzer          = $paymentService->getUnzerManagerForOrder( $order );
-			try {
-				$customer = $unzer->fetchCustomerByExtCustomerId( 'wp-' . wp_get_current_user()->ID );
-			} catch ( Exception $e ) {
-				// no worries, we cover this by creating a new customer
-			}
+		$order               = is_object( $order ) ? $order : wc_get_order( $order );
+		$paymentService      = new PaymentService();
+		$unzer               = $paymentService->getUnzerManagerForOrder( $order );
+		$unzerCustomerNumber = $this->calculateCustomerNumber( $order->get_customer_id() ?: null );
+		try {
+			$customer = $unzer->fetchCustomerByExtCustomerId( $unzerCustomerNumber );
+		} catch ( Exception $e ) {
+			// no worries, we cover this by creating a new customer
 		}
 
 		if ( empty( $customer ) ) {
 			$customer = new Customer();
-			if ( is_user_logged_in() ) {
-				$customer->setCustomerId( 'wp-' . wp_get_current_user()->ID );
-			}
+			$customer->setCustomerId( $unzerCustomerNumber );
 		}
 
 		$customer
@@ -56,15 +169,18 @@ class CustomerService {
 			->setCompany( $order->get_billing_company() ?: '' )
 			->setEmail( $order->get_billing_email() ?: '' );
 
-		$this->setDateOfBirth( $customer, $order );
-		$this->setCompanyInfo( $customer, $order );
 		$this->setAddresses( $customer, $order );
 		$this->logger->debug( 'customer data', array( $customer->expose() ) );
 
 		if ( $customer->getId() ) {
 			try {
-				/** @noinspection PhpUndefinedVariableInspection */
 				$unzer->updateCustomer( $customer );
+			} catch ( Exception $e ) {
+				$this->logger->warning( 'update customer failed: ' . $e->getMessage(), array( $customer->expose() ) );
+			}
+		} else {
+			try {
+				$customer = $unzer->createCustomer( $customer );
 			} catch ( Exception $e ) {
 				$this->logger->warning( 'update customer failed: ' . $e->getMessage(), array( $customer->expose() ) );
 			}
@@ -73,31 +189,6 @@ class CustomerService {
 		return $customer;
 	}
 
-	protected function setDateOfBirth( Customer $customer, WC_Abstract_Order $order ) {
-		$dob = $order->get_meta( Main::ORDER_META_KEY_DATE_OF_BIRTH );
-		if ( empty( $dob ) ) {
-			$dob = Util::getDobFromPost();
-		}
-		if ( ! empty( $dob ) ) {
-			$customer->setBirthDate( gmdate( 'Y-m-d', strtotime( $dob ) ) );
-		}
-	}
-
-	protected function setCompanyInfo( Customer $customer, WC_Abstract_Order $order ) {
-		if ( $order->get_billing_company() ) {
-			$companyType = $order->get_meta( Main::ORDER_META_KEY_COMPANY_TYPE );
-			if ( empty( $companyType ) ) {
-				$companyType = Util::getCompanyTypeFromPost();
-			}
-			if ( ! empty( $companyType ) ) {
-				$companyInfo = ( new CompanyInfo() )
-					->setCompanyType( $companyType )
-					->setRegistrationType( CompanyRegistrationTypes::REGISTRATION_TYPE_NOT_REGISTERED )
-					->setFunction( 'OWNER' );
-				$customer->setCompanyInfo( $companyInfo );
-			}
-		}
-	}
 
 	protected function setAddresses( Customer $customer, WC_Abstract_Order $order ) {
 		$shippingType = ShippingTypes::EQUALS_BILLING;

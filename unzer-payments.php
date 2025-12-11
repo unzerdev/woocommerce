@@ -5,12 +5,12 @@
  * Description: Official Unzer Plugin
  * Author: Unzer
  * Author URI: https://www.unzer.com
- * Version: 1.8.4
+ * Version: 2.0.0
  * License: Apache-2.0
  * Requires at least: 4.5
  * Tested up to: 6.9
  * WC requires at least: 6.0
- * WC tested up to: 10.2
+ * WC tested up to: 10.4
  * Text Domain: unzer-payments
  */
 
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Required minimums and constants
  */
-define( 'UNZER_VERSION', '1.8.4' );
+define( 'UNZER_VERSION', '2.0.0' );
 define( 'UNZER_PLUGIN_TYPE_STRING', 'Unzer Payments' );
 define( 'UNZER_PLUGIN_URL', untrailingslashit( plugins_url( basename( plugin_dir_path( __FILE__ ) ), basename( __FILE__ ) ) ) );
 define( 'UNZER_PLUGIN_PATH', __DIR__ . '/' );
@@ -55,31 +55,26 @@ add_action(
 			);
 			return;
 		}
-		// TODO: add autoload
 		require_once UNZER_PLUGIN_PATH . 'vendor/autoload.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/Main.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/Util.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/sdk-extension/Resource/ApplePayCertificate.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/sdk-extension/Resource/ApplePayPrivateKey.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/sdk-extension/Services/AppleKeyService.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/services/DashboardService.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/services/OrderService.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/services/CustomerService.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/services/LogService.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/services/PaymentService.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/services/ShopService.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/services/WebhookManagementService.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/controllers/CheckoutController.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/controllers/AccountController.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/controllers/AdminController.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/controllers/WebhookController.php';
-		require_once UNZER_PLUGIN_PATH . 'includes/gateways/AbstractGateway.php';
-		foreach ( glob( UNZER_PLUGIN_PATH . 'includes/traits/*.php' ) as $trait ) {
-			require_once $trait;
-		}
-		foreach ( glob( UNZER_PLUGIN_PATH . 'includes/gateways/*.php' ) as $gateway ) {
-			require_once $gateway;
-		}
+
+		spl_autoload_register(
+			function ( $class ) {
+				$prefix   = 'UnzerPayments\\';
+				$base_dir = UNZER_PLUGIN_PATH . 'includes/';
+
+				$len = strlen( $prefix );
+				if ( strncmp( $prefix, $class, $len ) !== 0 ) {
+					return;
+				}
+
+				$relative_class = substr( $class, $len );
+				$file           = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+
+				if ( file_exists( $file ) ) {
+					require_once $file;
+				}
+			}
+		);
 
 		$unzer = \UnzerPayments\Main::getInstance();
 		$unzer->init();

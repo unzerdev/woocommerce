@@ -51,15 +51,7 @@ class Util {
 		}
 	}
 
-	public static function getDobFromPost(): ?string {
-		return self::getNonceCheckedPostValue( 'unzer-dob' );
-	}
-
-	public static function getCompanyTypeFromPost(): ?string {
-		return self::getNonceCheckedPostValue( 'unzer-invoice-company-type' );
-	}
-
-	public static function getNonceCheckedPostValue( string $key ): ?string {
+	public static function getNonceCheckedPostValue( string $key, $skipSanitize = false ): ?string {
 		if ( ! empty( $_POST[ $key ] ) ) {
 			// our own nonce:
 			if ( isset( $_POST[ self::NONCE_NAME ] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ self::NONCE_NAME ] ) ), self::NONCE_NAME ) ) {
@@ -67,11 +59,23 @@ class Util {
 			}
 			// woocommerce nonce:
 			if ( isset( $_POST['security'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['security'] ) ), 'update-order-review' ) ) {
-				return sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+				$value = wp_unslash( $_POST[ $key ] );
+				return $skipSanitize ? $value : sanitize_text_field( $value );
 			}
 		}
 		return null;
 	}
+
+	public static function getNonceCheckedBillingData(): array {
+		$postData = self::getNonceCheckedPostValue( 'post_data', true );
+		if ( ! empty( $postData ) ) {
+			parse_str( $postData, $params );
+			$params = array_map( 'sanitize_text_field', $params );
+			return $params;
+		}
+		return array();
+	}
+
 
 	public static function escape_array_html( $data ) {
 		if ( is_array( $data ) ) {

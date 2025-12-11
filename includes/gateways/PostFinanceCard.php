@@ -2,6 +2,8 @@
 
 namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\PostFinanceCardBlock;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -9,6 +11,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class PostFinanceCard extends AbstractGateway {
 
 	const GATEWAY_ID            = 'unzer_postfinance_card';
+	const BLOCK_CLASS           = PostFinanceCardBlock::class;
+	public $allowedCountries    = array( 'CH' );
+	public $allowedCurrencies   = array( 'CHF' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\PostFinanceCard::class;
 	public $method_title        = 'Unzer Post Finance Card';
 	public $method_description;
@@ -16,11 +21,10 @@ class PostFinanceCard extends AbstractGateway {
 	public $description = '';
 	public $id          = self::GATEWAY_ID;
 	public $plugin_id;
-	public $supports          = array(
+	public $supports = array(
 		'products',
 		'refunds',
 	);
-	public $allowedCurrencies = array( 'CHF' );
 
 	public function get_form_fields() {
 		return apply_filters(

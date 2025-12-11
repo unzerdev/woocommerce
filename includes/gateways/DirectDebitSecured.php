@@ -3,12 +3,14 @@
 namespace UnzerPayments\Gateways;
 
 use Exception;
+use UnzerPayments\Gateways\Blocks\DirectDebitSecuredBlock;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
 use UnzerSDK\Resources\TransactionTypes\Authorization;
+use UnzerSDK\Resources\TransactionTypes\Charge;
 use WC_Order;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -17,13 +19,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class DirectDebitSecured extends AbstractGateway {
 
-	const GATEWAY_ID     = 'unzer_direct_debit_secured';
-	public $method_title = 'Unzer Direct Debit';
-	public $method_description;
-	public $title             = 'Direct Debit';
-	public $description       = '';
-	public $id                = self::GATEWAY_ID;
+
+	const GATEWAY_ID          = 'unzer_direct_debit_secured';
+	const BLOCK_CLASS         = DirectDebitSecuredBlock::class;
+	public $allowedCountries  = array( 'AT', 'DE' );
 	public $allowedCurrencies = array( 'EUR' );
+	public $isAllowedForB2B   = false;
+	public $method_title      = 'Unzer Direct Debit';
+	public $method_description;
+	public $title       = 'Direct Debit';
+	public $description = '';
+	public $id          = self::GATEWAY_ID;
 	public $plugin_id;
 	public $supports = array(
 		'products',
@@ -45,23 +51,25 @@ class DirectDebitSecured extends AbstractGateway {
 		if ( $description ) {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
+
 		Util::getNonceField();
-		$formId = uniqid();
-		?>
-		<input type="hidden" id="unzer-direct-debit-secured-id" name="unzer-direct-debit-secured-id" value=""/>
-
-		<div class="unzer-checkout-field-row form-row">
-			<label><?php echo esc_html__( 'Date of birth', 'unzer-payments' ); ?></label>
-			<input type="date" id="unzer-direct-debit-secured-dob" name="unzer-direct-debit-secured-dob" class="input-text" value="<?php echo esc_attr( $this->getUserBirthDate() ); ?>" max="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"/>
-		</div>
-		<div id="unzer-direct-debit-secured-form" data-form-id="<?php echo esc_attr( $formId ); ?>">
-			<div id="unzer-direct-debit-secured-form-ui-<?php echo esc_attr( $formId ); ?>" class="unzerUI form"></div>
-		</div>
-		<?php
-	}
-
-	public function payment_scripts() {
-		$this->threatmetrix_payment_scripts();
+		$form = '
+		 <input type="hidden" id="unzer-direct-debit-secured-id" name="unzer-direct-debit-secured-id" value=""/>
+		 <input type="hidden" id="unzer-direct-debit-secured-customer-id" name="unzer-direct-debit-secured-customer-id" value=""/>
+		 <input type="hidden" id="unzer-direct-debit-secured-risk-id" name="unzer-direct-debit-secured-risk-id" value=""/>
+            <div class="unzer-ui-container"></div>
+            <template class="unzer-ui-template">
+                <unzer-payment
+                        id="unzer-paylater-direct-debit-payment-component"
+                        publicKey="' . esc_attr( $this->get_current_public_key() ) . '"
+                        locale="' . esc_attr( get_locale() ) . '"            
+                        data-customer="' . esc_attr( $this->get_checkout_customer_json_encoded() ) . '"    
+                >
+                    <unzer-paylater-direct-debit id="unzer-paylater-direct-debit"></unzer-paylater-direct-debit>
+                </unzer-payment>
+            </template>     
+        ';
+		echo wp_kses( $form, $this->get_allowed_html_tags() );
 	}
 
 	public function get_form_fields() {
@@ -113,24 +121,22 @@ class DirectDebitSecured extends AbstractGateway {
 
 	public function process_payment( $order_id ) {
 		$this->logger->debug( 'start payment for #' . $order_id . ' with ' . self::GATEWAY_ID );
-		$order  = wc_get_order( $order_id );
-		$return = array(
+		$order         = wc_get_order( $order_id );
+		$return        = array(
 			'result' => 'success',
 		);
-		$dob    = Util::getNonceCheckedPostValue( 'unzer-direct-debit-secured-dob' );
-		$this->handleDateOfBirth( $order, $dob );
-		$_POST['unzer-dob'] = $dob; // for the unified handling in CustomerService and OrderService
-		$paymentMeanId      = Util::getNonceCheckedPostValue( 'unzer-direct-debit-secured-id' );
+		$paymentMeanId = Util::getNonceCheckedPostValue( 'unzer-direct-debit-secured-id' );
+		$riskId        = Util::getNonceCheckedPostValue( 'unzer-direct-debit-secured-risk-id' );
 
 		$authorization = ( new PaymentService() )->performAuthorizationForOrder(
 			$order_id,
 			$this,
 			$paymentMeanId,
-			function ( Authorization $authorization ) {
-				AbstractGateway::addRiskDataToAuthorization( $authorization );
+			function ( Authorization $authorization ) use ( $riskId ) {
+				AbstractGateway::addRiskDataToAuthorization( $authorization, $riskId );
 			}
 		);
-
+		$this->before_payment_redirect( $order_id );
 		if ( $authorization->getPayment()->getRedirectUrl() ) {
 			$return['redirect'] = $authorization->getPayment()->getRedirectUrl();
 		} elseif ( $authorization->isSuccess() ) {
@@ -141,9 +147,8 @@ class DirectDebitSecured extends AbstractGateway {
 				// silent catch
 			}
 			WC()->session->set( 'unzer_confirm_order_id', $order_id );
-			$return['redirect'] = $this->get_confirm_url();
+			$return['redirect'] = $this->get_confirm_url( $order_id );
 		}
-		AbstractGateway::removeRiskDataFromSession();
 		return $return;
 	}
 
@@ -167,11 +172,24 @@ class DirectDebitSecured extends AbstractGateway {
 	public function capture( WC_Order $order, $amount = null ) {
 	}
 
+	/**
+	 * @param Charge|Authorization $chargeOrAuthorization
+	 * @return string
+	 */
 	public function get_payment_information( AbstractTransactionType $chargeOrAuthorization ) {
 		return sprintf(
 			__( "An amount of %1\$s will be deducted from your account using the descriptor '%2\$s' according to the SEPA mandate", 'unzer-payments' ),
 			wc_price( $chargeOrAuthorization->getAmount(), array( 'currency' => $chargeOrAuthorization->getCurrency() ) ),
 			$chargeOrAuthorization->getDescriptor()
 		);
+	}
+
+	private function get_current_public_key() {
+		$keyName   = 'public_key_eur_b2c';
+		$publicKey = $this->get_option( $keyName );
+		if ( empty( $publicKey ) ) {
+			$publicKey = get_option( 'unzer_public_key' );
+		}
+		return $publicKey;
 	}
 }

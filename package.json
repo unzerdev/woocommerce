@@ -1,0 +1,25 @@
+{
+  "name": "unzer-payments",
+  "version": "2.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "pnpm run start:hot",
+    "start": "wp-scripts start",
+    "start:hot": "wp-scripts start --hot",
+    "build": "wp-scripts build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@woocommerce/dependency-extraction-webpack-plugin": "^4.0.0",
+    "@wordpress/scripts": "^30.25.0"
+  },
+  "dependencies": {
+    "@woocommerce/settings": "^1.0.0",
+    "@wordpress/element": "^6.32.0",
+    "@wordpress/html-entities": "^4.32.0",
+    "@wordpress/i18n": "^6.5.0"
+  }
+}

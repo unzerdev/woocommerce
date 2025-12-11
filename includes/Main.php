@@ -2,40 +2,39 @@
 
 namespace UnzerPayments;
 
+use Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry;
 use UnzerPayments\Controllers\AccountController;
 use UnzerPayments\Controllers\AdminController;
 use UnzerPayments\Controllers\CheckoutController;
 use UnzerPayments\Controllers\WebhookController;
 use UnzerPayments\Gateways\AbstractGateway;
 use UnzerPayments\Gateways\Alipay;
-use UnzerPayments\Gateways\ApplePay;
-use UnzerPayments\gateways\ApplePayV2;
+use UnzerPayments\Gateways\ApplePayV2;
 use UnzerPayments\Gateways\Bancontact;
 use UnzerPayments\Gateways\Card;
 use UnzerPayments\Gateways\DirectDebit;
 use UnzerPayments\Gateways\DirectDebitSecured;
 use UnzerPayments\Gateways\Eps;
-use UnzerPayments\gateways\GooglePay;
+use UnzerPayments\Gateways\GooglePay;
 use UnzerPayments\Gateways\Ideal;
 use UnzerPayments\Gateways\Installment;
 use UnzerPayments\Gateways\Invoice;
-use UnzerPayments\gateways\OpenBanking;
+use UnzerPayments\Gateways\Klarna;
+use UnzerPayments\Gateways\OpenBanking;
 use UnzerPayments\Gateways\Paypal;
 use UnzerPayments\Gateways\PostFinanceCard;
 use UnzerPayments\Gateways\PostFinanceEfinance;
 use UnzerPayments\Gateways\Prepayment;
 use UnzerPayments\Gateways\Przelewy24;
-use UnzerPayments\Gateways\Sofort;
-use UnzerPayments\gateways\Twint;
+use UnzerPayments\Gateways\Twint;
 use UnzerPayments\Gateways\WeChatPay;
-use UnzerPayments\SdkExtension\Resource\ApplePayCertificate;
-use UnzerPayments\SdkExtension\Resource\ApplePayPrivateKey;
-use UnzerPayments\SdkExtension\Services\AppleKeyService;
+use UnzerPayments\Gateways\Wero;
 use UnzerPayments\Services\DashboardService;
 use UnzerPayments\Services\OrderService;
-use UnzerPayments\Services\PaymentService;
+use WC_Payment_Gateway;
 
 class Main {
+
 
 
 	public static $instance;
@@ -54,7 +53,6 @@ class Main {
 		self::ORDER_META_KEY_PAYMENT_SHORT_ID,
 		self::ORDER_META_KEY_PAYMENT_INSTRUCTIONS,
 		self::ORDER_META_KEY_CANCELLATION_ID,
-		self::ORDER_META_KEY_DATE_OF_BIRTH,
 	);
 
 	const USER_META_KEY_PAYMENT_INSTRUMENTS = 'payment_instruments';
@@ -82,13 +80,11 @@ class Main {
 		add_action( 'woocommerce_api_' . AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG, array( new AdminController(), 'webhookManagement' ) );
 		add_action( 'woocommerce_api_' . AdminController::KEY_VALIDATION_ROUTE_SLUG, array( new AdminController(), 'validateKeypair' ) );
 		add_action( 'woocommerce_api_' . AdminController::NOTIFICATION_SLUG, array( new AdminController(), 'handleNotification' ) );
-		add_action( 'woocommerce_api_' . AdminController::APPLE_PAY_REMOVE_KEY_ROUTE_SLUG, array( new AdminController(), 'applePayRemoveKey' ) );
-		add_action( 'woocommerce_api_' . AdminController::APPLE_PAY_VALIDATE_CREDENTIALS_ROUTE_SLUG, array( new AdminController(), 'applePayValidateCredentials' ) );
 
 		add_action( 'woocommerce_api_' . AbstractGateway::CONFIRMATION_ROUTE_SLUG, array( new CheckoutController(), 'confirm' ) );
 		add_action( 'woocommerce_api_' . WebhookController::WEBHOOK_ROUTE_SLUG, array( new WebhookController(), 'receiveWebhook' ) );
 		add_action( 'woocommerce_api_' . AccountController::DELETE_PAYMENT_INSTRUMENT_URL_SLUG, array( new AccountController(), 'deletePaymentInstrument' ) );
-		add_action( 'woocommerce_api_' . CheckoutController::APPLE_PAY_MERCHANT_VALIDATION_ROUTE_SLUG, array( new CheckoutController(), 'validateApplePayMerchant' ) );
+		add_action( 'woocommerce_api_' . CheckoutController::GET_UNZER_CUSTOMER_SLUG, array( new CheckoutController(), 'getUnzerCustomerData' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( UNZER_PLUGIN_PATH . 'unzer-payments.php' ), array( $this, 'addPluginSettingsLink' ) );
 		add_action( 'add_meta_boxes', array( $this, 'addMetaBoxes' ), 40 );
 		add_action( 'woocommerce_settings_checkout', array( AdminController::class, 'renderGlobalSettingsStart' ) );
@@ -100,10 +96,11 @@ class Main {
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_card', array( $this, 'savePaymentMethodSettingsCard' ) );
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_paypal', array( $this, 'savePaymentMethodSettingsPaypal' ) );
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_direct_debit', array( $this, 'savePaymentMethodSettingsDirectDebit' ) );
-		add_action( 'woocommerce_update_options_payment_gateways_unzer_apple_pay', array( $this, 'savePaymentMethodSettingsApplePay' ) );
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_apple_pay_v2', array( $this, 'savePaymentMethodSettingsApplePayV2' ) );
 		add_action( 'woocommerce_update_options_checkout_unzer_general', array( $this, 'saveGeneralSettings' ) );
 		add_action( 'admin_notices', array( new DashboardService(), 'showNotifications' ) );
+		add_action( 'woocommerce_blocks_loaded', array( $this, 'addCheckoutBlocks' ) );
+		add_action( 'before_woocommerce_pay_form', array( $this, 'orderPayPaymentMethod' ), 20, 4 );
 		add_action(
 			'admin_enqueue_scripts',
 			function () {
@@ -245,48 +242,6 @@ class Main {
 			( new DashboardService() )->addError( 'apple_pay_id_file' );
 		}
 	}
-	public function savePaymentMethodSettingsApplePay(): void {
-		if ( empty( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'woocommerce-settings' ) ) {
-			return;
-		}
-		if ( ! empty( $_FILES['unzer_apple_pay_payment_processing_certificate']['tmp_name'] ) && ! empty( $_FILES['unzer_apple_pay_payment_processing_key']['tmp_name'] ) ) {
-			$client      = ( new PaymentService() )->getUnzerManager();
-			$certificate = file_get_contents( sanitize_url( $_FILES['unzer_apple_pay_payment_processing_certificate']['tmp_name'] ) );
-			$key         = file_get_contents( sanitize_url( $_FILES['unzer_apple_pay_payment_processing_key']['tmp_name'] ) );
-
-			if ( extension_loaded( 'openssl' ) && ! openssl_x509_parse( $certificate ) ) {
-				throw new \Exception( 'Invalid Payment Processing certificate given' );
-			}
-
-			$privateKeyResource = new ApplePayPrivateKey();
-			$privateKeyResource->setCertificate( $key );
-			$client->getResourceService()->createResource( $privateKeyResource->setParentResource( $client ) );
-			/** @var string $privateKeyId */
-			$privateKeyId = $privateKeyResource->getId();
-			update_option( 'unzer_apple_pay_payment_key_id', $privateKeyId );
-			$certificateResource = new ApplePayCertificate();
-			$certificateResource->setCertificate( $certificate );
-			$certificateResource->setPrivateKey( $privateKeyId );
-			$client->getResourceService()->createResource( $certificateResource->setParentResource( $client ) );
-
-			$certificateService = new AppleKeyService( $client );
-			$activateSuccess    = $certificateService->activateCertificate( $certificateResource->getId() );
-			if ( ! $activateSuccess ) {
-				throw new \Exception( 'Could not activate Apple Pay certificate' );
-			}
-			update_option( 'unzer_apple_pay_payment_certificate_id', $certificateResource->getId() );
-		}
-
-		if ( ! empty( $_FILES['unzer_apple_pay_merchant_id_certificate']['tmp_name'] ) ) {
-			$certificate = file_get_contents( sanitize_url( $_FILES['unzer_apple_pay_merchant_id_certificate']['tmp_name'] ) );
-			update_option( 'unzer_apple_pay_merchant_id_certificate', $certificate );
-		}
-
-		if ( ! empty( $_FILES['unzer_apple_pay_merchant_id_key']['tmp_name'] ) ) {
-			$certificate = file_get_contents( sanitize_url( $_FILES['unzer_apple_pay_merchant_id_key']['tmp_name'] ) );
-			update_option( 'unzer_apple_pay_merchant_id_key', $certificate );
-		}
-	}
 
 	public function setMetaProtected( $protected, $meta_key, $meta_type ) {
 		if ( in_array( $meta_key, self::ORDER_META_KEYS ) ) {
@@ -397,10 +352,7 @@ class Main {
 			WeChatPay::GATEWAY_ID           => WeChatPay::class,
 			Alipay::GATEWAY_ID              => Alipay::class,
 			Eps::GATEWAY_ID                 => Eps::class,
-			// Giropay::GATEWAY_ID             => Giropay::class,
-			Sofort::GATEWAY_ID              => Sofort::class,
-			// Klarna::GATEWAY_ID => Klarna::class,
-			// Pis::GATEWAY_ID => Pis::class,
+			Klarna::GATEWAY_ID              => Klarna::class,
 			DirectDebit::GATEWAY_ID         => DirectDebit::class,
 			DirectDebitSecured::GATEWAY_ID  => DirectDebitSecured::class,
 			Invoice::GATEWAY_ID             => Invoice::class,
@@ -409,11 +361,11 @@ class Main {
 			Ideal::GATEWAY_ID               => Ideal::class,
 			PostFinanceEfinance::GATEWAY_ID => PostFinanceEfinance::class,
 			PostFinanceCard::GATEWAY_ID     => PostFinanceCard::class,
-			ApplePay::GATEWAY_ID            => ApplePay::class,
 			ApplePayV2::GATEWAY_ID          => ApplePayV2::class,
 			GooglePay::GATEWAY_ID           => GooglePay::class,
 			Twint::GATEWAY_ID               => Twint::class,
 			OpenBanking::GATEWAY_ID         => OpenBanking::class,
+			Wero::GATEWAY_ID                => Wero::class,
 		);
 	}
 
@@ -423,5 +375,40 @@ class Main {
 			return new $class();
 		}
 		return null;
+	}
+
+	public function addCheckoutBlocks() {
+		if ( class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
+			add_action(
+				'woocommerce_blocks_payment_method_type_registration',
+				function ( PaymentMethodRegistry $payment_method_registry ) {
+					foreach ( $this->getPaymentGateways() as $gatewayClass ) {
+						if ( defined( $gatewayClass . '::BLOCK_CLASS' ) ) {
+							$blockClass = constant( $gatewayClass . '::BLOCK_CLASS' );
+							if ( class_exists( $blockClass ) ) {
+								$payment_method_registry->register( new $blockClass() );
+							}
+						}
+					}
+				}
+			);
+		}
+	}
+
+	public function orderPayPaymentMethod( $order, $order_button_text, $available_gateways ) {
+		$paymentMethod = (string) $order->get_payment_method();
+		if ( AbstractGateway::isUnzerPaymentMethod( $paymentMethod ) ) {
+			$isSelectedGatewayActive = false;
+			/** @var WC_Payment_Gateway $gateway */
+			foreach ( $available_gateways as $gateway ) {
+				if ( $gateway->id === $paymentMethod ) {
+					$isSelectedGatewayActive = true;
+					break;
+				}
+			}
+			foreach ( $available_gateways as $gateway ) {
+				$gateway->chosen = ( $gateway->id === $paymentMethod );
+			}
+		}
 	}
 }

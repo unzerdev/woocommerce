@@ -2,11 +2,9 @@
 
 namespace UnzerPayments\Gateways;
 
-use DateTime;
-use Exception;
 use UnzerPayments\Controllers\AdminController;
-use UnzerPayments\Controllers\CheckoutController;
 use UnzerPayments\Main;
+use UnzerPayments\Services\CustomerService;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
@@ -24,6 +22,58 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 
 
 
+	const ALLOWED_HTML            = array(
+		'unzer-payment'               => array(
+			'id'            => true,
+			'class'         => true,
+			'locale'        => true,
+			'publicKey'     => true,
+			'publickey'     => true,
+			'data-customer' => true,
+			'disableCTP'    => true,
+			'disablectp'    => true,
+		),
+		'unzer-checkout'              => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'unzer-card'                  => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'unzer-apple-pay'             => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'unzer-google-pay'            => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'unzer-sepa-direct-debit'     => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'unzer-paylater-direct-debit' => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'unzer-paylater-installment'  => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'unzer-paylater-invoice'      => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'unzer-open-banking'          => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'template'                    => array(
+			'id'    => true,
+			'class' => true,
+		),
+	);
 	const CONFIRMATION_ROUTE_SLUG = 'unzer-confirm';
 
 	const TRANSACTION_TYPE_AUTHORIZE = 'authorize';
@@ -42,8 +92,10 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	/**
 	 * @var null|array
 	 */
-	public $allowedCurrencies = null;
-	public $allowedCountries  = null;
+	public $allowedCurrencies          = null;
+	public $allowedCountries           = null;
+	public $isAllowedForB2B            = null;
+	public $allowedCountryCurrencySets = null;
 
 	public function __construct() {
 		$this->logger    = new LogService();
@@ -58,6 +110,12 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		$this->title       = $this->get_option( 'title' );
 		$this->description = $this->get_option( 'description' );
 		add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
+	}
+
+	protected function get_allowed_html_tags() {
+		$response                     = array_merge( wp_kses_allowed_html( 'post' ), self::ALLOWED_HTML );
+		$response['input']['checked'] = true;
+		return $response;
 	}
 
 	public function payment_scripts() {
@@ -97,14 +155,78 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		return $this->enabled === 'yes';
 	}
 
+	protected function get_billing_data_from_post(): array {
+		$postData = Util::getNonceCheckedPostValue( 'post_data' );
+		if ( ! empty( $postData ) ) {
+			parse_str( $postData, $params );
+			return $params;
+		}
+		return array();
+	}
+
+	protected function get_company_from_post() {
+		$company = Util::getNonceCheckedPostValue( 'company' );
+		if ( ! empty( $company ) ) {
+			return $company;
+		}
+
+		$postData = Util::getNonceCheckedPostValue( 'post_data' );
+		if ( ! empty( $postData ) ) {
+			parse_str( $postData, $params );
+			if ( ! empty( $params['billing_company'] ) ) {
+				return $params['billing_company'];
+			}
+		}
+		return '';
+	}
+
+	protected function getCurrentCountry() {
+		$country = Util::getNonceCheckedPostValue( 'country' );
+		if ( ! empty( $country ) ) {
+			return $country;
+		}
+		if ( WC()->session !== null ) {
+			$customer = WC()->session->get( 'customer' );
+			if ( ! empty( $customer['country'] ) ) {
+				return $customer['country'];
+			}
+		}
+		return null;
+	}
+
 	public function is_available() {
 		$isAvailable = parent::is_available();
 		if ( $isAvailable && ! empty( $this->allowedCurrencies ) ) {
 			$isAvailable = in_array( get_woocommerce_currency(), $this->allowedCurrencies );
 		}
 		if ( $isAvailable && ! empty( $this->allowedCountries ) ) {
-			$country = Util::getNonceCheckedPostValue( 'country' );
+			$country = $this->getCurrentCountry();
 			if ( ! empty( $country ) && ! in_array( $country, $this->allowedCountries ) ) {
+				$isAvailable = false;
+			}
+		}
+		if ( $isAvailable && $this->isAllowedForB2B === false ) {
+			$company = $this->get_company_from_post();
+			if ( ! empty( $company ) ) {
+				$isAvailable = false;
+			}
+		}
+
+		if ( $isAvailable && ! empty( $this->allowedCountryCurrencySets ) ) {
+			$country  = $this->getCurrentCountry();
+			$currency = get_woocommerce_currency();
+			$isFound  = false;
+			foreach ( $this->allowedCountryCurrencySets as $allowedCountryCurrencySet ) {
+				if ( ! empty( $country ) && $allowedCountryCurrencySet['country'] !== $country ) {
+					continue;
+				}
+				if ( $allowedCountryCurrencySet['currency'] !== $currency ) {
+					continue;
+				}
+				$isFound = true;
+				break;
+			}
+			if ( ! $isFound ) {
 				$isAvailable = false;
 			}
 		}
@@ -123,10 +245,15 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 			'result' => 'success',
 		);
 		$charge = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $this->paymentTypeResource );
+		$this->before_payment_redirect( $order_id );
 		if ( $charge->getPayment()->getRedirectUrl() ) {
 			$return['redirect'] = $charge->getPayment()->getRedirectUrl();
 		}
 		return $return;
+	}
+
+	protected function before_payment_redirect( $order_id ) {
+		WC()->session->set( 'unzer_confirm_order_id', $order_id );
 	}
 
 	public function process_refund( $order_id, $amount = null, $reason = '' ) {
@@ -163,8 +290,13 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		}
 	}
 
-	public function get_confirm_url(): string {
-		return WC()->api_request_url( static::CONFIRMATION_ROUTE_SLUG );
+	public function get_confirm_url( $order_id = null ): string {
+		$url = WC()->api_request_url( static::CONFIRMATION_ROUTE_SLUG );
+		if ( $order_id !== null ) {
+			$separator = strpos( $url, '?' ) === false ? '?' : '&';
+			$url      .= $separator . 'unzer_confirm_order_id=' . $order_id;
+		}
+		return $url;
 	}
 
 	public function admin_options() {
@@ -286,48 +418,19 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		$order->save();
 	}
 
-	/**
-	 * @param WC_Order $order
-	 * @return void
-	 * @throws Exception
-	 */
-	protected function handleDateOfBirth( $order, $dateOfBirth ) {
-		$birthDate = new DateTime( $dateOfBirth );
-		$maxDate   = new DateTime( '-18 years' );
-		$minDate   = new DateTime( '-120 years' );
-		if ( $birthDate >= $maxDate ) {
-			throw new Exception( esc_html__( 'You have to be at least 18 years old for this payment method', 'unzer-payments' ) );
-		}
-		if ( $birthDate < $minDate ) {
-			throw new Exception( esc_html__( 'Please check your date of birth', 'unzer-payments' ) );
-		}
-		$order->update_meta_data( Main::ORDER_META_KEY_DATE_OF_BIRTH, gmdate( 'Y-m-d', strtotime( $dateOfBirth ) ) );
-		$order->save_meta_data();
-
-		$user = wp_get_current_user();
-		if ( $user->ID ) {
-			update_user_meta( $user->ID, Main::ORDER_META_KEY_DATE_OF_BIRTH, gmdate( 'Y-m-d', strtotime( $dateOfBirth ) ) );
-		}
+	public function get_checkout_customer_json() {
+		global $wp;
+		$orderId  = $this->isOrderPay() ? (int) $wp->query_vars['order-pay'] : null;
+		$customer = ( new CustomerService() )->getCustomerFromSession( $this, $orderId );
+		return $customer !== null ? json_encode( $customer->expose() ) : '';
 	}
 
-	protected function getUserBirthDate(): string {
-		$dob  = '';
-		$user = wp_get_current_user();
-		if ( $user->ID ) {
-			$dobFromUser = get_user_meta( $user->ID, Main::ORDER_META_KEY_DATE_OF_BIRTH, true );
-			if ( $dobFromUser ) {
-				$dob = gmdate( 'Y-m-d', strtotime( $dobFromUser ) );
-			}
-		}
-		return $dob;
+	protected function get_checkout_customer_json_encoded() {
+		return base64_encode( $this->get_checkout_customer_json() );
 	}
 
 	protected function addCheckoutAssets() {
-		wp_enqueue_script( 'unzer_js', 'https://static.unzer.com/v1/unzer.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
-		wp_enqueue_style( 'unzer_css', 'https://static.unzer.com/v1/unzer.css', array(), UNZER_VERSION );
-		wp_enqueue_style( 'woocommerce_unzer_css', UNZER_PLUGIN_URL . '/assets/css/checkout.css', array(), UNZER_VERSION );
-		wp_register_script( 'woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', array( 'unzer_js', 'jquery' ), UNZER_VERSION, array( 'in_footer' => false ) );
-
+		global $wp;
 		// TODO replace when minimum WP version is 6.5 (wp_enqueue_script_module)
 		add_filter(
 			'script_loader_tag',
@@ -343,8 +446,16 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 			10,
 			3
 		);
-		wp_enqueue_script( 'unzer_ui_v2_js', 'https://static-v2.unzer.com/v2/ui-components/index.js', array(), UNZER_VERSION, array( 'in_footer' => true ) );
+		wp_enqueue_script( 'unzer_ui_v2_js', 'https://static.test.unzer.com/v2/ui-components/index.js', array(), UNZER_VERSION, array( 'in_footer' => true ) ); // https://static-v2.unzer.com/v2/ui-components/index.js
+		wp_enqueue_style( 'woocommerce_unzer_css', UNZER_PLUGIN_URL . '/assets/css/checkout.css', array(), UNZER_VERSION );
 
+		if ( ( $this instanceof GooglePay ) && empty( $this->get_description() ) ) {
+				wp_add_inline_style( 'woocommerce_unzer_css', '.payment_box.payment_method_unzer_google_pay{display:none !important;}' );
+		} elseif ( ( $this instanceof ApplePayV2 ) && empty( $this->get_description() ) ) {
+			wp_add_inline_style( 'woocommerce_unzer_css', '.payment_box.payment_method_unzer_apple_pay_v2{display:none !important;}' );
+		}
+
+		wp_register_script( 'woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', array( 'jquery' ), UNZER_VERSION, array( 'in_footer' => false ) );
 		// for separate api keys
 		$paylaterGateway           = new Invoice();
 		$installmentGateway        = new Installment();
@@ -367,7 +478,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 				'locale'                               => get_locale(),
 				'store_name'                           => get_bloginfo( 'name' ),
 				'store_country'                        => strtoupper( substr( get_option( 'woocommerce_default_country' ), 0, 2 ) ),
-				'apple_pay_merchant_validation_url'    => WC()->api_request_url( CheckoutController::APPLE_PAY_MERCHANT_VALIDATION_ROUTE_SLUG ),
+				'is_order_pay'                         => self::isOrderPay() ? 'true' : 'false',
 				'currency'                             => get_woocommerce_currency(),
 				'google_pay_options'                   => array(
 					'gatewayMerchantId'   => $googlePayGateway->get_option( 'channel_id' ),
@@ -392,17 +503,19 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 			'woocommerce_unzer',
 			'unzer_i18n',
 			array(
-				'errorDob'         => __( 'Please enter your date of birth', 'unzer-payments' ),
-				'errorCompanyType' => __( 'Please enter your company type', 'unzer-payments' ),
 				'errorSepaMandate' => __( 'Please accept the SEPA mandate', 'unzer-payments' ),
 			)
 		);
 		wp_enqueue_script( 'woocommerce_unzer' );
 	}
 
-	public static function addRiskDataToAuthorization( Authorization $authorization ) {
+	public static function isOrderPay() {
+		global $wp;
+		return ! empty( $wp->query_vars['order-pay'] );
+	}
+
+	public static function addRiskDataToAuthorization( Authorization $authorization, ?string $riskId ) {
 		$riskData = new RiskData();
-		$riskData->setThreatMetrixId( WC()->session->get( 'unzerThreatMetrixId' ) );
 		if ( is_user_logged_in() ) {
 			/** @var \WP_User $user */
 			$user = wp_get_current_user();
@@ -412,28 +525,13 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		} else {
 			$riskData->setRegistrationLevel( 0 );
 		}
+		if ( $riskId !== null ) {
+			$riskData->setThreatMetrixId( $riskId );
+		}
 		$authorization->setRiskData( $riskData );
 	}
 
-	public static function removeRiskDataFromSession() {
-		WC()->session->set( 'unzerThreatMetrixId', null );
-	}
-
-
-	protected function threatmetrix_payment_scripts() {
-		if ( ! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
-			return;
-		}
-
-		if ( ! $this->is_enabled() ) {
-			return;
-		}
-
-		if ( empty( WC()->session->get( 'unzerThreatMetrixId' ) ) ) {
-			WC()->session->set( 'unzerThreatMetrixId', uniqid( 'unzer_tm_' ) );
-		}
-		wp_enqueue_script( 'unzer_threat_metrix_js', 'https://h.online-metrix.net/fp/tags.js?org_id=363t8kgq&session_id=' . WC()->session->get( 'unzerThreatMetrixId' ), array(), UNZER_VERSION, array( 'in_footer' => false ) );
-
-		$this->addCheckoutAssets();
+	public static function isUnzerPaymentMethod( string $paymentMethodId ) {
+		return substr( $paymentMethodId, 0, 6 ) === 'unzer_';
 	}
 }

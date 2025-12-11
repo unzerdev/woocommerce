@@ -39,3 +39,7 @@ apple-pay-button {
 .apple-pay-button-black {
 	-apple-pay-button-style: black;
 }
+
+.unzer-payment-instrument-new-form{
+	display: none;
+}

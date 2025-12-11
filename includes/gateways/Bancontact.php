@@ -2,6 +2,7 @@
 
 namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\BancontactBlock;
 use UnzerPayments\Services\PaymentService;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,6 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Bancontact extends AbstractGateway {
 
 	const GATEWAY_ID            = 'unzer_bancontact';
+	const BLOCK_CLASS           = BancontactBlock::class;
+	public $allowedCountries    = array( 'BE' );
+	public $allowedCurrencies   = array( 'EUR' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Bancontact::class;
 	public $method_title        = 'Unzer Bancontact';
 	public $method_description;

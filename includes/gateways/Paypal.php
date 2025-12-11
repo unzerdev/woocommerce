@@ -2,6 +2,7 @@
 
 namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\PaypalBlock;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Traits\SavePaymentInstrumentTrait;
 use UnzerPayments\Util;
@@ -14,10 +15,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Paypal extends AbstractGateway {
 
 
+
 	use SavePaymentInstrumentTrait;
 
 	public $paymentTypeResource = PaypalResource::class;
 	const GATEWAY_ID            = 'unzer_paypal';
+	const BLOCK_CLASS           = PaypalBlock::class;
 	public $method_title        = 'Unzer PayPal';
 	public $method_description;
 	public $title       = 'PayPal';
@@ -109,10 +112,12 @@ class Paypal extends AbstractGateway {
 			$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $paymentMean, $transactionEditorFunction );
 		}
 
+		$this->before_payment_redirect( $order_id );
+
 		if ( $transaction->getPayment()->getRedirectUrl() ) {
 			$return['redirect'] = $transaction->getPayment()->getRedirectUrl();
 		} elseif ( $transaction->isSuccess() ) {
-			$return['redirect'] = $this->get_confirm_url();
+			$return['redirect'] = $this->get_confirm_url( $order_id );
 		}
 		return $return;
 	}

@@ -2,8 +2,7 @@
 
 namespace UnzerPayments\Gateways;
 
-use UnzerPayments\Services\PaymentService;
-use UnzerPayments\Util;
+use UnzerPayments\Gateways\Blocks\IdealBlock;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -11,8 +10,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Ideal extends AbstractGateway {
 
-	const GATEWAY_ID     = 'unzer_ideal';
-	public $method_title = 'Unzer iDEAL';
+
+	const GATEWAY_ID            = 'unzer_ideal';
+	const BLOCK_CLASS           = IdealBlock::class;
+	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Ideal::class;
+	public $allowedCountries    = array( 'NL' );
+	public $allowedCurrencies   = array( 'EUR' );
+	public $method_title        = 'Unzer iDEAL';
 	public $method_description;
 	public $title       = 'iDEAL';
 	public $description = '';
@@ -22,24 +26,6 @@ class Ideal extends AbstractGateway {
 		'products',
 		'refunds',
 	);
-
-	public function has_fields() {
-		return true;
-	}
-
-	public function payment_fields() {
-		$description = $this->get_description();
-		if ( $description ) {
-			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
-		}
-		Util::getNonceField();
-		?>
-		<div id="unzer-ideal-form" class="unzerUI form" novalidate>
-			<input type="hidden" id="unzer-ideal-id" name="unzer-ideal-id" value=""/>
-			<div id="unzer-ideal" class="field"></div>
-		</div>
-		<?php
-	}
 
 	public function get_form_fields() {
 		return apply_filters(
@@ -67,17 +53,5 @@ class Ideal extends AbstractGateway {
 				),
 			)
 		);
-	}
-
-	public function process_payment( $order_id ) {
-		$this->logger->debug( 'start payment for #' . $order_id . ' with ' . self::GATEWAY_ID );
-		$return      = array(
-			'result' => 'success',
-		);
-		$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, Util::getNonceCheckedPostValue( 'unzer-ideal-id' ) );
-		if ( $transaction->getPayment()->getRedirectUrl() ) {
-			$return['redirect'] = $transaction->getPayment()->getRedirectUrl();
-		}
-		return $return;
 	}
 }

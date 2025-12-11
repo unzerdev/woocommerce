@@ -59,16 +59,16 @@ trait SavePaymentInstrumentTrait {
 		}
 		$existingPaymentMeans[ $this->paymentTypeResource ][ $paymentInstrumentId ] = array(
 			'id'    => $paymentInstrumentId,
-			'label' => $this->getLabelForPaymentInstrument( $paymentInstrument ),
+			'label' => (string) $this->getLabelForPaymentInstrument( $paymentInstrument ),
 		);
 		update_user_meta( $user->ID, Main::USER_META_KEY_PAYMENT_INSTRUMENTS, $existingPaymentMeans );
 	}
 
-	public function getLabelForPaymentInstrument( BasePaymentType $paymentInstrument ): string {
+	public function getLabelForPaymentInstrument( BasePaymentType $paymentInstrument ): ?string {
 		if ( $paymentInstrument instanceof Card ) {
 			return $paymentInstrument->getNumber() . ' (' . $paymentInstrument->getExpiryDate() . ')';
 		} elseif ( $paymentInstrument instanceof Paypal ) {
-			return $paymentInstrument->getEmail();
+			return $paymentInstrument->getEmail() ?: $paymentInstrument->getId();
 		} elseif ( $paymentInstrument instanceof SepaDirectDebit ) {
 			return $paymentInstrument->getIban();
 		} else {

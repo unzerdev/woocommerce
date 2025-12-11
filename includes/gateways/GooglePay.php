@@ -1,7 +1,8 @@
 <?php
 
-namespace UnzerPayments\gateways;
+namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\GooglePayBlock;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
 use UnzerSDK\Unzer;
@@ -13,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class GooglePay extends AbstractGateway {
 
 	const GATEWAY_ID     = 'unzer_google_pay';
+	const BLOCK_CLASS    = GooglePayBlock::class;
 	public $method_title = 'Unzer Google Pay';
 	public $method_description;
 	public $title       = 'Google Pay';
@@ -68,23 +70,22 @@ class GooglePay extends AbstractGateway {
 		if ( $description ) {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
-		?>
-		<input type="hidden" id="unzer-google-pay-id" name="unzer-google-pay-id" value=""/>
-		<input type="hidden" id="unzer-google-pay-amount" name="unzer-google-pay-amount" value="<?php echo esc_attr( $this->get_amount() ); ?>"/>
-		<?php
-	}
 
-	public function payment_scripts() {
-		if ( ! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
-			return;
-		}
-
-		if ( ! $this->is_enabled() ) {
-			return;
-		}
-
-		$this->addCheckoutAssets();
-		wp_enqueue_script( 'unzer_google_pay_js', 'https://pay.google.com/gp/p/js/pay.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
+		Util::getNonceField();
+		$form = '
+		    <input type="hidden" id="unzer-google-pay-id" name="unzer-google-pay-id" value=""/>
+		    <input type="hidden" id="unzer-google-pay-amount" name="unzer-google-pay-amount" value="' . esc_attr( $this->get_amount() ) . '"/>
+            <template class="unzer-google-pay-ui-template">
+                <unzer-payment
+                        id="unzer-google-pay-payment-component"
+                        publicKey="' . esc_attr( $this->get_public_key() ) . '"
+                        locale="' . esc_attr( get_locale() ) . '">
+                    <unzer-google-pay></unzer-google-pay>
+                </unzer-payment>
+                <unzer-checkout id="unzer-google-pay-checkout-component"></unzer-checkout>
+            </template>     
+        ';
+		echo wp_kses( $form, $this->get_allowed_html_tags() );
 	}
 
 	public function get_form_fields() {
@@ -211,12 +212,6 @@ class GooglePay extends AbstractGateway {
 		);
 
 		$googlePayId = Util::getNonceCheckedPostValue( 'unzer-google-pay-id' );
-
-		if ( empty( $googlePayId ) ) {
-			$this->logger->debug( 'google pay empty id' );
-			$return['messages'] = '<!-- start-unzer-google-pay -->';
-			return $return;
-		}
 		if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
 			$transaction = ( new PaymentService() )->performAuthorizationForOrder( $order_id, $this, $googlePayId );
 		} else {
@@ -224,11 +219,11 @@ class GooglePay extends AbstractGateway {
 		}
 
 		$this->logger->debug( 'google pay charge/authorization for order ' . $order_id, array( $transaction->expose() ) );
-
+		$this->before_payment_redirect( $order_id );
 		if ( $transaction->getPayment()->getRedirectUrl() ) {
 			$return['redirect'] = $transaction->getPayment()->getRedirectUrl();
 		} else {
-			$return['redirect'] = $this->get_confirm_url();
+			$return['redirect'] = $this->get_confirm_url( $order_id );
 		}
 		return $return;
 	}

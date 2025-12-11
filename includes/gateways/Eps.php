@@ -2,6 +2,7 @@
 
 namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\EpsBlock;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
 
@@ -12,6 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Eps extends AbstractGateway {
 
 	const GATEWAY_ID            = 'unzer_eps';
+	const BLOCK_CLASS           = EpsBlock::class;
+	public $allowedCountries    = array( 'AT' );
+	public $allowedCurrencies   = array( 'EUR' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\EPS::class;
 	public $method_title        = 'Unzer EPS';
 	public $method_description;

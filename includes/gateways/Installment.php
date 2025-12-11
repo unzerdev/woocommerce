@@ -3,12 +3,14 @@
 namespace UnzerPayments\Gateways;
 
 use Exception;
+use UnzerPayments\Gateways\Blocks\InstallmentBlock;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
 use UnzerSDK\Resources\TransactionTypes\Authorization;
+use UnzerSDK\Resources\TransactionTypes\Charge;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -17,19 +19,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Installment extends AbstractGateway {
 
 
-	const GATEWAY_ID     = 'unzer_installment';
-	public $method_title = 'Unzer Installment';
+	const GATEWAY_ID          = 'unzer_installment';
+	const BLOCK_CLASS         = InstallmentBlock::class;
+	public $allowedCurrencies = array( 'EUR', 'CHF' );
+	public $allowedCountries  = array( 'AT', 'CH', 'DE' );
+	public $isAllowedForB2B   = false;
+	public $method_title      = 'Unzer Installment';
 	public $method_description;
 	public $title       = 'Installment';
 	public $description = '';
 	public $id          = self::GATEWAY_ID;
 	public $plugin_id;
-	public $supports          = array(
+	public $supports = array(
 		'products',
 		'refunds',
 	);
-	public $allowedCurrencies = array( 'EUR', 'CHF' );
-	public $allowedCountries  = array( 'AT', 'CH', 'DE' );
 
 	public function __construct() {
 		parent::__construct();
@@ -46,24 +50,34 @@ class Installment extends AbstractGateway {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
 		Util::getNonceField();
-		?>
-		<div class="unzer-checkout-field-row form-row">
-			<label><?php echo esc_html__( 'Date of birth', 'unzer-payments' ); ?></label>
-			<input type="date" id="unzer-installment-dob" name="unzer-installment-dob" class="input-text" value="<?php echo esc_attr( $this->getUserBirthDate() ); ?>" max="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"/>
-		</div>
-		<div id="unzer-installment-form" class="unzerUI form">
-			<input type="hidden" id="unzer-installment-id" name="unzer-installment-id" value=""/>
-			<input type="hidden" id="unzer-installment-amount" name="unzer-installment-amount" value="<?php echo esc_attr( $this->get_amount() ); ?>"/>
-			<div class="field">
-				<div id="unzer-installment-fields">
-				</div>
-			</div>
-		</div>
-		<?php
+		$form = '
+		 <input type="hidden" id="unzer-installment-id" name="unzer-installment-id" value=""/>
+		 <input type="hidden" id="unzer-installment-customer-id" name="unzer-installment-customer-id" value=""/>
+		 <input type="hidden" id="unzer-installment-risk-id" name="unzer-installment-risk-id" value=""/>
+		 <input type="hidden" id="unzer-installment-amount" name="unzer-installment-amount" value="' . esc_attr( $this->get_amount() ) . '" />
+            <div class="unzer-ui-container"></div>
+            <template class="unzer-ui-template">
+                <unzer-payment
+                        id="unzer-paylater-installment-payment-component"
+                        publicKey="' . esc_attr( $this->get_current_public_key() ) . '"
+                        locale="' . esc_attr( get_locale() ) . '"               
+                        data-customer="' . esc_attr( $this->get_checkout_customer_json_encoded() ) . '" 
+                >
+                    <unzer-paylater-installment id="unzer-paylater-installment"></unzer-paylater-installment>
+                </unzer-payment>
+            </template>     
+        ';
+		echo wp_kses( $form, $this->get_allowed_html_tags() );
 	}
 
-	public function payment_scripts() {
-		$this->threatmetrix_payment_scripts();
+	public function get_current_public_key() {
+		$currency  = get_woocommerce_currency();
+		$keyName   = 'public_key_' . strtolower( $currency ) . '_b2c';
+		$publicKey = $this->get_option( $keyName );
+		if ( empty( $publicKey ) ) {
+			$publicKey = get_option( 'unzer_public_key' );
+		}
+		return $publicKey;
 	}
 
 	public function get_form_fields() {
@@ -154,19 +168,15 @@ class Installment extends AbstractGateway {
 			'result' => 'success',
 		);
 		$order  = wc_get_order( $order_id );
-
-		$dob = Util::getNonceCheckedPostValue( 'unzer-installment-dob' );
-		$this->handleDateOfBirth( $order, $dob );
-		$_POST['unzer-dob'] = $dob;
 		$order->save_meta_data();
-
+		$riskId = Util::getNonceCheckedPostValue( 'unzer-installment-risk-id' );
 		try {
 			$authorization = ( new PaymentService() )->performAuthorizationForOrder(
 				$order_id,
 				$this,
 				Util::getNonceCheckedPostValue( 'unzer-installment-id' ),
-				function ( Authorization $authorization ) {
-					AbstractGateway::addRiskDataToAuthorization( $authorization );
+				function ( Authorization $authorization ) use ( $riskId ) {
+					AbstractGateway::addRiskDataToAuthorization( $authorization, $riskId );
 				}
 			);
 		} catch ( UnzerApiException $e ) {
@@ -175,6 +185,7 @@ class Installment extends AbstractGateway {
 		if ( ! ( $authorization->isPending() || $authorization->isSuccess() ) ) {
 			throw new Exception( esc_html( $authorization->getMessage()->getCustomer() ) );
 		}
+
 		if ( $authorization->isSuccess() ) {
 			$order        = wc_get_order( $order_id );
 			$orderService = new OrderService();
@@ -182,11 +193,14 @@ class Installment extends AbstractGateway {
 		} else {
 			$this->set_order_transaction_number( wc_get_order( $order_id ), $authorization->getPayment()->getId() );
 		}
+		$this->before_payment_redirect( $order_id );
 		$return['redirect'] = $this->get_return_url( wc_get_order( $order_id ) );
-		AbstractGateway::removeRiskDataFromSession();
 		return $return;
 	}
-
+	/**
+	 * @param Charge|Authorization $chargeOrAuthorization
+	 * @return string
+	 */
 	public function get_payment_information( AbstractTransactionType $chargeOrAuthorization ) {
 		return sprintf(
 			__(
