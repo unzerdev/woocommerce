@@ -1,9 +1,8 @@
 <?php
 
-namespace UnzerPayments\gateways;
+namespace UnzerPayments\Gateways;
 
-use UnzerPayments\Services\PaymentService;
-use UnzerPayments\Util;
+use UnzerPayments\Gateways\Blocks\OpenBankingBlock;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -11,8 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OpenBanking extends AbstractGateway {
 
-
 	const GATEWAY_ID            = 'unzer_open_banking';
+	const BLOCK_CLASS           = OpenBankingBlock::class;
+	public $allowedCountries    = array( 'DE' );
+	public $allowedCurrencies   = array( 'EUR' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\OpenbankingPis::class;
 	public $method_title        = 'Unzer Direct Bank Transfer';
 	public $method_description;
@@ -34,16 +35,19 @@ class OpenBanking extends AbstractGateway {
 		if ( $description ) {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
-		Util::getNonceField();
-		?>
-		<div id="unzer-banking-form">
-			<unzer-payment
-					publicKey="<?php echo esc_attr( $this->get_public_key() ); ?>"
-					locale="<?php echo esc_attr( get_locale() ); ?>">
-				<unzer-open-banking></unzer-open-banking>
-			</unzer-payment>
-		</div>
-		<?php
+
+		$html = '
+            
+            <div class="unzer-ui-container"></div>
+            <template class="unzer-ui-template">
+                    <unzer-payment
+                        publicKey="' . esc_attr( $this->get_public_key() ) . '"
+                        locale="' . esc_attr( get_locale() ) . '"
+                    >
+                        <unzer-open-banking></unzer-open-banking>
+                    </unzer-payment>
+            </template>';
+		echo wp_kses( $html, $this->get_allowed_html_tags() );
 	}
 
 	public function process_refund( $order_id, $amount = null, $reason = '' ) {

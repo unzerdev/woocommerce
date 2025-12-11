@@ -3,6 +3,7 @@
 namespace UnzerPayments\Gateways;
 
 use Exception;
+use UnzerPayments\Gateways\Blocks\CardBlock;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Traits\SavePaymentInstrumentTrait;
 use UnzerPayments\Util;
@@ -18,9 +19,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Card extends AbstractGateway {
 
 
+
 	use SavePaymentInstrumentTrait;
 
 	const GATEWAY_ID            = 'unzer_card';
+	const BLOCK_CLASS           = CardBlock::class;
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Card::class;
 	public $method_title        = 'Unzer Credit Card';
 	public $method_description;
@@ -45,35 +48,20 @@ class Card extends AbstractGateway {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
 		Util::getNonceField();
-		$formId = uniqid();
-		$form   = '
-        <input type="hidden" id="unzer-card-id" name="unzer-card-id" value=""/>
-        <div id="unzer-card-form" class="unzerUI form" data-form-id="' . $formId . '">
-            <div class="field">
-                <div id="unzer-card-form-number-' . $formId . '" class="unzerInput">
-                    <!-- Card number UI Element will be inserted here. -->
-                </div>
-            </div>
-            <div class="two fields">
-                <div class="field ten wide">
-                    <div id="unzer-card-form-expiry-' . $formId . '" class="unzerInput">
-                        <!-- Card expiry date UI Element will be inserted here. -->
-                    </div>
-                </div>
-                <div class="field six wide">
-                    <div id="unzer-card-form-cvc-' . $formId . '" class="unzerInput">
-                        <!-- Card CVC UI Element will be inserted here. -->
-                    </div>
-                </div>
-            </div>
-            <div class="field">
-                <div id="unzer-card-form-holder-' . $formId . '" class="unzerInput">
-                    <!-- Card holder UI Element is inserted here. -->
-                </div>
-            </div>
-        </div>
-        ';
-		echo wp_kses_post( $this->renderSavedInstrumentsSelection( $form ) );
+		$form = '
+            <input type="hidden" id="unzer-card-id" name="unzer-card-id" value=""/>
+                <div class="unzer-ui-container"></div>
+            <template class="unzer-ui-template">
+                    <unzer-payment
+                        id="unzer-card-payment-component"
+                        publicKey="' . esc_attr( $this->get_public_key() ) . '"
+                        locale="' . esc_attr( get_locale() ) . '"
+                        ' . ( $this->get_option( 'allow_ctp' ) === 'yes' ? '' : 'disableCTP' ) . '
+                    >
+                        <unzer-card id="unzer-card"></unzer-card>
+                    </unzer-payment>
+            </template>';
+		echo wp_kses( $this->renderSavedInstrumentsSelection( $form ), $this->get_allowed_html_tags() );
 	}
 
 	public function get_form_fields() {
@@ -113,6 +101,17 @@ class Card extends AbstractGateway {
 				),
 				AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => array(
 					'title'       => __( 'Save card for registered customers', 'unzer-payments' ),
+					'label'       => __( '&nbsp;', 'unzer-payments' ),
+					'type'        => 'select',
+					'description' => '',
+					'default'     => 'no',
+					'options'     => array(
+						'no'  => __( 'No', 'unzer-payments' ),
+						'yes' => __( 'Yes', 'unzer-payments' ),
+					),
+				),
+				'allow_ctp'        => array(
+					'title'       => __( 'Offer Click To Pay', 'unzer-payments' ),
 					'label'       => __( '&nbsp;', 'unzer-payments' ),
 					'type'        => 'select',
 					'description' => '',
@@ -164,11 +163,11 @@ class Card extends AbstractGateway {
 		} else {
 			$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $cardId, $transactionEditorFunction );
 		}
-
+		$this->before_payment_redirect( $order_id );
 		if ( $transaction->getPayment()->getRedirectUrl() ) {
 			$return['redirect'] = $transaction->getPayment()->getRedirectUrl();
 		} elseif ( $transaction->isSuccess() ) {
-			$return['redirect'] = $this->get_confirm_url();
+			$return['redirect'] = $this->get_confirm_url( $order_id );
 		}
 		return $return;
 	}

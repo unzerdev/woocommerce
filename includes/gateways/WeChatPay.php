@@ -2,6 +2,7 @@
 
 namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\WeChatPayBlock;
 use UnzerPayments\Services\PaymentService;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,6 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WeChatPay extends AbstractGateway {
 
 	const GATEWAY_ID            = 'unzer_wechatpay';
+	const BLOCK_CLASS           = WeChatPayBlock::class;
+	public $allowedCountries    = array( 'AT', 'BE', 'DK', 'FI', 'FR', 'DE', 'ES', 'GB', 'GR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LU', 'MT', 'NL', 'NO', 'PT', 'SE' );
+	public $allowedCurrencies   = array( 'CHF', 'CNY', 'EUR', 'GBP', 'USD' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Wechatpay::class;
 	public $method_title        = 'Unzer WeChat Pay';
 	public $method_description;

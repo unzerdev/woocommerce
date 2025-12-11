@@ -3,6 +3,7 @@
 namespace UnzerPayments\Gateways;
 
 use Exception;
+use UnzerPayments\Gateways\Blocks\InvoiceBlock;
 use UnzerPayments\Main;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
@@ -10,6 +11,7 @@ use UnzerPayments\Util;
 use UnzerSDK\Exceptions\UnzerApiException;
 use UnzerSDK\Resources\TransactionTypes\AbstractTransactionType;
 use UnzerSDK\Resources\TransactionTypes\Authorization;
+use UnzerSDK\Resources\TransactionTypes\Charge;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -18,8 +20,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Invoice extends AbstractGateway {
 
 
-	const GATEWAY_ID     = 'unzer_invoice';
-	public $method_title = 'Unzer Invoice';
+	const GATEWAY_ID          = 'unzer_invoice';
+	const BLOCK_CLASS         = InvoiceBlock::class;
+	public $allowedCurrencies = array( 'EUR', 'CHF' );
+	public $allowedCountries  = array( 'AT', 'CH', 'DE', 'NL' );
+	public $method_title      = 'Unzer Invoice';
 	public $method_description;
 	public $title       = 'Invoice';
 	public $description = '';
@@ -30,8 +35,6 @@ class Invoice extends AbstractGateway {
 		'refunds',
 	);
 
-	public $allowedCurrencies = array( 'EUR', 'CHF' );
-	public $allowedCountries  = array( 'AT', 'CH', 'DE', 'NL' );
 
 	public function __construct() {
 		parent::__construct();
@@ -152,37 +155,37 @@ class Invoice extends AbstractGateway {
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
 		Util::getNonceField();
-		?>
-		<div class="unzer-checkout-field-row form-row" id="unzer-checkout-dob-row">
-			<label><?php echo esc_html__( 'Date of birth', 'unzer-payments' ); ?></label>
-			<input type="date" id="unzer-invoice-dob" name="unzer-invoice-dob" class="input-text" value="<?php echo esc_attr( $this->getUserBirthDate() ); ?>" max="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"/>
-		</div>
-		<div class="unzer-checkout-field-row form-row b2b" id="unzer-invoice-company-type-container">
-			<label><?php echo esc_html__( 'Type of company', 'unzer-payments' ); ?></label>
-			<select name="unzer-invoice-company-type" id="unzer-invoice-company-type" class="input-text">
-				<option></option>
-				<option value="association"><?php echo esc_html__( 'Association', 'unzer-payments' ); ?></option>
-				<option value="authority"><?php echo esc_html__( 'Authority', 'unzer-payments' ); ?></option>
-				<option value="company"><?php echo esc_html__( 'Company', 'unzer-payments' ); ?></option>
-				<option value="sole"><?php echo esc_html__( 'Sole', 'unzer-payments' ); ?></option>
-				<option value="other"><?php echo esc_html__( 'Other', 'unzer-payments' ); ?></option>
-			</select>
-		</div>
-		<div id="unzer-invoice-form" class="unzerUI form">
-			<input type="hidden" id="unzer-invoice-id" name="unzer-invoice-id" value=""/>
-			<div class="field">
-				<div id="unzer-invoice-fields">
-					<!-- The Payment form UI element (opt-in text and checkbox) will be inserted here -->
-				</div>
-			</div>
-		</div>
-		<?php
+
+		$form = '
+		 <input type="hidden" id="unzer-invoice-id" name="unzer-invoice-id" value=""/>
+		 <input type="hidden" id="unzer-invoice-customer-id" name="unzer-invoice-customer-id" value=""/>
+		 <input type="hidden" id="unzer-invoice-risk-id" name="unzer-invoice-risk-id" value=""/>
+		 <input type="hidden" id="unzer-invoice-amount" name="unzer-invoice-amount" value="' . esc_attr( $this->get_amount() ) . '" />
+            <div class="unzer-ui-container"></div>
+            <template class="unzer-ui-template">
+                <unzer-payment
+                        id="unzer-paylater-invoice-payment-component"
+                        publicKey="' . esc_attr( $this->get_current_public_key() ) . '"
+                        locale="' . esc_attr( get_locale() ) . '"       
+                        data-customer="' . esc_attr( $this->get_checkout_customer_json_encoded() ) . '"         
+                >
+                    <unzer-paylater-invoice id="unzer-paylater-invoice"></unzer-paylater-invoice>
+                </unzer-payment>
+            </template>     
+        ';
+		echo wp_kses( $form, $this->get_allowed_html_tags() );
 	}
 
-	public function payment_scripts() {
-		$this->threatmetrix_payment_scripts();
+	public function get_current_public_key() {
+		$currency  = get_woocommerce_currency();
+		$isB2C     = empty( $this->get_company_from_post() );
+		$keyName   = 'public_key_' . strtolower( $currency ) . '_' . ( $isB2C ? 'b2c' : 'b2b' );
+		$publicKey = $this->get_option( $keyName );
+		if ( empty( $publicKey ) ) {
+			$publicKey = get_option( 'unzer_public_key' );
+		}
+		return $publicKey;
 	}
-
 
 	/**
 	 * @param $order_id
@@ -193,33 +196,14 @@ class Invoice extends AbstractGateway {
 		$return = array(
 			'result' => 'success',
 		);
-		$order  = wc_get_order( $order_id );
-
-        if ( !$order->get_billing_company() ) {
-            $dob = Util::getNonceCheckedPostValue('unzer-invoice-dob');
-            $this->handleDateOfBirth($order, $dob);
-            $_POST['unzer-dob'] = $dob; // for unified handling in CustomerService and OrderService
-        } elseif ( $order->get_billing_company() ) {
-			$companyType = (string) Util::getNonceCheckedPostValue( 'unzer-invoice-company-type' );
-			if ( empty( $companyType ) ) {
-				throw new Exception( esc_html__( 'Please enter your company type', 'unzer-payments' ) );
-			}
-            if ($companyType === 'sole') {
-                $dob = Util::getNonceCheckedPostValue('unzer-invoice-dob');
-                $this->handleDateOfBirth($order, $dob);
-                $_POST['unzer-dob'] = $dob; // for unified handling in CustomerService and OrderService
-            }
-			$order->update_meta_data( Main::ORDER_META_KEY_COMPANY_TYPE, $companyType );
-		}
-		$order->save_meta_data();
-
+		$riskId = Util::getNonceCheckedPostValue( 'unzer-invoice-risk-id' );
 		try {
 			$authorization = ( new PaymentService() )->performAuthorizationForOrder(
 				$order_id,
 				$this,
 				Util::getNonceCheckedPostValue( 'unzer-invoice-id' ),
-				function ( Authorization $authorization ) {
-					AbstractGateway::addRiskDataToAuthorization( $authorization );
+				function ( Authorization $authorization ) use ( $riskId ) {
+					AbstractGateway::addRiskDataToAuthorization( $authorization, $riskId );
 				}
 			);
 		} catch ( UnzerApiException $e ) {
@@ -235,8 +219,8 @@ class Invoice extends AbstractGateway {
 		} else {
 			$this->set_order_transaction_number( wc_get_order( $order_id ), $authorization->getPayment()->getId() );
 		}
+		$this->before_payment_redirect( $order_id );
 		$return['redirect'] = $this->get_return_url( wc_get_order( $order_id ) );
-		AbstractGateway::removeRiskDataFromSession();
 		return $return;
 	}
 
@@ -253,6 +237,10 @@ class Invoice extends AbstractGateway {
 	}
 
 
+	/**
+	 * @param Charge|Authorization $chargeOrAuthorization
+	 * @return string
+	 */
 	public function get_payment_information( AbstractTransactionType $chargeOrAuthorization ) {
 		return sprintf(
 			__(

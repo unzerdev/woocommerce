@@ -214,66 +214,6 @@ class OrderService {
 	}
 
 	/**
-	 * @param int|WC_Order $order
-	 * @return Customer
-	 */
-	public function getCustomer( $order ): Customer {
-		$order = is_object( $order ) ? $order : wc_get_order( $order );
-
-		if ( is_user_logged_in() ) {
-			$paymentService = new PaymentService();
-			$unzer          = $paymentService->getUnzerManagerForOrder( $order );
-			try {
-				$customer = $unzer->fetchCustomerByExtCustomerId( 'wp-' . wp_get_current_user()->ID );
-			} catch ( Exception $e ) {
-				// no worries, we cover this by creating a new customer
-			}
-		}
-
-		if ( empty( $customer ) ) {
-			$customer = new Customer();
-			if ( is_user_logged_in() ) {
-				$customer->setCustomerId( 'wp-' . wp_get_current_user()->ID );
-			}
-		}
-
-		$customer
-			->setFirstname( $order->get_billing_first_name() )
-			->setLastname( $order->get_billing_last_name() )
-			->setPhone( $order->get_billing_phone() )
-			->setCompany( $order->get_billing_company() )
-			->setEmail( $order->get_billing_email() );
-
-		$dob = $order->get_meta( Main::ORDER_META_KEY_DATE_OF_BIRTH );
-		if ( empty( $dob ) ) {
-			$dob = Util::getDobFromPost();
-		}
-
-		if ( ! empty( $dob ) ) {
-			$customer->setBirthDate( gmdate( 'Y-m-d', strtotime( $dob ) ) );
-		}
-
-		if ( $order->get_billing_company() ) {
-			$companyType = $order->get_meta( Main::ORDER_META_KEY_COMPANY_TYPE );
-			if ( empty( $companyType ) ) {
-				$companyType = Util::getCompanyTypeFromPost();
-			}
-			if ( ! empty( $companyType ) ) {
-				$companyInfo = ( new CompanyInfo() )
-					->setCompanyType( $companyType )
-					->setRegistrationType( CompanyRegistrationTypes::REGISTRATION_TYPE_NOT_REGISTERED )
-					->setFunction( 'OWNER' );
-				// ->setRegistrationType(CompanyRegistrationTypes::REGISTRATION_TYPE_REGISTERED)
-				// ->setCommercialRegisterNumber(uniqid());
-				$customer->setCompanyInfo( $companyInfo );
-			}
-		}
-
-		$this->setAddresses( $customer, $order );
-		return $customer;
-	}
-
-	/**
 	 * @param Authorization|Charge $transaction
 	 * @return void
 	 * @throws \WC_Data_Exception|Exception
@@ -352,7 +292,6 @@ class OrderService {
 	}
 
 	public function getOrderIdFromPaymentId( $paymentId ) {
-		// TODO: TEST
 		$orderId = null;
 		if ( Util::isHPOS() ) {
 			$orders = wc_get_orders(

@@ -2,6 +2,7 @@
 
 namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\AlipayBlock;
 use UnzerPayments\Services\PaymentService;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,7 +11,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Alipay extends AbstractGateway {
 
-	const GATEWAY_ID            = 'unzer_alipay';
+	const GATEWAY_ID  = 'unzer_alipay';
+	const BLOCK_CLASS = AlipayBlock::class;
+
+	public $allowedCountries    = array( 'DE', 'AT', 'BE', 'IT', 'ES', 'NL' );
+	public $allowedCurrencies   = array( 'AUD', 'CAD', 'CHF', 'CNY', 'EUR', 'GBP', 'HKD', 'NZD', 'SGD', 'USD' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Alipay::class;
 	public $method_title        = 'Unzer Alipay';
 	public $method_description;

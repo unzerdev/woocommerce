@@ -1,0 +1,194 @@
+/* Header row with status */
+.unzer-header-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.unzer-payment-id {
+	font-weight: 600;
+	font-size: 13px;
+	color: #1d2327;
+}
+
+/* Status Badge - inline */
+#unzer-status-message {
+	display: inline-block;
+	border-radius: 3px;
+	padding: 2px 8px;
+	font-weight: 500;
+	font-size: 12px;
+	text-transform: capitalize;
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+#unzer-status-message.empty {
+	display: none;
+}
+
+#unzer-status-message.unzer-status-chargeback,
+#unzer-status-message.unzer-status-canceled {
+	color: #761919;
+	background: #eba3a3;
+}
+
+#unzer-status-message.unzer-status-completed,
+#unzer-status-message.unzer-status-success {
+	color: #5b841b;
+	background: #c6e1c6;
+}
+
+#unzer-status-message.unzer-status-pending {
+	color: #996800;
+	background: #fcf9e8;
+}
+
+#unzer-status-message.unzer-status-partly {
+	color: #2271b1;
+	background: #f0f6fc;
+}
+
+/* Totals - compact inline layout */
+.unzer-totals-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 16px;
+	font-size: 12px;
+	margin-bottom: 12px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.unzer-totals-row .unzer-total-item {
+	display: flex;
+	gap: 4px;
+}
+
+.unzer-totals-row .unzer-total-label {
+	color: #50575e;
+}
+
+.unzer-totals-row .unzer-total-value {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Payment Instructions */
+.unzer-instructions {
+	font-size: 12px;
+	margin-bottom: 12px;
+	padding: 8px;
+	background: #fcf9e8;
+	border-left: 3px solid #dba617;
+}
+
+/* Capture Action - inline */
+.unzer-capture-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.unzer-capture-row:empty {
+	display: none;
+}
+
+.unzer-capture-row .button.is-loading {
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+.unzer-capture-row .button.is-loading::after {
+	content: "";
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	margin-left: 6px;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	border-radius: 50%;
+	animation: unzer-spin 0.6s linear infinite;
+	vertical-align: middle;
+}
+
+@keyframes unzer-spin {
+	to { transform: rotate(360deg); }
+}
+
+#unzer-capture-amount-input {
+	width: 90px;
+	padding: 2px 6px;
+	border: 1px solid #8c8f94;
+	border-radius: 3px;
+	font-size: 12px;
+}
+
+#unzer-capture-amount-input:focus {
+	border-color: #2271b1;
+	box-shadow: 0 0 0 1px #2271b1;
+	outline: none;
+}
+
+/* Transactions Table - compact */
+#unzer-transactions {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+	margin-bottom: 12px;
+}
+
+#unzer-transactions thead th {
+	text-align: left;
+	padding: 6px 8px 6px 0;
+	font-weight: 600;
+	font-size: 11px;
+	color: #50575e;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	border-bottom: 1px solid #c3c4c7;
+}
+
+#unzer-transactions tbody td {
+	padding: 6px 8px 6px 0;
+	vertical-align: middle;
+}
+
+#unzer-transactions tbody tr.unzer-row-error {
+	color: #d63638;
+}
+
+#unzer-transactions tbody tr.unzer-row-pending {
+	color: #a7aaad;
+}
+
+#unzer-transactions tbody tr.unzer-row-success {
+	color: #1d2327;
+}
+
+/* Debug Section - minimal */
+.unzer-debug-section {
+	margin-top: 8px;
+}
+
+.unzer-debug-section .button {
+	font-size: 11px;
+	padding: 0 8px;
+	min-height: 24px;
+	line-height: 22px;
+}
+
+#unzer-debug {
+	display: none;
+	margin-top: 8px;
+	padding: 8px;
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
+	font-size: 10px;
+	line-height: 1.4;
+	overflow-x: auto;
+	max-height: 300px;
+}

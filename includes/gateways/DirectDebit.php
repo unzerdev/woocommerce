@@ -3,6 +3,7 @@
 namespace UnzerPayments\Gateways;
 
 use Exception;
+use UnzerPayments\Gateways\Blocks\DirectDebitBlock;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Traits\SavePaymentInstrumentTrait;
 use UnzerPayments\Util;
@@ -20,6 +21,8 @@ class DirectDebit extends AbstractGateway {
 
 	public $paymentTypeResource = SepaDirectDebit::class;
 	const GATEWAY_ID            = 'unzer_direct_debit';
+	const BLOCK_CLASS           = DirectDebitBlock::class;
+	public $allowedCurrencies   = array( 'EUR' );
 	public $method_title        = 'Unzer SEPA Direct Debit';
 	public $method_description;
 	public $title       = 'SEPA Direct Debit';
@@ -57,45 +60,23 @@ In case of refusal or rejection of direct debit payment I instruct my bank irrev
 			echo wp_kses_post( wpautop( wptexturize( $description ) ) );
 		}
 		Util::getNonceField();
-		$formId = uniqid();
-		$form   = '
-        <div id="unzer-direct-debit-form" class="unzerUI form" data-form-id="' . $formId . '">
-            <input type="hidden" id="unzer-direct-debit-id" name="unzer-direct-debit-id" value=""/>
-            <div class="field">
-                <div id="unzer-direct-debit-iban-' . $formId . '" class="unzerInput">
-                </div>
-            </div>
-        </div>
-        <div id="unzer-direct-debit-sepa-mandate-container">
-            <label>
-                <input type="checkbox" name="unzer-accept-sepa-mandate" value="1" id="unzer-accept-sepa-mandate-checkbox" />
-                <span class="label">' .
-			__( 'I accept the SEPA mandate', 'unzer-payments' ) .
-			' <a href="#" onclick="document.getElementById(\'unzer-direct-debit-sepa-mandate-complete\').style.display = \'block\'; this.remove(); return false;">' .
-			__( '(read more)', 'unzer-payments' ) .
-			'</a>' .
-			'<div id="unzer-direct-debit-sepa-mandate-complete" style="display: none;">' .
-			nl2br(
-				str_replace( '%merchant%', get_bloginfo( 'name' ), $this->get_option( 'sepa_mandate' ) ?: $this->defaultMandateText )
-			) .
-			'</div>
-                </span>
-            </label>
-        </div>
+		$form = '
+		
+		 <input type="hidden" id="unzer-direct-debit-id" name="unzer-direct-debit-id" value=""/>
+		 
+            <div class="unzer-ui-container"></div>
+         
+            <template class="unzer-ui-template">
+                <unzer-payment
+                        id="unzer-sepa-payment-component"
+                        publicKey="' . esc_attr( $this->get_public_key() ) . '"
+                        locale="' . esc_attr( get_locale() ) . '"                
+                >
+                    <unzer-sepa-direct-debit id="unzer-sepa-direct-debit"></unzer-sepa-direct-debit>
+                </unzer-payment>
+            </template>     
         ';
-		echo wp_kses_post( $this->renderSavedInstrumentsSelection( $form ) );
-	}
-
-	public function payment_scripts() {
-		if ( ! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
-			return;
-		}
-
-		if ( ! $this->is_enabled() ) {
-			return;
-		}
-
-		$this->addCheckoutAssets();
+		echo wp_kses( $this->renderSavedInstrumentsSelection( $form ), $this->get_allowed_html_tags() );
 	}
 
 	public function get_form_fields() {
@@ -103,30 +84,23 @@ In case of refusal or rejection of direct debit payment I instruct my bank irrev
 			'wc_unzer_settings',
 			array(
 
-				'enabled'      => array(
+				'enabled'     => array(
 					'title'       => __( 'Enable/Disable', 'unzer-payments' ),
 					'label'       => __( 'Enable Unzer SEPA Direct Debit Payments', 'unzer-payments' ),
 					'type'        => 'checkbox',
 					'description' => '',
 					'default'     => 'no',
 				),
-				'title'        => array(
+				'title'       => array(
 					'title'       => __( 'Title', 'unzer-payments' ),
 					'type'        => 'text',
 					'description' => __( 'This controls the title which the user sees during checkout.', 'unzer-payments' ),
 					'default'     => __( 'SEPA Direct Debit', 'unzer-payments' ),
 				),
-				'description'  => array(
+				'description' => array(
 					'title'       => __( 'Description', 'unzer-payments' ),
 					'type'        => 'text',
 					'description' => __( 'This controls the description which the user sees during checkout.', 'unzer-payments' ),
-					'default'     => '',
-				),
-				'sepa_mandate' => array(
-					'title'       => __( 'Alternative SEPA mandate description', 'unzer-payments' ),
-					'type'        => 'textarea',
-					'description' => __( 'Leave empty to display the default text', 'unzer-payments' ),
-					'placeholder' => $this->defaultMandateText,
 					'default'     => '',
 				),
 				AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => array(
@@ -168,8 +142,8 @@ In case of refusal or rejection of direct debit payment I instruct my bank irrev
 		} else {
 			$this->set_order_transaction_number( wc_get_order( $order_id ), $charge->getPayment()->getId() );
 		}
-		WC()->session->set( 'unzer_confirm_order_id', $order_id );
-		$return['redirect'] = $this->get_confirm_url();
+		$this->before_payment_redirect( $order_id );
+		$return['redirect'] = $this->get_confirm_url( $order_id );
 		return $return;
 	}
 

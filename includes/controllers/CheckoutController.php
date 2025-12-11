@@ -3,22 +3,19 @@
 namespace UnzerPayments\Controllers;
 
 use Exception;
-use UnzerPayments\Gateways\ApplePay;
-use UnzerPayments\Gateways\Prepayment;
+use UnzerPayments\Gateways\AbstractGateway;
 use UnzerPayments\Main;
+use UnzerPayments\Services\CustomerService;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
-use UnzerSDK\Adapter\ApplepayAdapter;
 use UnzerSDK\Constants\PaymentState;
-use UnzerSDK\Resources\ExternalResources\ApplepaySession;
 use WC_Order;
 
 class CheckoutController {
 
-
-	const APPLE_PAY_MERCHANT_VALIDATION_ROUTE_SLUG = 'unzer_apple_pay_merchant_validation';
+	const GET_UNZER_CUSTOMER_SLUG = 'get-unzer-customer';
 
 	public function confirm() {
 		$logger = ( new LogService() );
@@ -30,6 +27,14 @@ class CheckoutController {
 			WC()->session->set( 'unzer_confirm_order_id', null );
 		}
 		if ( empty( $orderId ) ) {
+			$logger->debug( 'order id from store_api_draft_order' );
+			$orderId = (int) WC()->session->get( 'store_api_draft_order' );
+		}
+		if ( empty( $orderId ) ) {
+			$logger->debug( 'order id from get query' );
+			$orderId = (int) ( $_GET['unzer_confirm_order_id'] ?? 0 );
+		}
+		if ( empty( $orderId ) ) {
 			$logger->error( 'empty order id for confirmation endpoint' );
 			wp_redirect( wc_get_checkout_url() );
 			die;
@@ -38,6 +43,7 @@ class CheckoutController {
 		$unzerPluginManager = Main::getInstance();
 		$paymentGateway     = $unzerPluginManager->getPaymentGateway( $order->get_payment_method() );
 		if ( ! $paymentGateway ) {
+			$order->update_status( 'failed' );
 			$logger->error( 'payment method unknown', $order->get_payment_method() );
 			wc_add_notice( __( 'Payment error', 'unzer-payments' ), 'error' );
 			wp_redirect( wc_get_checkout_url() );
@@ -47,6 +53,7 @@ class CheckoutController {
 		$transaction    = $paymentService->getChargeOrAuthorizationFromOrder( $orderId, $paymentGateway );
 
 		if ( ! $transaction ) {
+			$order->update_status( 'failed' );
 			$paymentService->removeTransactionMetaData( $orderId );
 			$logger->error( 'no authorization/charge found', array( 'order' => $orderId ) );
 			wc_add_notice( __( 'Payment error', 'unzer-payments' ), 'error' );
@@ -64,12 +71,13 @@ class CheckoutController {
 					'reason'      => $transaction->getMessage()->getMerchant(),
 				)
 			);
+			$order->update_status( 'failed' );
 			wc_add_notice( __( 'Payment cancelled', 'unzer-payments' ), 'error' );
 			wp_redirect( wc_get_checkout_url() );
 			die;
 		}
 
-		if ( method_exists( $paymentGateway, 'isSaveInstruments' ) ) {
+		if ( method_exists( $paymentGateway, 'maybeSavePaymentInstrument' ) ) {
 			if ( WC()->session->get( 'save_payment_instrument' ) ) {
 				$paymentGateway->maybeSavePaymentInstrument( $transaction->getPayment()->getPaymentType()->getId() );
 			}
@@ -77,6 +85,7 @@ class CheckoutController {
 		$orderService = new OrderService();
 		try {
 			$orderService->processPaymentStatus( $transaction, $order );
+			self::clearSessionData();
 			wp_redirect( $order->get_checkout_order_received_url() );
 		} catch ( Exception $e ) {
 			$logger->error(
@@ -87,6 +96,7 @@ class CheckoutController {
 					'exception'   => $e->getMessage(),
 				)
 			);
+			$order->update_status( 'failed' );
 			wc_add_notice( __( 'Payment error', 'unzer-payments' ), 'error' );
 			wp_redirect( wc_get_checkout_url() );
 		}
@@ -94,61 +104,43 @@ class CheckoutController {
 		die;
 	}
 
+	public function getUnzerCustomerData() {
+		$paymentMethodGatewayId = Util::getNonceCheckedPostValue( 'payment_method' );
+		$cartData               = json_decode( Util::getNonceCheckedPostValue( 'data' ), true );
+		$paymentMethodGateway   = Main::getInstance()->getPaymentGateway( $paymentMethodGatewayId );
+		$billingData            = array();
+		foreach ( $cartData['billingAddress'] as $k => $v ) {
+			$billingData[ 'billing_' . $k ] = $v;
+		}
+		$unzerCustomer = ( new CustomerService() )->getCustomerFromData( $paymentMethodGateway, $billingData );
+
+		$paymentService = new PaymentService();
+		$publicKey      = $paymentService->getPublicKey( $paymentMethodGateway, ! empty( $billingData['billing_company'] ), $cartData['totals']['currency_code'] );
+
+		$this->renderJson(
+			array(
+				'customer'  => $unzerCustomer->expose(),
+				'publicKey' => $publicKey,
+			)
+		);
+	}
+
 	/**
 	 * @param WC_Order $order
 	 * @return void
 	 */
 	public static function checkoutSuccess( $order ) {
+		self::clearSessionData();
 		( new OrderService() )->printPaymentInstructionsHtml( $order );
-	}
-
-	public function validateApplePayMerchant() {
-		$applePayGateway = new ApplePay();
-		$applePaySession = new ApplepaySession(
-			$applePayGateway->get_option( 'merchant_id' ),
-			get_bloginfo( 'name' ),
-			isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : get_bloginfo( 'url' ),
-		);
-		$appleAdapter    = new ApplepayAdapter();
-
-		$certificateTempPath = tempnam( sys_get_temp_dir(), 'WpUnzerPayments' );
-		$keyTempPath         = tempnam( sys_get_temp_dir(), 'WpUnzerPayments' );
-
-		if ( ! $certificateTempPath || ! $keyTempPath ) {
-			throw new Exception( 'Error on temporary file creation' );
-		}
-
-		file_put_contents( $certificateTempPath, get_option( 'unzer_apple_pay_merchant_id_certificate' ) );
-		file_put_contents( $keyTempPath, get_option( 'unzer_apple_pay_merchant_id_key' ) );
-
-		try {
-			$appleAdapter->init( $certificateTempPath, $keyTempPath );
-			$merchantValidationUrl = urldecode( Util::getNonceCheckedPostValue( 'validation_url' ) );
-			try {
-				$validationResponse = $appleAdapter->validateApplePayMerchant(
-					$merchantValidationUrl,
-					$applePaySession
-				);
-				( new LogService() )->debug( 'apple pay validation response', array( 'response' => $validationResponse ) );
-				$this->renderJson( array( 'response' => $validationResponse ) );
-			} catch ( Exception $e ) {
-				( new LogService() )->error(
-					'merchant validation failed',
-					array(
-						'error'                 => $e->getMessage(),
-						'merchantValidationUrl' => $merchantValidationUrl,
-					)
-				);
-			}
-		} finally {
-			wp_delete_file( $keyTempPath );
-			wp_delete_file( $certificateTempPath );
-		}
 	}
 
 	protected function renderJson( array $data ) {
 		header( 'Content-Type: application/json' );
 		echo wp_json_encode( Util::escape_array_html( $data ) );
 		die;
+	}
+
+	protected static function clearSessionData() {
+		setcookie( CustomerService::SESSION_KEY_USER_ID, '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN );
 	}
 }

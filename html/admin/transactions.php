@@ -16,10 +16,13 @@ if ( empty( $paymentId ) ) {
 	return;
 }
 $paymentShortId = $order->get_meta( Main::ORDER_META_KEY_PAYMENT_SHORT_ID, true );
-
+wp_enqueue_style( 'unzer_admin_order_view_css', UNZER_PLUGIN_URL . '/assets/css/admin-order-view.css', array(), UNZER_VERSION );
 ?>
 
-<div><b><?php echo esc_html( 'ID #' . $paymentShortId ); ?></b></div>
+<div class="unzer-header-row">
+	<span class="unzer-payment-id"><?php echo esc_html( '#' . $paymentShortId ); ?></span>
+	<span id="unzer-status-message" class="empty"></span>
+</div>
 
 <?php
 $paymentInstructions = $order->get_meta( \UnzerPayments\Main::ORDER_META_KEY_PAYMENT_INSTRUCTIONS, true );
@@ -31,21 +34,16 @@ if ( $paymentInstructions ) {
 		$paymentInstructions = str_replace( '#!trpst#/trp-gettext#!trpen#', '', $paymentInstructions );
 	}
 	?>
-	<h3><?php echo esc_html__( 'Payment Instructions', 'unzer-payments' ); ?></h3>
-	<div><?php echo wp_kses_post( $paymentInstructions ); ?></div>
+	<div class="unzer-instructions"><?php echo wp_kses_post( $paymentInstructions ); ?></div>
 	<?php
 }
 ?>
-<h3><?php echo esc_html__( 'Totals', 'unzer-payments' ); ?></h3>
-<div id="unzer-status-message"></div>
-<table id="unzer-sums">
-	<tbody id="unzer-sums-body">
 
-	</tbody>
-</table>
-<h3><?php echo esc_html__( 'Detailed Transactions', 'unzer-payments' ); ?></h3>
-<table id="unzer-transactions" style="width: 100%;">
-	<thead style="text-align: left;">
+<div id="unzer-totals-row" class="unzer-totals-row"></div>
+<div id="unzer-capture-row" class="unzer-capture-row"></div>
+
+<table id="unzer-transactions">
+	<thead>
 	<tr>
 		<th><?php echo esc_html__( 'Time', 'unzer-payments' ); ?></th>
 		<th><?php echo esc_html__( 'Type', 'unzer-payments' ); ?></th>
@@ -54,17 +52,13 @@ if ( $paymentInstructions ) {
 		<th><?php echo esc_html__( 'Status', 'unzer-payments' ); ?></th>
 	</tr>
 	</thead>
-	<tbody id="unzer-transactions-body">
-
-	</tbody>
+	<tbody id="unzer-transactions-body"></tbody>
 </table>
-<div style="margin-top:20px;">
-	<a href="#" onclick="document.getElementById('unzer-debug').style.display = 'block'; return false;" class="button">
-		<?php echo esc_html__( 'Show Debug Information', 'unzer-payments' ); ?>
+<div class="unzer-debug-section">
+	<a href="#" onclick="document.getElementById('unzer-debug').style.display = 'block'; this.style.display = 'none'; return false;" class="button button-secondary">
+		<?php echo esc_html__( 'Debug', 'unzer-payments' ); ?>
 	</a>
-	<pre id="unzer-debug" style="display: none; font-size:10px;">
-
-	</pre>
+	<pre id="unzer-debug"></pre>
 </div>
 <?php
 $ajaxUrl  = WC()->api_request_url( AdminController::GET_ORDER_TRANSACTIONS_ROUTE_SLUG );
@@ -86,10 +80,9 @@ ob_start();
 				if (data.transactions) {
 					let tHtml = '';
 					for (const transaction of data.transactions) {
-						let color = transaction.status === 'error' ? '#cc0000' : '#000000';
-						color = transaction.status === 'pending' ? '#bbb' : color;
+						const rowClass = transaction.status === 'error' ? 'unzer-row-error' : (transaction.status === 'pending' ? 'unzer-row-pending' : 'unzer-row-success');
 						tHtml += `
-					<tr style="color:${color};">
+					<tr class="${rowClass}">
 						<td>${transaction.time}</td>
 						<td>${transaction.type}</td>
 						<td>${transaction.id}</td>
@@ -101,24 +94,25 @@ ob_start();
 					document.getElementById('unzer-transactions-body').innerHTML = tHtml;
 				}
 
-				document.getElementById('unzer-status-message').innerHTML = data.status === 'chargeback' ? '<div style="color:#cc0000; margin:10px 0; font-weight:bold;">CHARGEBACK!</div>' : '';
+				const orderStatusMessageContainer = document.getElementById('unzer-status-message');
+				orderStatusMessageContainer.innerHTML = '<span>'+data.status+'</span>';
+				orderStatusMessageContainer.className = "unzer-status-"+data.status;
 
-				let captureAction = '';
-				if (data.remainingPlain && data.paymentMethod !== 'unzer_prepayment') {
-					captureAction = '<div><input type="number" step="0.01" min="0.01"  max="' + data.remainingPlain + '" value="' + data.remainingPlain + '" id="unzer-capture-amount-input" /></div> ' +
-						'<a href="#" onclick="unzerCaptureOrder(unzerOrderId, document.getElementById(\'unzer-capture-amount-input\').value, \'<?php echo esc_attr( Util::getNonce() ); ?>\'); return false;" class="button button-small" style="width:100%; text-align: center;"><?php echo esc_html__( 'Capture Amount', 'unzer-payments' ); ?></a>'
 
+				const totalsHtml = `
+					<span class="unzer-total-item"><span class="unzer-total-label"><?php echo esc_html__( 'Total', 'unzer-payments' ); ?>:</span> <span class="unzer-total-value">${data.amount}</span></span>
+					<span class="unzer-total-item"><span class="unzer-total-label"><?php echo esc_html__( 'Charged', 'unzer-payments' ); ?>:</span> <span class="unzer-total-value">${data.charged}</span></span>
+					<span class="unzer-total-item"><span class="unzer-total-label"><?php echo esc_html__( 'Cancelled', 'unzer-payments' ); ?>:</span> <span class="unzer-total-value">${data.cancelled}</span></span>
+					<span class="unzer-total-item"><span class="unzer-total-label"><?php echo esc_html__( 'Remaining', 'unzer-payments' ); ?>:</span> <span class="unzer-total-value">${data.remaining}</span></span>
+				`;
+				document.getElementById('unzer-totals-row').innerHTML = totalsHtml;
+
+				let captureHtml = '';
+				if (data.remainingPlain && data.paymentMethod !== 'unzer_prepayment' && data.status !== 'canceled') {
+					captureHtml = `<input type="number" step="0.01" min="0.01" max="${data.remainingPlain}" value="${data.remainingPlain}" id="unzer-capture-amount-input" />
+						<a href="#" id="unzer-capture-btn" onclick="unzerCaptureOrder(unzerOrderId, document.getElementById('unzer-capture-amount-input').value, '<?php echo esc_attr( Util::getNonce() ); ?>'); return false;" class="button button-small"><?php echo esc_html__( 'Capture', 'unzer-payments' ); ?></a>`;
 				}
-
-				let amountHtml = `
-				<tr><th style="text-align: left;"><?php echo esc_html__( 'Total amount', 'unzer-payments' ); ?>: </th><td style="text-align: right;">${data.amount}</td></tr>
-				<tr><th style="text-align: left;"><?php echo esc_html__( 'Charged amount', 'unzer-payments' ); ?>: </th><td style="text-align: right;">${data.charged}</td></tr>
-				<tr><th style="text-align: left;"><?php echo esc_html__( 'Cancelled amount', 'unzer-payments' ); ?>: </th><td style="text-align: right;">${data.cancelled}</td></tr>
-				<tr><th style="text-align: left;"><?php echo esc_html__( 'Remaining amount', 'unzer-payments' ); ?>: </th><td style="text-align: right;">${data.remaining}</td></tr>
-				<tr><td colspan="2">${captureAction}</td></tr>
-			`;
-
-				document.getElementById('unzer-sums-body').innerHTML = amountHtml;
+				document.getElementById('unzer-capture-row').innerHTML = captureHtml;
 				if (data.raw) {
 					document.getElementById('unzer-debug').innerHTML = data.raw;
 				}
@@ -132,6 +126,10 @@ ob_start();
 	unzerRefreshData();
 
 	function unzerCaptureOrder(orderId, amount, nonce) {
+		const btn = document.getElementById('unzer-capture-btn');
+		if (btn) {
+			btn.classList.add('is-loading');
+		}
 		const formData = new FormData();
 		formData.append('order_id', orderId);
 		formData.append('amount', amount);
@@ -143,13 +141,14 @@ ob_start();
 			.then(data => {
 				if (data.error) {
 					alert(data.error);
+					if (btn) {
+						btn.classList.remove('is-loading');
+					}
 				}
 				unzerRefreshData();
-			})
-
+			});
 	}
 <?php
 $script = ob_get_clean();
 wp_enqueue_script( 'unzer_admin_webhook_management_js', 'inline-only', array(), UNZER_VERSION, array( 'in_footer' => true ) );
 wp_add_inline_script( 'unzer_admin_webhook_management_js', $script );
-

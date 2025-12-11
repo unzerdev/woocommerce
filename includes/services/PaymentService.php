@@ -16,6 +16,7 @@ use UnzerSDK\Resources\TransactionTypes\Authorization;
 use UnzerSDK\Resources\TransactionTypes\Cancellation;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 use UnzerSDK\Unzer;
+use WC_Geolocation;
 use WC_Order;
 
 class PaymentService {
@@ -27,14 +28,55 @@ class PaymentService {
 		$this->logger = new LogService();
 	}
 
+	public function getPublicKey( ?AbstractGateway $paymentGateway = null, $isB2B = null, $currency = null ): string {
+		if ( $paymentGateway === null ) {
+			return get_option( 'unzer_public_key' );
+		} else {
+			$keyTail = $this->getKeyTail( $paymentGateway, $isB2B, $currency );
+			if ( $keyTail !== null ) {
+				$publicKey = $paymentGateway->get_option( 'public_key_' . $keyTail );
+			}
+			if ( empty( $publicKey ) ) {
+				$publicKey = $paymentGateway->get_public_key();
+			}
+			return $publicKey;
+		}
+	}
+
 	/**
 	 * @param AbstractGateway|null $paymentGateway
 	 * @return Unzer
 	 */
-	public function getUnzerManager( AbstractGateway $paymentGateway = null ): Unzer {
-		$unzer = new Unzer( $paymentGateway ? $paymentGateway->get_private_key() : get_option( 'unzer_private_key' ) );
-        $unzer->setClientIp($_SERVER['REMOTE_ADDR'] ?? null);
-        return $unzer;
+	public function getUnzerManager( ?AbstractGateway $paymentGateway = null, $isB2B = null, $currency = null ): Unzer {
+		if ( $paymentGateway === null ) {
+			$privateKey = get_option( 'unzer_private_key' );
+		} else {
+			$keyTail = $this->getKeyTail( $paymentGateway, $isB2B, $currency );
+			if ( $keyTail !== null ) {
+				$privateKey = $paymentGateway->get_option( 'private_key_' . $keyTail );
+			}
+			if ( empty( $privateKey ) ) {
+				$privateKey = $paymentGateway->get_private_key();
+			}
+		}
+		$unzer = new Unzer( $privateKey );
+		$unzer->setClientIp( WC_Geolocation::get_ip_address() ?: null );
+		return $unzer;
+	}
+
+	protected function getKeyTail( AbstractGateway $paymentGateway, $isB2B = null, $currency = null ): ?string {
+
+			$result = null;
+		if ( $paymentGateway instanceof Invoice && $currency !== null && $isB2B !== null ) {
+			$result = strtolower( $currency ) . '_' . ( $isB2B ? 'b2b' : 'b2c' );
+		} elseif ( $paymentGateway instanceof Installment && $currency !== null ) {
+			// B2C only
+			$result = strtolower( $currency ) . '_b2c';
+		} elseif ( $paymentGateway instanceof DirectDebitSecured ) {
+			// B2C EUR only
+			$result = 'eur_b2c';
+		}
+			return $result;
 	}
 
 	/**
@@ -44,34 +86,7 @@ class PaymentService {
 	public function getUnzerManagerForOrder( WC_Order $order = null ): Unzer {
 		$unzerPluginManager = Main::getInstance();
 		$paymentGateway     = $unzerPluginManager->getPaymentGateway( $order->get_payment_method() );
-		$privateKey         = $paymentGateway->get_private_key();
-		if ( $paymentGateway instanceof Invoice ) {
-			$isB2B             = ! empty( $order->get_billing_company() );
-			$currency          = $order->get_currency();
-			$optionKey         = 'private_key_' . strtolower( $currency ) . '_' . ( $isB2B ? 'b2b' : 'b2c' );
-			$specialPrivateKey = $paymentGateway->get_option( $optionKey );
-			if ( ! empty( $specialPrivateKey ) ) {
-				$privateKey = $specialPrivateKey;
-			}
-		} elseif ( $paymentGateway instanceof Installment ) {
-			// B2C only
-			$currency          = $order->get_currency();
-			$optionKey         = 'private_key_' . strtolower( $currency ) . '_b2c';
-			$specialPrivateKey = $paymentGateway->get_option( $optionKey );
-			if ( ! empty( $specialPrivateKey ) ) {
-				$privateKey = $specialPrivateKey;
-			}
-		} elseif ( $paymentGateway instanceof DirectDebitSecured ) {
-			// B2C EUR only
-			$optionKey         = 'private_key_eur_b2c';
-			$specialPrivateKey = $paymentGateway->get_option( $optionKey );
-			if ( ! empty( $specialPrivateKey ) ) {
-				$privateKey = $specialPrivateKey;
-			}
-		}
-		$unzer = new Unzer( $privateKey );
-        $unzer->setClientIp($_SERVER['REMOTE_ADDR'] ?? null);
-        return $unzer;
+		return $this->getUnzerManager( $paymentGateway, ! empty( $order->get_billing_company() ), $order->get_currency() );
 	}
 
 	public function performChargeOnAuthorization( $orderId, $amount = null ) {
@@ -165,7 +180,7 @@ class PaymentService {
 				)
 			);
 			if ( $type === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
-				$authorization = new Authorization( $basket->getTotalValueGross(), $basket->getCurrencyCode(), $paymentGateway->get_confirm_url() );
+				$authorization = new Authorization( $basket->getTotalValueGross(), $basket->getCurrencyCode(), $paymentGateway->get_confirm_url( $orderId ) );
 				$authorization->setOrderId( $order->get_id() );
 				if ( $transactionEditor !== null ) {
 					$transactionEditor( $authorization );
@@ -173,7 +188,7 @@ class PaymentService {
 				$transactionObject = $unzer->performAuthorization( $authorization, $paymentType, $customer, ( new ShopService() )->getMetadata(), $basket );
 				$order->update_meta_data( Main::ORDER_META_KEY_AUTHORIZATION_ID, $transactionObject->getId() );
 			} else {
-				$charge = new Charge( $basket->getTotalValueGross(), $basket->getCurrencyCode(), $paymentGateway->get_confirm_url() );
+				$charge = new Charge( $basket->getTotalValueGross(), $basket->getCurrencyCode(), $paymentGateway->get_confirm_url( $orderId ) );
 				$charge->setOrderId( $order->get_id() );
 				if ( $transactionEditor !== null ) {
 					$transactionEditor( $charge );
@@ -301,7 +316,7 @@ class PaymentService {
 			$errorMessages[] = $e->getMessage();
 		}
 		throw new Exception(
-			wp_kses_post( sprintf( __( 'Unable to do refund: Maximum amount for single refund is %s.', 'unzer-payments' ), html_entity_decode( wp_strip_all_tags( wc_price( $maxCaptureRefund, array( 'currency' => $payment->getCurrency() ) ) ) ) ) ) .
+			( $maxCaptureRefund > 0 ? wp_kses_post( sprintf( __( 'Unable to do refund: Maximum amount for single refund is %s.', 'unzer-payments' ), html_entity_decode( wp_strip_all_tags( wc_price( $maxCaptureRefund, array( 'currency' => $payment->getCurrency() ) ) ) ) ) ) : '' ) .
 			( $numberOfRefundsPossible > 1 ? ' ' . esc_html( sprintf( __( 'However, you may refund in up to %s smaller chunks.', 'unzer-payments' ), $numberOfRefundsPossible ) ) : '' ) .
 			( $errorMessages ? "\n\n" . esc_html__( 'Original error message: ', 'unzer-payments' ) . esc_html( implode( ' ', $errorMessages ) ) : '' )
 		);
@@ -336,10 +351,7 @@ class PaymentService {
 			}
 		} else {
 			try {
-				if ( ! Util::safeCompareAmount( $payment->getAmount()->getTotal(), $amount ) ) {
-					throw new Exception( __( 'Reversals prior to capturing are only allowed for the full amount', 'unzer-payments' ) );
-				}
-				return $unzer->cancelAuthorizedPayment( $paymentId );
+				return $unzer->cancelAuthorizedPayment( $paymentId, new Cancellation( $amount ) );
 			} catch ( Exception $e ) {
 				$this->logger->warning( 'Reversal not possible: ' . $e->getMessage() );
 				throw new Exception( esc_html__( 'Reversal not possible', 'unzer-payments' ) . ': ' . esc_html( $e->getMessage() ) );

@@ -2,6 +2,8 @@
 
 namespace UnzerPayments\Gateways;
 
+use UnzerPayments\Gateways\Blocks\PostFinanceEfinanceBlock;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -9,6 +11,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class PostFinanceEfinance extends AbstractGateway {
 
 	const GATEWAY_ID            = 'unzer_postfinance_efinance';
+	const BLOCK_CLASS           = PostFinanceEfinanceBlock::class;
+	public $allowedCountries    = array( 'CH' );
+	public $allowedCurrencies   = array( 'CHF' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\PostFinanceEfinance::class;
 	public $method_title        = 'Unzer Post Finance eFinance';
 	public $method_description;
@@ -16,11 +21,10 @@ class PostFinanceEfinance extends AbstractGateway {
 	public $description = '';
 	public $id          = self::GATEWAY_ID;
 	public $plugin_id;
-	public $supports          = array(
+	public $supports = array(
 		'products',
 		'refunds',
 	);
-	public $allowedCurrencies = array( 'CHF' );
 
 	public function get_form_fields() {
 		return apply_filters(

@@ -3,8 +3,10 @@
 namespace UnzerPayments\Gateways;
 
 use Exception;
+use UnzerPayments\Gateways\Blocks\PrepaymentBlock;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
+use UnzerSDK\Resources\TransactionTypes\Authorization;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -14,8 +16,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Prepayment extends AbstractGateway {
 
 
-	const GATEWAY_ID     = 'unzer_prepayment';
-	public $method_title = 'Unzer Prepayment';
+	const GATEWAY_ID          = 'unzer_prepayment';
+	const BLOCK_CLASS         = PrepaymentBlock::class;
+	public $allowedCurrencies = array( 'EUR' );
+	public $method_title      = 'Unzer Prepayment';
 	public $method_description;
 	public $title       = 'Prepayment';
 	public $description = '';
