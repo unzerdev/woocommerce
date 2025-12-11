@@ -14,6 +14,7 @@ Use Unzer plugin for WooCommerce to provide an easy-to-install and use payment g
 ## Description ##
 
 * Version 2.0.0 is a breaking change - remember to test and create backup before updating your LIVE environment.
+* Migration from WooCommerce Classic Checkout to Checkout Block will follow with version 2.1.0
 * Unzer Payments for WooCommerce payments by credit card, SOFORT, PayPal, Unzer Invoice (Paylater), iDEAL, EPS, Direct Bank Transfer and many more (See complete list below).
 * Easily accept digital payments in your online store with Unzer Plugins.
 * Unzer Payments is a 3rd party payment gateway plugin, https://docs.unzer.com/plugins/woocommerce and https://unzer.com/
@@ -65,7 +66,6 @@ Unzer is one of the leading payment companies in Europe. Over 70,000 retailers t
 * Migration from Unzer UI Component V1 to Unzer UI Component V2
 * EAA Support, https://docs.unzer.com/online-payments/compliance/eaa/
 * Deprecated payment methods have been replaced with new ones, removed or renamed. For full list see https://github.com/unzerdev/woocommerce/blob/master/readme.txt for an updated list.
-* Migration from WooCommerce Classic Checkout to Checkout Block
 
 # 1.8.4 #
 * Fix correct amount for order pay page
