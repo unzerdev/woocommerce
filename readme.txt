@@ -3,7 +3,7 @@ Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
 Tested up to: 6.9
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
@@ -59,6 +59,9 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth * online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 ## Changelog ##
+
+# 2.0.1 #
+* Bugfix dependency Germanized plugin
 
 # 2.0.0 #
 * Version 2.0.0 is a breaking change - remember to test and create backup before updating your LIVE environment.
@@ -183,3 +186,4 @@ Unzer is one of the leading payment companies in Europe. Over 70,000 retailers t
 
 # 1.0.0 #
 * Release
+
