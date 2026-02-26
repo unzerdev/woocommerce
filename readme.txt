@@ -3,7 +3,7 @@ Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
 Tested up to: 6.9
-Stable tag: 2.0.1
+Stable tag: 2.1.0
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
@@ -13,8 +13,7 @@ Use Unzer plugin for WooCommerce to provide an easy-to-install and use payment g
 
 ## Description ##
 
-* Version 2.0.0 is a breaking change - remember to test and create backup before updating your LIVE environment.
-* Migration from WooCommerce Classic Checkout to Checkout Block will follow with version 2.1.0
+* Version 2.0.0 was a breaking change - remember to test and create backup before updating your LIVE environment.
 * Easily accept digital payments in your online store with Unzer Plugins.
 * Unzer Payments is a 3rd party payment gateway plugin, https://docs.unzer.com/plugins/woocommerce and https://unzer.com/
 * Unzer Payments can use external JavaScripts for certain payment methods, Apple Pay https://applepay.cdn-apple.com/jsapi/v1/apple-pay-sdk.js, Google Pay https://pay.google.com/gp/p/js/pay.js, Unzer paylater payment methods https://h.online-metrix.net/fp/tags.js.
@@ -59,6 +58,17 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth * online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 ## Changelog ##
+
+# 2.1.0 #
+### This is a major release - remember to test and create backup before updating your LIVE environment.
+* New: Block code is now fully supported
+* New: One key pair logic implemented
+* New: Payment method list for new installs, has new design
+* New: Wero is set to direct charge for better support from external payment systems
+* Fix: Customer saved payment methods can be deleted
+* Fix: Apple Pay is now supported in non-Safari browsers
+* Fix: Apple Pay did not always return to order page
+* Fix: Typos, UI improvements etc.
 
 # 2.0.1 #
 * Bugfix dependency Germanized plugin
@@ -186,4 +196,3 @@ Unzer is one of the leading payment companies in Europe. Over 70,000 retailers t
 
 # 1.0.0 #
 * Release
-

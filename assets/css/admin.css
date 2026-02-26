@@ -132,3 +132,15 @@
 .unzer-payment-navigation{
 	display:none;
 }
+
+.unzer-alert-info-row td{
+	padding:0;
+}
+
+.unzer-alert-info{
+	padding: 10px 15px;
+	background: #e7f5fe;
+	border-left: 4px solid #2196f3;
+	color: #1a3e5c;
+	margin: 10px 0;
+}

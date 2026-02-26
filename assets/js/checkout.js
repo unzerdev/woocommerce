@@ -197,6 +197,7 @@ const UnzerManager = {
             // for some reason this does not get applied without timeout?
             setTimeout(
                 function () {
+                    console.log(unzerPaymentElement, paymentDataRequestObject);
                     unzerPaymentElement.setGooglePayData(paymentDataRequestObject);
                 },
                 100
@@ -250,7 +251,7 @@ const UnzerManager = {
             );
             const unzerCheckout = document.getElementById('unzer-apple-pay-checkout-component');
             unzerCheckout.onPaymentSubmit = function (response) {
-                if (response.submitResponse && response.submitResponse.data && response.submitResponse.data.id && response.submitResponse.data.id.indexOf('apple') === -1) {
+                if (response.submitResponse && response.submitResponse.data && response.submitResponse.data.id && response.submitResponse.data.id.indexOf('-apl-') === -1) {
                     return
                 }
                 if (response.submitResponse && response.submitResponse.success) {
@@ -495,9 +496,6 @@ const UnzerManager = {
 
         return false;
     },
-    supportsApplePay() {
-        return window.ApplePaySession && window.ApplePaySession.canMakePayments() && window.ApplePaySession.supportsVersion(6);
-    },
     _setCustomerDataToPaymentComponent(selector) {
         const paymentElement = document.querySelector(selector);
         if (paymentElement) {
@@ -588,11 +586,8 @@ jQuery(
                 const applePayContainer = document.querySelector('.payment_method_unzer_apple_pay_v2');
                 if (applePayContainer) {
                     const applePayButton = document.getElementById('unzer_apple_pay_v2_place_order');
-                    if (!UnzerManager.supportsApplePay()) {
-                        applePayContainer.style.display = 'none';
-                    }
                     if (applePayButton && placeOrderButton) {
-                        if (document.getElementById('payment_method_unzer_apple_pay_v2').checked && UnzerManager.supportsApplePay()) {
+                        if (document.getElementById('payment_method_unzer_apple_pay_v2').checked) {
                             applePayButton.style.display = '';
                             showPlaceOrderButton = false;
                         } else {
@@ -624,4 +619,3 @@ jQuery(
         );
     }
 );
-

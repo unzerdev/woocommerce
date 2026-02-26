@@ -81,7 +81,7 @@ class Paypal extends AbstractGateway {
 					'default'     => 'charge',
 				),
 				AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS => array(
-					'title'       => __( 'Save PayPAl account for registered customers', 'unzer-payments' ),
+					'title'       => __( 'Save PayPal account for registered customers', 'unzer-payments' ),
 					'label'       => __( '&nbsp;', 'unzer-payments' ),
 					'type'        => 'select',
 					'description' => '',

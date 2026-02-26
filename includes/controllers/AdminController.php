@@ -143,9 +143,10 @@ class AdminController {
 
 	public function webhookManagement() {
 		try {
-			$slug    = Util::getNonceCheckedPostValue( 'slug' );
-			$action  = Util::getNonceCheckedPostValue( 'action' );
-			$service = new WebhookManagementService( $slug );
+			$slug          = Util::getNonceCheckedPostValue( 'slug' );
+			$action        = Util::getNonceCheckedPostValue( 'action' );
+			$paymentMethod = Util::getNonceCheckedPostValue( 'unzer_payment_method' );
+			$service       = new WebhookManagementService( $slug, $paymentMethod );
 			if ( empty( $action ) ) {
 				$this->renderJson(
 					array(

@@ -104,6 +104,9 @@ class Installment extends AbstractGateway {
 					'description' => __( 'This controls the description which the user sees during checkout.', 'unzer-payments' ),
 					'default'     => '',
 				),
+				'additional_key_info' => array(
+					'type' => 'unzer_additional_key_info',
+				),
 				'public_key_eur_b2c'  => array(
 					'title'   => __( 'Public Key EUR/B2C', 'unzer-payments' ),
 					'type'    => 'text',

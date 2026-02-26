@@ -6,6 +6,7 @@ export default [
     'klarna',
     'postfinance_card',
     'postfinance_efinance',
+    'paypal',
     'prepayment',
     'przelewy24',
     'twint',

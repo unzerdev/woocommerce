@@ -37,6 +37,26 @@ class GooglePay extends AbstractGateway {
 		parent::admin_options();
 	}
 
+	public function getPublicOptions() {
+		return array(
+			'gatewayMerchantId'   => $this->get_option( 'channel_id' ),
+			'merchantInfo'        => array(
+				'merchantName' => $this->get_option( 'merchant_name' ),
+				'merchantId'   => $this->get_option( 'merchant_id' ),
+			),
+			'transactionInfo'     => array(
+				'countryCode' => $this->get_option( 'country_code' ),
+			),
+			'buttonOptions'       => array(
+				'buttonColor'    => $this->get_option( 'button_color' ),
+				'buttonSizeMode' => $this->get_option( 'button_size_mode' ),
+			),
+			'allowCreditCards'    => $this->get_option( 'credit_cards_allowed' ) === 'yes',
+			'allowPrepaidCards'   => $this->get_option( 'prepaid_cards_allowed' ) === 'yes',
+			'allowedCardNetworks' => (array) $this->get_option( 'card_networks' ),
+		);
+	}
+
 	public function fetchAndSaveChannelId() {
 		if ( ! $this->get_private_key() ) {
 			$this->update_option( 'channel_id', '' );

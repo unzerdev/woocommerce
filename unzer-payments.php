@@ -5,7 +5,7 @@
  * Description: Official Unzer Plugin
  * Author: Unzer
  * Author URI: https://www.unzer.com
- * Version: 2.0.1
+ * Version: 2.1.0
  * License: Apache-2.0
  * Requires at least: 4.5
  * Tested up to: 6.9
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Required minimums and constants
  */
-define( 'UNZER_VERSION', '2.0.1' );
+define( 'UNZER_VERSION', '2.1.0' );
 define( 'UNZER_PLUGIN_TYPE_STRING', 'Unzer Payments' );
 define( 'UNZER_PLUGIN_URL', untrailingslashit( plugins_url( basename( plugin_dir_path( __FILE__ ) ), basename( __FILE__ ) ) ) );
 define( 'UNZER_PLUGIN_PATH', __DIR__ . '/' );
@@ -39,6 +39,15 @@ add_action(
 	function () {
 		if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
 			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+		}
+	}
+);
+
+add_action(
+	'before_woocommerce_init',
+	function () {
+		if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
+			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__, true );
 		}
 	}
 );
@@ -80,4 +89,3 @@ add_action(
 		$unzer->init();
 	}
 );
-

@@ -9,7 +9,7 @@ use UnzerPayments\Util;
 $slug    = isset( $slug ) ? $slug : '';
 $ajaxUrl = WC()->api_request_url( AdminController::WEBHOOK_MANAGEMENT_ROUTE_SLUG );
 ?>
-	<div id="unzer-webhook-container<?php echo esc_attr( $slug ); ?>" class="unzer-webhook-container" data-slug="<?php echo esc_attr( $slug ); ?>" data-url="<?php echo esc_url( $ajaxUrl ); ?>" data-nonce="<?php echo esc_attr( Util::getNonce() ); ?>">
+	<div id="unzer-webhook-container<?php echo esc_attr( $slug ); ?>" class="unzer-webhook-container" data-payment-method="<?php echo esc_attr( $paymentMethod ?? '' ); ?>" data-slug="<?php echo esc_attr( $slug ); ?>" data-url="<?php echo esc_url( $ajaxUrl ); ?>" data-nonce="<?php echo esc_attr( Util::getNonce() ); ?>">
 		<h2>Webhooks</h2>
 		<div id="unzer-webhooks-status<?php echo esc_attr( $slug ); ?>" style="margin-bottom:20px;"></div>
 		<div id="unzer-webhook-actions<?php echo esc_attr( $slug ); ?>" style="margin-bottom:20px;"></div>

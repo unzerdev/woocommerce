@@ -60,7 +60,10 @@ abstract class AbstractBlock extends AbstractPaymentMethodType {
 			'publicKey'          => $gateway->get_public_key(),
 			'locale'             => get_locale(),
 			'nonce'              => Util::getNonce(),
+			'storeName'           => get_bloginfo( 'name' ),
+			'storeCountry'        => strtoupper( substr( get_option( 'woocommerce_default_country' ), 0, 2 ) ),
 			'paymentComponentId' => str_replace( '_', '-', static::GATEWAY_ID ) . '-payment-component',
+			'checkoutComponentId' => str_replace( '_', '-', static::GATEWAY_ID ) . '-checkout-component',
 			'getCustomerDataUrl' => WC()->api_request_url( CheckoutController::GET_UNZER_CUSTOMER_SLUG ),
 		);
 	}
@@ -92,6 +95,10 @@ abstract class AbstractBlock extends AbstractPaymentMethodType {
 		return array( $this->get_identifier() . '-block-checkout' );
 	}
 
+	public function get_payment_method_script_handles_for_admin() {
+		return array();
+	}
+
 
 	public function initialize() {
 		if ( ! $this->should_enqueue_assets() || is_admin() ) {
@@ -112,8 +119,9 @@ abstract class AbstractBlock extends AbstractPaymentMethodType {
 			10,
 			3
 		);
-		wp_enqueue_script( 'unzer_ui_v2_js', 'https://static.test.unzer.com/v2/ui-components/index.js', array(), UNZER_VERSION, array( 'in_footer' => true ) ); // https://static-v2.unzer.com/v2/ui-components/index.js
+		wp_enqueue_script( 'unzer_ui_v2_js', 'https://static-v2.unzer.com/v2/ui-components/index.js', array(), UNZER_VERSION, array( 'in_footer' => true ) ); // https://static-v2.unzer.com/v2/ui-components/index.js
 		wp_register_script( 'unzer_global-block-checkout', UNZER_PLUGIN_URL . '/assets/build/unzer_global.js', array( 'wc-blocks-registry' ), UNZER_VERSION, array( 'in_footer' => true ) );
+		wp_enqueue_style( 'woocommerce_unzer_block_checkout_css', UNZER_PLUGIN_URL . '/assets/css/block-checkout.css', array(), UNZER_VERSION );
 		wp_enqueue_script( 'unzer_global-block-checkout' );
 		$this->settings           = array(
 			'title' => $this->get_setting( 'title' ),
