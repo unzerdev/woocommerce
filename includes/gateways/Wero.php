@@ -33,25 +33,26 @@ class Wero extends AbstractGateway {
 			'wc_unzer_settings',
 			array(
 
-				'enabled'          => array(
+				'enabled'     => array(
 					'title'       => __( 'Enable/Disable', 'unzer-payments' ),
 					'label'       => __( 'Enable Unzer Wero', 'unzer-payments' ),
 					'type'        => 'checkbox',
 					'description' => '',
 					'default'     => 'no',
 				),
-				'title'            => array(
+				'title'       => array(
 					'title'       => __( 'Title', 'unzer-payments' ),
 					'type'        => 'text',
 					'description' => __( 'This controls the title which the user sees during checkout.', 'unzer-payments' ),
 					'default'     => __( 'Wero', 'unzer-payments' ),
 				),
-				'description'      => array(
+				'description' => array(
 					'title'       => __( 'Description', 'unzer-payments' ),
 					'type'        => 'text',
 					'description' => __( 'This controls the description which the user sees during checkout.', 'unzer-payments' ),
 					'default'     => '',
 				),
+				/*
 				'transaction_type' => array(
 					'title'       => __( 'Charge or Authorize', 'unzer-payments' ),
 					'label'       => '',
@@ -63,6 +64,7 @@ class Wero extends AbstractGateway {
 					),
 					'default'     => 'charge',
 				),
+				*/
 			)
 		);
 	}
@@ -71,11 +73,11 @@ class Wero extends AbstractGateway {
 		$return = array(
 			'result' => 'success',
 		);
-		if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
-			$transaction = ( new PaymentService() )->performAuthorizationForOrder( $order_id, $this, $this->paymentTypeResource );
-		} else {
-			$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $this->paymentTypeResource );
-		}
+		// if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
+		// $transaction = ( new PaymentService() )->performAuthorizationForOrder( $order_id, $this, $this->paymentTypeResource );
+		// } else {
+		$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $this->paymentTypeResource );
+		// }
 
 		$this->before_payment_redirect( $order_id );
 

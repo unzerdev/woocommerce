@@ -697,7 +697,7 @@ msgid "PayPal"
 msgstr "PayPal"
 
 #: includes/gateways/Paypal.php:84
-msgid "Save PayPAl account for registered customers"
+msgid "Save PayPal account for registered customers"
 msgstr "PayPal-Konto für registrierte Kunden speichern"
 
 #: includes/gateways/Pis.php:35

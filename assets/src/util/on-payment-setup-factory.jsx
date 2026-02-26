@@ -6,6 +6,25 @@ export default function onPaymentSetupFactory(paymentComponentId, paymentTypeIdF
             if(!unzerPaymentComponent) {
                 console.error('unzer payment component does not exist: ' + paymentComponentId);
             }
+
+            if(unzerPaymentComponent.woocommercePaymentTypeId){
+                const paymentMethodData = {};
+                paymentMethodData['unzer_nonce'] = settings.nonce;
+                paymentMethodData[paymentTypeIdFieldName] = unzerPaymentComponent.woocommercePaymentTypeId;
+                const returnValue = {
+                    type: emitResponse?.responseTypes?.SUCCESS,
+                    meta: {
+                        paymentMethodData
+                    }
+                };
+                console.log(
+                    'return previously generated type id (button payment methods)',
+                    returnValue
+                );
+
+                return returnValue;
+            }
+
             const response = await unzerPaymentComponent.submit();
             if (response.submitResponse) {
                 if (response.submitResponse.success === true) {
@@ -19,29 +38,24 @@ export default function onPaymentSetupFactory(paymentComponentId, paymentTypeIdF
                             paymentMethodData
                         }
                     };
-                    console.log(
-                        'submit response: ',
-                        response.submitResponse,
-                        returnValue
-                    );
 
                     return returnValue;
                 } else {
                     return {
                         type: emitResponse?.responseTypes?.ERROR,
-                        message: 'GENERAL ERROR 1'
+                        message: response.submitResponse.message || 'General Error'
                     }
                 }
             } else {
                 return {
                     type: emitResponse?.responseTypes?.ERROR,
-                    message: 'GENERAL ERROR 2'
+                    message: 'General Error 002'
                 }
             }
-        } catch (err) {
+        } catch (error) {
             return {
                 type: emitResponse?.responseTypes?.ERROR,
-                message: 'GENERAL ERROR 3'
+                message: error.message || error.name || 'General Error 003'
             }
         }
 

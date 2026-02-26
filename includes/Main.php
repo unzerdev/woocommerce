@@ -99,7 +99,7 @@ class Main {
 		add_action( 'woocommerce_update_options_payment_gateways_unzer_apple_pay_v2', array( $this, 'savePaymentMethodSettingsApplePayV2' ) );
 		add_action( 'woocommerce_update_options_checkout_unzer_general', array( $this, 'saveGeneralSettings' ) );
 		add_action( 'admin_notices', array( new DashboardService(), 'showNotifications' ) );
-		// add_action( 'woocommerce_blocks_loaded', array( $this, 'addCheckoutBlocks' ) );
+		add_action( 'woocommerce_blocks_loaded', array( $this, 'addCheckoutBlocks' ) );
 		add_action( 'before_woocommerce_pay_form', array( $this, 'orderPayPaymentMethod' ), 20, 4 );
 		add_action(
 			'admin_enqueue_scripts',

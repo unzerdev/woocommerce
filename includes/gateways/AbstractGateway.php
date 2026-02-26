@@ -326,20 +326,38 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		echo '</div>';
 	}
 
+	public function generate_unzer_additional_key_info_html( $key, $data ) {
+		return '
+            <tr valign="top" class="unzer-alert-info-row">
+                <td colspan="2">
+                    <div class="unzer-alert-info">
+                        ' . esc_html__( 'In the section below you may enter additional key pairs. If you leave fields empty, the main key pair will be used by default.' ) . '
+                    </div>
+                </td>
+            </tr>
+            ';
+	}
+
 
 	public function generate_key_check_html( $key, $data ) {
 		$slug  = $data['slug'];
 		$title = $data['title'] ?? '';
+
+		if ( empty( $this->get_option( 'private_key_' . $slug ) ) || empty( $this->get_option( 'public_key_' . $slug ) ) ) {
+			return '';
+		}
+
 		wp_enqueue_script( 'unzer_admin_key_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_key_management.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 		wp_enqueue_script( 'unzer_admin_webhook_management_js', UNZER_PLUGIN_URL . '/assets/js/admin_webhook_management.js', array(), UNZER_VERSION, array( 'in_footer' => false ) );
 
 		$webhookHtml = '';
-		if ( $this->get_option( 'private_key_' . $slug ) && $this->get_option( 'public_key_' . $slug ) ) {
-			ob_start();
-			include UNZER_PLUGIN_PATH . 'html/admin/webhooks.php';
-			$webhookHtml = ob_get_contents();
-			ob_end_clean();
-		}
+
+		ob_start();
+		$paymentMethod = static::GATEWAY_ID;
+		include UNZER_PLUGIN_PATH . 'html/admin/webhooks.php';
+		$webhookHtml = ob_get_contents();
+		ob_end_clean();
+
 		$ajaxUrl = WC()->api_request_url( AdminController::KEY_VALIDATION_ROUTE_SLUG );
 		return '
             <tr valign="top">
@@ -446,11 +464,11 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 			10,
 			3
 		);
-		wp_enqueue_script( 'unzer_ui_v2_js', 'https://static.test.unzer.com/v2/ui-components/index.js', array(), UNZER_VERSION, array( 'in_footer' => true ) ); // https://static-v2.unzer.com/v2/ui-components/index.js
+		wp_enqueue_script( 'unzer_ui_v2_js', 'https://static-v2.unzer.com/v2/ui-components/index.js', array(), UNZER_VERSION, array( 'in_footer' => true ) ); // https://static-v2.unzer.com/v2/ui-components/index.js
 		wp_enqueue_style( 'woocommerce_unzer_css', UNZER_PLUGIN_URL . '/assets/css/checkout.css', array(), UNZER_VERSION );
 
 		if ( ( $this instanceof GooglePay ) && empty( $this->get_description() ) ) {
-				wp_add_inline_style( 'woocommerce_unzer_css', '.payment_box.payment_method_unzer_google_pay{display:none !important;}' );
+			wp_add_inline_style( 'woocommerce_unzer_css', '.payment_box.payment_method_unzer_google_pay{display:none !important;}' );
 		} elseif ( ( $this instanceof ApplePayV2 ) && empty( $this->get_description() ) ) {
 			wp_add_inline_style( 'woocommerce_unzer_css', '.payment_box.payment_method_unzer_apple_pay_v2{display:none !important;}' );
 		}
@@ -480,23 +498,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 				'store_country'                        => strtoupper( substr( get_option( 'woocommerce_default_country' ), 0, 2 ) ),
 				'is_order_pay'                         => self::isOrderPay() ? 'true' : 'false',
 				'currency'                             => get_woocommerce_currency(),
-				'google_pay_options'                   => array(
-					'gatewayMerchantId'   => $googlePayGateway->get_option( 'channel_id' ),
-					'merchantInfo'        => array(
-						'merchantName' => $googlePayGateway->get_option( 'merchant_name' ),
-						'merchantId'   => $googlePayGateway->get_option( 'merchant_id' ),
-					),
-					'transactionInfo'     => array(
-						'countryCode' => $googlePayGateway->get_option( 'country_code' ),
-					),
-					'buttonOptions'       => array(
-						'buttonColor'    => $googlePayGateway->get_option( 'button_color' ),
-						'buttonSizeMode' => $googlePayGateway->get_option( 'button_size_mode' ),
-					),
-					'allowCreditCards'    => $googlePayGateway->get_option( 'credit_cards_allowed' ) === 'yes',
-					'allowPrepaidCards'   => $googlePayGateway->get_option( 'prepaid_cards_allowed' ) === 'yes',
-					'allowedCardNetworks' => (array) $googlePayGateway->get_option( 'card_networks' ),
-				),
+				'google_pay_options'                   => $googlePayGateway->getPublicOptions(),
 			)
 		);
 		wp_localize_script(

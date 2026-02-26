@@ -150,7 +150,7 @@ Für den Fall der Nichteinlösung der Lastschriften oder des Widerspruchs gegen 
 		'Direct Bank Transfer'                         => 'Direktüberweisung',
 		'Enable Unzer PayPal'                          => 'Aktivieren Sie Unzer PayPal',
 		'PayPal'                                       => 'PayPal',
-		'Save PayPAl account for registered customers' => 'PayPal-Konto für registrierte Kunden speichern',
+		'Save PayPal account for registered customers' => 'PayPal-Konto für registrierte Kunden speichern',
 		'Enable Unzer Bank Transfer'                   => 'Unzer Banküberweisung aktivieren',
 		'Bank Transfer'                                => 'Banküberweisung',
 		'Enable Unzer Post Finance Card'               => 'Unzer Post Finance Card aktivieren',

@@ -3,6 +3,7 @@ function unzerWebhookRefreshData(slug) {
 	const formData = new FormData();
 	formData.append( 'slug', slug );
 	formData.append( 'unzer_nonce', window.unzerWebhookNonce );
+	formData.append( 'unzer_payment_method', window.unzerWebhookPaymentMethod );
 	fetch(
 		window.unzerWebhookAjaxUrl,
 		{
@@ -56,6 +57,7 @@ function unzerAddCurrentWebhook(slug) {
 	formData.append( 'action', 'add' );
 	formData.append( 'slug', slug );
 	formData.append( 'unzer_nonce', window.unzerWebhookNonce );
+	formData.append( 'unzer_payment_method', window.unzerWebhookPaymentMethod );
 	fetch(
 		window.unzerWebhookAjaxUrl,
 		{
@@ -85,6 +87,7 @@ function unzerDeleteWebhook(id, slug) {
 	formData.append( 'id', id );
 	formData.append( 'slug', slug );
 	formData.append( 'unzer_nonce', window.unzerWebhookNonce );
+	formData.append( 'unzer_payment_method', window.unzerWebhookPaymentMethod );
 	fetch(
 		window.unzerWebhookAjaxUrl,
 		{
@@ -127,8 +130,9 @@ document.addEventListener(
 		document.querySelectorAll( '.unzer-webhook-container' ).forEach(
 			function (element) {
 				if (element.getAttribute( 'data-url' ) && element.getAttribute( 'data-nonce' )) {
-					window.unzerWebhookAjaxUrl = element.getAttribute( 'data-url' );
-					window.unzerWebhookNonce   = element.getAttribute( 'data-nonce' );
+					window.unzerWebhookAjaxUrl       = element.getAttribute( 'data-url' );
+					window.unzerWebhookNonce         = element.getAttribute( 'data-nonce' );
+					window.unzerWebhookPaymentMethod = element.getAttribute( 'data-payment-method' );
 					unzerWebhookRefreshData( element.getAttribute( 'data-slug' ) );
 				}
 			}

@@ -8,11 +8,7 @@ export default function unzerRegisterSimpleMethod(nameInSnakeCase) {
     const gatewayDescription = settings?.description || ''
 
     const PaymentContent = () => {
-        return (
-            <div>
-                {gatewayDescription && <p>{gatewayDescription}</p>}
-            </div>
-        )
+        return gatewayDescription ? <p>{gatewayDescription}</p> : null;
     }
     unzerRegisterMethod(gatewayName, gatewayTitle, <PaymentContent />);
 }
