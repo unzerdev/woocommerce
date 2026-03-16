@@ -16,9 +16,9 @@ class Ideal extends AbstractGateway {
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Ideal::class;
 	public $allowedCountries    = array( 'NL' );
 	public $allowedCurrencies   = array( 'EUR' );
-	public $method_title        = 'Unzer iDEAL';
+	public $method_title        = 'Unzer iDEAL | Wero';
 	public $method_description;
-	public $title       = 'iDEAL';
+	public $title       = 'iDEAL | Wero';
 	public $description = '';
 	public $id          = self::GATEWAY_ID;
 	public $plugin_id;
@@ -34,7 +34,7 @@ class Ideal extends AbstractGateway {
 
 				'enabled'     => array(
 					'title'       => __( 'Enable/Disable', 'unzer-payments' ),
-					'label'       => __( 'Enable Unzer iDEAL', 'unzer-payments' ),
+					'label'       => __( 'Enable Unzer iDEAL | Wero', 'unzer-payments' ),
 					'type'        => 'checkbox',
 					'description' => '',
 					'default'     => 'no',
@@ -43,7 +43,7 @@ class Ideal extends AbstractGateway {
 					'title'       => __( 'Title', 'unzer-payments' ),
 					'type'        => 'text',
 					'description' => __( 'This controls the title which the user sees during checkout.', 'unzer-payments' ),
-					'default'     => __( 'iDEAL', 'unzer-payments' ),
+					'default'     => __( 'iDEAL | wero', 'unzer-payments' ),
 				),
 				'description' => array(
 					'title'       => __( 'Description', 'unzer-payments' ),
