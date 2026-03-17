@@ -105,7 +105,8 @@ class Installment extends AbstractGateway {
 					'default'     => '',
 				),
 				'additional_key_info' => array(
-					'type' => 'unzer_additional_key_info',
+					'type'    => 'unzer_additional_key_info',
+					'default' => '',
 				),
 				'public_key_eur_b2c'  => array(
 					'title'   => __( 'Public Key EUR/B2C', 'unzer-payments' ),
