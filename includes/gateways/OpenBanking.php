@@ -12,7 +12,7 @@ class OpenBanking extends AbstractGateway {
 
 	const GATEWAY_ID            = 'unzer_open_banking';
 	const BLOCK_CLASS           = OpenBankingBlock::class;
-	public $allowedCountries    = array( 'DE' );
+
 	public $allowedCurrencies   = array( 'EUR' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\OpenbankingPis::class;
 	public $method_title        = 'Unzer Direct Bank Transfer';

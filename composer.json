@@ -1,6 +1,31 @@
 {
+    "name": "unzerdev/woocommerce",
+    "description": "Official Unzer Payment Extension for WooCommerce.",
+    "type": "wordpress-plugin",
+    "homepage": "https://www.unzer.com/",
+    "authors": [
+        {
+            "name": "Unzer GmbH",
+            "email": "info@unzer.com",
+            "homepage": "https://www.unzer.com"
+        }
+    ],
+    "license": "Apache-2.0",
+    "keywords": [
+        "wordpress",
+        "woocommerce",
+        "unzer",
+        "payment",
+        "gateway"
+    ],
     "require": {
-        "unzerdev/php-sdk": "^3.11.0",
-        "php": ">=7.4"
+        "php": ">=7.4",
+        "composer/installers": "^2.3",
+        "unzerdev/php-sdk": "^3.15.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true
+        }
     }
 }
