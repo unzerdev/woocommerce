@@ -5,12 +5,12 @@
  * Description: Official Unzer Plugin
  * Author: Unzer
  * Author URI: https://www.unzer.com
- * Version: 2.1.2
+ * Version: 2.1.3
  * License: Apache-2.0
  * Requires at least: 4.5
  * Tested up to: 6.9
  * WC requires at least: 6.0
- * WC tested up to: 10.4
+ * WC tested up to: 10.7
  * Text Domain: unzer-payments
  */
 
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Required minimums and constants
  */
-define( 'UNZER_VERSION', '2.1.2' );
+define( 'UNZER_VERSION', '2.1.3' );
 define( 'UNZER_PLUGIN_TYPE_STRING', 'Unzer Payments' );
 define( 'UNZER_PLUGIN_URL', untrailingslashit( plugins_url( basename( plugin_dir_path( __FILE__ ) ), basename( __FILE__ ) ) ) );
 define( 'UNZER_PLUGIN_PATH', __DIR__ . '/' );

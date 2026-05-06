@@ -611,7 +611,7 @@ jQuery(
                     if (showPlaceOrderButton) {
                         placeOrderButton.style.display = '';
                     } else {
-                        placeOrderButton.style.display = 'none';
+                        placeOrderButton.style.setProperty('display', 'none', 'important');
                     }
                 }
             },

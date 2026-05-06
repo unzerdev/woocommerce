@@ -2,6 +2,9 @@
 
 namespace UnzerPayments\Controllers;
 
+use UnzerPayments\Gateways\OpenBanking;
+use UnzerPayments\Gateways\Prepayment;
+use UnzerPayments\Main;
 use UnzerPayments\Services\DashboardService;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\OrderService;
@@ -174,10 +177,40 @@ class WebhookController {
 			)
 		);
 		$order = wc_get_order( $orderId );
-		$order->payment_complete( $paymentId );
+        $previous_status = $order->get_status();
+        $order->payment_complete( $paymentId );
 		$order->set_transaction_id( $paymentId );
 		if ( get_option( 'unzer_captured_order_status' ) ) {
-			$order->set_status( get_option( 'unzer_captured_order_status' ) );
+            $update_order_status = true;
+            if ( get_option( 'unzer_capture_order_status_lock' ) === 'yes' ) {
+                if ($order->get_meta( Main::ORDER_CHARGE_AUTOMATICALLY_DONE) === 'yes') {
+                    $update_order_status = false;
+                }
+            }
+            if (get_option( 'unzer_capture_trigger_order_status' )) {
+                $triggerStatus = str_replace(
+                    'wc-',
+                    '',
+                    get_option( 'unzer_capture_trigger_order_status' )
+                );
+
+                if (
+                    in_array(
+                        $order->get_payment_method(),
+                        array(
+                            Prepayment::GATEWAY_ID,
+                            OpenBanking::GATEWAY_ID,
+                        ),
+                        true
+                    )
+                ) {
+                    $update_order_status = false;
+                }
+            }
+
+            if ($update_order_status) {
+                $order->set_status( str_replace( 'wc-', '', get_option( 'unzer_captured_order_status' ) ) );
+            }
 		}
 		$order->save();
 	}

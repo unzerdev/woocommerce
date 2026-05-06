@@ -31,6 +31,7 @@ use UnzerPayments\Gateways\WeChatPay;
 use UnzerPayments\Gateways\Wero;
 use UnzerPayments\Services\DashboardService;
 use UnzerPayments\Services\OrderService;
+use UnzerPayments\Services\PaymentService;
 use WC_Payment_Gateway;
 
 class Main {
@@ -46,6 +47,7 @@ class Main {
 	const ORDER_META_KEY_CANCELLATION_ID      = 'unzer_cancellation_id';
 	const ORDER_META_KEY_DATE_OF_BIRTH        = 'unzer_dob';
 	const ORDER_META_KEY_COMPANY_TYPE         = 'unzer_company_type';
+    const ORDER_CHARGE_AUTOMATICALLY_DONE     = 'unzer_charge_automatically_done';
 	const ORDER_META_KEYS                     = array(
 		self::ORDER_META_KEY_AUTHORIZATION_ID,
 		self::ORDER_META_KEY_CHARGE_ID,
@@ -101,6 +103,7 @@ class Main {
 		add_action( 'admin_notices', array( new DashboardService(), 'showNotifications' ) );
 		add_action( 'woocommerce_blocks_loaded', array( $this, 'addCheckoutBlocks' ) );
 		add_action( 'before_woocommerce_pay_form', array( $this, 'orderPayPaymentMethod' ), 20, 4 );
+        add_action( 'woocommerce_order_status_changed', array($this, 'unzerPaymentStatusChange'), 10, 4);
 		add_action(
 			'admin_enqueue_scripts',
 			function () {
@@ -324,6 +327,25 @@ class Main {
 					'value'   => get_option( 'unzer_chargeback_order_status' ),
 					'default' => OrderService::ORDER_STATUS_CHARGEBACK,
 				),
+                'capture_trigger_order_status' => array(
+                    'title'   => __( 'Order status to trigger capture', 'unzer-payments' ),
+                    'label'   => '',
+                    'type'    => 'select',
+                    'desc'    => __( 'This status triggers an automatic capture action', 'unzer-payments' ),
+                    'options' => array_merge( array( '' => __( '[No automatic capture]', 'unzer-payments' ) ), wc_get_order_statuses() ),
+                    'id'      => 'unzer_capture_trigger_order_status',
+                    'value'   => get_option( 'unzer_capture_trigger_order_status' ),
+                    'default' => '',
+                ),
+                'capture_order_status_lock' => array(
+                    'title'   => __( 'Lock order state', 'unzer-payments' ),
+                    'label'   => '',
+                    'type'    => 'checkbox',
+                    'desc'    => __( 'When checked, order state will not change to order state defined in “Order status for captured payments” after automatic capture.', 'unzer-payments' ),
+                    'id'      => 'unzer_capture_order_status_lock',
+                    'value'   => get_option( 'unzer_capture_order_status_lock' ),
+                    'default' => '',
+                ),
 				'sectionend'              => array(
 					'type' => 'sectionend',
 				),
@@ -376,6 +398,36 @@ class Main {
 		}
 		return null;
 	}
+
+    public function unzerPaymentStatusChange($order_id, $from, $to, $order)
+    {
+        if (!AbstractGateway::isUnzerPaymentMethod($order->get_payment_method())) {
+            return;
+        }
+        if ( $order->get_payment_method() === Prepayment::GATEWAY_ID ) {
+            return;
+        }
+        if ( $order->get_payment_method() === OpenBanking::GATEWAY_ID ) {
+            return;
+        }
+
+        try {
+            if (in_array($to, [str_replace('wc-', '', get_option( 'unzer_capture_trigger_order_status' ))], true)) {
+                if (!$order->is_paid()) {
+                    $unzer        = ( new PaymentService() )->getUnzerManagerForOrder( $order );
+                    $paymentId = $order->get_meta( Main::ORDER_META_KEY_PAYMENT_ID, true );
+                    $payment      = $unzer->fetchPayment( $paymentId );
+                    if ( $payment->getAmount()->getCharged() == 0 ) {
+                        $order->update_meta_data( Main::ORDER_CHARGE_AUTOMATICALLY_DONE, 'yes' );
+                        $order->save_meta_data();
+                        ( new PaymentService() )->performChargeOnAuthorization( $order_id );
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // silent
+        }
+    }
 
 	public function addCheckoutBlocks() {
 		if ( class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {

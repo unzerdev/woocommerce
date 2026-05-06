@@ -92,11 +92,52 @@ abstract class AbstractBlock extends AbstractPaymentMethodType {
 	}
 
 	public function get_payment_method_script_handles() {
+        if (is_admin()) {
+            $identifier               = $this->get_identifier();
+            $asset_handle             = $identifier . '-block-checkout';
+            $script_dependencies_path = UNZER_PLUGIN_PATH . 'assets/build/' . $identifier . '.asset.php';
+            $script_url               = UNZER_PLUGIN_URL . '/assets/build/' . $identifier . '.js';
+
+            if ( file_exists( $script_dependencies_path ) ) {
+                $script_dependencies = require $script_dependencies_path;
+
+                if ( ! wp_script_is( 'unzer_global-block-checkout', 'registered' ) ) {
+                    wp_register_script(
+                        'unzer_global-block-checkout',
+                        UNZER_PLUGIN_URL . '/assets/build/unzer_global.js',
+                        array( 'wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-html-entities', 'wp-i18n' ),
+                        UNZER_VERSION,
+                        true
+                    );
+                }
+
+                $dependencies = array_unique(
+                    array_merge(
+                        array( 'unzer_global-block-checkout' ),
+                        $script_dependencies['dependencies']
+                    )
+                );
+
+                if ( ! wp_script_is( $asset_handle, 'registered' ) ) {
+                    wp_register_script(
+                        $asset_handle,
+                        $script_url,
+                        $dependencies,
+                        $script_dependencies['version'],
+                        true
+                    );
+
+                    wp_set_script_translations( $asset_handle, 'unzer-payments' );
+                }
+            }
+
+            return array( $asset_handle );
+        }
 		return array( $this->get_identifier() . '-block-checkout' );
 	}
 
 	public function get_payment_method_script_handles_for_admin() {
-		return array();
+		return $this->get_payment_method_script_handles();
 	}
 
 
