@@ -148,7 +148,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	}
 
 	public function needs_setup() {
-		return true;
+		return false;
 	}
 
 	public function is_enabled() {

@@ -3,7 +3,7 @@ Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
 Tested up to: 6.9
-Stable tag: 2.1.2
+Stable tag: 2.1.3
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
@@ -58,6 +58,12 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth * online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 ## Changelog ##
+
+# 2.1.3 #
+* Fixed order button incorrectly displayed alongside Apple Pay and Google Pay
+* Fixed “Blocks not supported” message appearing in the designer
+* Improvement: Fixed error when enabling a payment method from the payment overview
+* Improvement: Added support for capturing payment when order status is changed to shipped
 
 # 2.1.2 #
 * Removed country restrictions for Direct Bank Transfer
