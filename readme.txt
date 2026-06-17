@@ -2,8 +2,8 @@
 Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
-Tested up to: 6.9
-Stable tag: 2.1.3
+Tested up to: 7.0
+Stable tag: 2.1.4
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
@@ -58,6 +58,11 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth * online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 ## Changelog ##
+
+# 2.1.4 #
+* Direct Bank Transfer order status now correctly derived from combined payment + transaction state, with webhook handling for delayed settlements
+* Fixed UPL 2FA payments bypassing the redirect URL — users are now routed through the 2FA flow before landing on the order success page
+* Verified compatibility with WordPress 7.x
 
 # 2.1.3 #
 * Fixed order button incorrectly displayed alongside Apple Pay and Google Pay

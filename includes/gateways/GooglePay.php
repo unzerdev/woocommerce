@@ -248,10 +248,10 @@ class GooglePay extends AbstractGateway {
 		return $return;
 	}
 
-    public function needs_setup() {
-        if ($this->get_option( 'merchant_id' ) == '' || $this->get_option( 'merchant_name' ) == '' ) {
-            return true;
-        }
-        return false;
-    }
+	public function needs_setup() {
+		if ( $this->get_option( 'merchant_id' ) == '' || $this->get_option( 'merchant_name' ) == '' ) {
+			return true;
+		}
+		return false;
+	}
 }

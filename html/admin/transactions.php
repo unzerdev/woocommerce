@@ -108,7 +108,7 @@ ob_start();
 				document.getElementById('unzer-totals-row').innerHTML = totalsHtml;
 
 				let captureHtml = '';
-				if (data.remainingPlain && data.paymentMethod !== 'unzer_prepayment' && data.status !== 'canceled') {
+				if (data.remainingPlain && data.paymentMethod !== 'unzer_prepayment' && data.paymentMethod !== 'unzer_open_banking' && data.status !== 'canceled') {
 					captureHtml = `<input type="number" step="0.01" min="0.01" max="${data.remainingPlain}" value="${data.remainingPlain}" id="unzer-capture-amount-input" />
 						<a href="#" id="unzer-capture-btn" onclick="unzerCaptureOrder(unzerOrderId, document.getElementById('unzer-capture-amount-input').value, '<?php echo esc_attr( Util::getNonce() ); ?>'); return false;" class="button button-small"><?php echo esc_html__( 'Capture', 'unzer-payments' ); ?></a>`;
 				}
