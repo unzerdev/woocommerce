@@ -233,13 +233,36 @@ class OrderService {
 		$logger = ( new LogService() );
 		if ( $transaction instanceof Authorization ) {
 			$logger->debug( 'OrderService::processPaymentStatus() - set authorized' );
-			$this->setOrderAuthorized( $order, $transaction->getPayment()->getId() );
+			if ( $transaction->isPending() ) {
+				$this->logger->debug(
+					'authorization pending',
+					array(
+						'transaction' => $transaction->expose(),
+						'orderId'     => $order->get_id(),
+						'orderAmount' => $order->get_total(),
+					)
+				);
+			} else {
+				$this->setOrderAuthorized( $order, $transaction->getPayment()->getId() );
+			}
 		} else {
-			$logger->debug( 'OrderService::processPaymentStatus() - payment_complete' );
-			$order->payment_complete( $transaction->getPayment()->getId() );
-			$order->set_transaction_id( $transaction->getPayment()->getId() );
-			if ( get_option( 'unzer_captured_order_status' ) ) {
-				$order->set_status( get_option( 'unzer_captured_order_status' ) );
+			if ( $transaction->isPending() ) {
+				$this->logger->debug(
+					'charge pending',
+					array(
+						'transaction' => $transaction->expose(),
+						'orderId'     => $order->get_id(),
+						'orderAmount' => $order->get_total(),
+					)
+				);
+				$order->set_transaction_id( $transaction->getPayment()->getId() );
+			} else {
+				$logger->debug( 'OrderService::processPaymentStatus() - payment_complete' );
+				$order->payment_complete( $transaction->getPayment()->getId() );
+				$order->set_transaction_id( $transaction->getPayment()->getId() );
+				if ( get_option( 'unzer_captured_order_status' ) ) {
+					$order->set_status( get_option( 'unzer_captured_order_status' ) );
+				}
 			}
 			$order->save();
 		}

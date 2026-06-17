@@ -10,8 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class OpenBanking extends AbstractGateway {
 
-	const GATEWAY_ID            = 'unzer_open_banking';
-	const BLOCK_CLASS           = OpenBankingBlock::class;
+	const GATEWAY_ID  = 'unzer_open_banking';
+	const BLOCK_CLASS = OpenBankingBlock::class;
 
 	public $allowedCurrencies   = array( 'EUR' );
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\OpenbankingPis::class;

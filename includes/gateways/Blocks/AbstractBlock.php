@@ -52,19 +52,19 @@ abstract class AbstractBlock extends AbstractPaymentMethodType {
 		/** @var AbstractGateway $gateway */
 		$gateway = new $gatewayClass();
 		return array(
-			'id'                 => static::GATEWAY_ID,
-			'title'              => $gateway->title,
-			'description'        => $gateway->description,
-			'allowedCountries'   => $gateway->allowedCountries,
-			'allowedCurrencies'  => $gateway->allowedCurrencies,
-			'publicKey'          => $gateway->get_public_key(),
-			'locale'             => get_locale(),
-			'nonce'              => Util::getNonce(),
+			'id'                  => static::GATEWAY_ID,
+			'title'               => $gateway->title,
+			'description'         => $gateway->description,
+			'allowedCountries'    => $gateway->allowedCountries,
+			'allowedCurrencies'   => $gateway->allowedCurrencies,
+			'publicKey'           => $gateway->get_public_key(),
+			'locale'              => get_locale(),
+			'nonce'               => Util::getNonce(),
 			'storeName'           => get_bloginfo( 'name' ),
 			'storeCountry'        => strtoupper( substr( get_option( 'woocommerce_default_country' ), 0, 2 ) ),
-			'paymentComponentId' => str_replace( '_', '-', static::GATEWAY_ID ) . '-payment-component',
+			'paymentComponentId'  => str_replace( '_', '-', static::GATEWAY_ID ) . '-payment-component',
 			'checkoutComponentId' => str_replace( '_', '-', static::GATEWAY_ID ) . '-checkout-component',
-			'getCustomerDataUrl' => WC()->api_request_url( CheckoutController::GET_UNZER_CUSTOMER_SLUG ),
+			'getCustomerDataUrl'  => WC()->api_request_url( CheckoutController::GET_UNZER_CUSTOMER_SLUG ),
 		);
 	}
 
@@ -92,47 +92,47 @@ abstract class AbstractBlock extends AbstractPaymentMethodType {
 	}
 
 	public function get_payment_method_script_handles() {
-        if (is_admin()) {
-            $identifier               = $this->get_identifier();
-            $asset_handle             = $identifier . '-block-checkout';
-            $script_dependencies_path = UNZER_PLUGIN_PATH . 'assets/build/' . $identifier . '.asset.php';
-            $script_url               = UNZER_PLUGIN_URL . '/assets/build/' . $identifier . '.js';
+		if ( is_admin() ) {
+			$identifier               = $this->get_identifier();
+			$asset_handle             = $identifier . '-block-checkout';
+			$script_dependencies_path = UNZER_PLUGIN_PATH . 'assets/build/' . $identifier . '.asset.php';
+			$script_url               = UNZER_PLUGIN_URL . '/assets/build/' . $identifier . '.js';
 
-            if ( file_exists( $script_dependencies_path ) ) {
-                $script_dependencies = require $script_dependencies_path;
+			if ( file_exists( $script_dependencies_path ) ) {
+				$script_dependencies = require $script_dependencies_path;
 
-                if ( ! wp_script_is( 'unzer_global-block-checkout', 'registered' ) ) {
-                    wp_register_script(
-                        'unzer_global-block-checkout',
-                        UNZER_PLUGIN_URL . '/assets/build/unzer_global.js',
-                        array( 'wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-html-entities', 'wp-i18n' ),
-                        UNZER_VERSION,
-                        true
-                    );
-                }
+				if ( ! wp_script_is( 'unzer_global-block-checkout', 'registered' ) ) {
+					wp_register_script(
+						'unzer_global-block-checkout',
+						UNZER_PLUGIN_URL . '/assets/build/unzer_global.js',
+						array( 'wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-html-entities', 'wp-i18n' ),
+						UNZER_VERSION,
+						true
+					);
+				}
 
-                $dependencies = array_unique(
-                    array_merge(
-                        array( 'unzer_global-block-checkout' ),
-                        $script_dependencies['dependencies']
-                    )
-                );
+				$dependencies = array_unique(
+					array_merge(
+						array( 'unzer_global-block-checkout' ),
+						$script_dependencies['dependencies']
+					)
+				);
 
-                if ( ! wp_script_is( $asset_handle, 'registered' ) ) {
-                    wp_register_script(
-                        $asset_handle,
-                        $script_url,
-                        $dependencies,
-                        $script_dependencies['version'],
-                        true
-                    );
+				if ( ! wp_script_is( $asset_handle, 'registered' ) ) {
+					wp_register_script(
+						$asset_handle,
+						$script_url,
+						$dependencies,
+						$script_dependencies['version'],
+						true
+					);
 
-                    wp_set_script_translations( $asset_handle, 'unzer-payments' );
-                }
-            }
+					wp_set_script_translations( $asset_handle, 'unzer-payments' );
+				}
+			}
 
-            return array( $asset_handle );
-        }
+			return array( $asset_handle );
+		}
 		return array( $this->get_identifier() . '-block-checkout' );
 	}
 

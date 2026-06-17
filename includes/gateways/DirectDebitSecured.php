@@ -97,8 +97,8 @@ class DirectDebitSecured extends AbstractGateway {
 					'default'     => '',
 				),
 				'additional_key_info' => array(
-					'type' => 'unzer_additional_key_info',
-                    'default'     => '',
+					'type'    => 'unzer_additional_key_info',
+					'default' => '',
 				),
 				'public_key_eur_b2c'  => array(
 					'title'   => __( 'Public Key EUR/B2C', 'unzer-payments' ),
@@ -141,8 +141,8 @@ class DirectDebitSecured extends AbstractGateway {
 			}
 		);
 		$this->before_payment_redirect( $order_id );
-		if ( $authorization->getPayment()->getRedirectUrl() ) {
-			$return['redirect'] = $authorization->getPayment()->getRedirectUrl();
+		if ( $authorization->getRedirectUrl() ) {
+			$return['redirect'] = $authorization->getRedirectUrl();
 		} elseif ( $authorization->isSuccess() ) {
 			try {
 				// this is repeated in confirmAction, but we need to make sure, that the order is updated if anything goes wrong

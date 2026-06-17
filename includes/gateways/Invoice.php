@@ -66,8 +66,8 @@ class Invoice extends AbstractGateway {
 					'default'     => '',
 				),
 				'additional_key_info' => array(
-					'type' => 'unzer_additional_key_info',
-                    'default'     => '',
+					'type'    => 'unzer_additional_key_info',
+					'default' => '',
 				),
 				'public_key_eur_b2c'  => array(
 					'title'   => __( 'Public Key EUR/B2C', 'unzer-payments' ),
@@ -197,6 +197,7 @@ class Invoice extends AbstractGateway {
 	 * @throws \WC_Data_Exception|Exception
 	 */
 	public function process_payment( $order_id ) {
+		$order  = wc_get_order( $order_id );
 		$return = array(
 			'result' => 'success',
 		);
@@ -217,14 +218,12 @@ class Invoice extends AbstractGateway {
 			throw new Exception( esc_html( $authorization->getMessage()->getCustomer() ) );
 		}
 		if ( $authorization->isSuccess() ) {
-			$order        = wc_get_order( $order_id );
-			$orderService = new OrderService();
-			$orderService->setOrderAuthorized( $order, $authorization->getPayment()->getId() );
+			( new OrderService() )->processPaymentStatus( $authorization, $order );
 		} else {
 			$this->set_order_transaction_number( wc_get_order( $order_id ), $authorization->getPayment()->getId() );
 		}
 		$this->before_payment_redirect( $order_id );
-		$return['redirect'] = $this->get_return_url( wc_get_order( $order_id ) );
+		$return['redirect'] = $authorization->getRedirectUrl() ?: $this->get_confirm_url( wc_get_order( $order_id ) );
 		return $return;
 	}
 
