@@ -4,6 +4,7 @@ namespace UnzerPayments\Traits;
 
 use UnzerPayments\Gateways\AbstractGateway;
 use UnzerPayments\Main;
+use UnzerPayments\Services\ExpressCheckoutService;
 use UnzerPayments\Services\PaymentService;
 use UnzerSDK\Resources\PaymentTypes\BasePaymentType;
 use UnzerSDK\Resources\PaymentTypes\Card;
@@ -13,6 +14,9 @@ use UnzerSDK\Resources\PaymentTypes\SepaDirectDebit;
 trait SavePaymentInstrumentTrait {
 
 	public function isSaveInstruments(): bool {
+        if (WC()->session->get(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID)) {
+            return false;
+        }
 		return $this->get_option( AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS ) === 'yes' && is_user_logged_in();
 	}
 

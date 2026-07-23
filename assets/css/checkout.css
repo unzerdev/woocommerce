@@ -43,3 +43,16 @@ apple-pay-button {
 .unzer-payment-instrument-new-form{
 	display: none;
 }
+
+#unzer-express-buttons-container {
+	margin-top: 10px;
+}
+
+.unzer-paypal-express-container {
+	margin-bottom: 10px;
+}
+
+#unzer-express-buttons-container #google-pay-container button.gpay-button,
+#unzer-express-buttons-container #google-pay-container #gpay-button-online-api-id {
+	width: 100%;
+}

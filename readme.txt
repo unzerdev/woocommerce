@@ -3,7 +3,7 @@ Contributors: Unzer
 Tags: payments, woocommerce
 Requires at least: 4.5
 Tested up to: 7.0
-Stable tag: 2.1.4
+Stable tag: 2.2.0
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
@@ -58,6 +58,10 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth * online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 ## Changelog ##
+
+# 2.2.0 #
+* New: Added Express Checkout for PayPal, Google Pay, and Apple Pay
+* Fix: Automatic capture now triggers correctly when order status changes to the configured capture status
 
 # 2.1.4 #
 * Direct Bank Transfer order status now correctly derived from combined payment + transaction state, with webhook handling for delayed settlements

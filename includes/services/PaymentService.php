@@ -185,6 +185,13 @@ class PaymentService {
 				if ( $transactionEditor !== null ) {
 					$transactionEditor( $authorization );
 				}
+                $this->logger->debug(
+                    'calling authorization #' . $orderId . ' with ' . $order->get_payment_method(),
+                    array(
+                        'authorization'     => $authorization,
+                        'metadata'   => ( new ShopService() )->getMetadata()
+                    )
+                );
 				$transactionObject = $unzer->performAuthorization( $authorization, $paymentType, $customer, ( new ShopService() )->getMetadata(), $basket );
 				$order->update_meta_data( Main::ORDER_META_KEY_AUTHORIZATION_ID, $transactionObject->getId() );
 			} else {
@@ -193,6 +200,13 @@ class PaymentService {
 				if ( $transactionEditor !== null ) {
 					$transactionEditor( $charge );
 				}
+                $this->logger->debug(
+                    'calling charge #' . $orderId . ' with ' . $order->get_payment_method(),
+                    array(
+                        'charge'     => $charge,
+                        'metadata'   => ( new ShopService() )->getMetadata()
+                    )
+                );
 				$transactionObject = $unzer->performCharge( $charge, $paymentType, $customer, ( new ShopService() )->getMetadata(), $basket );
 				$order->update_meta_data( Main::ORDER_META_KEY_CHARGE_ID, $transactionObject->getId() );
 			}

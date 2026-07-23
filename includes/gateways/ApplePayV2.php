@@ -3,6 +3,7 @@
 namespace UnzerPayments\Gateways;
 
 use UnzerPayments\Gateways\Blocks\ApplePayBlock;
+use UnzerPayments\Services\ExpressCheckoutService;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
 
@@ -95,6 +96,17 @@ class ApplePayV2 extends AbstractGateway {
 					),
 					'default'     => 'charge',
 				),
+                AbstractGateway::SETTINGS_KEY_EXPRESS_OPTION => array(
+                    'title'       => __( 'Offer Apple Pay Express Checkout', 'unzer-payments' ),
+                    'label'       => __( '&nbsp;', 'unzer-payments' ),
+                    'type'        => 'select',
+                    'description' => '',
+                    'default'     => 'no',
+                    'options'     => array(
+                        'no'  => __( 'No', 'unzer-payments' ),
+                        'yes' => __( 'Yes', 'unzer-payments' ),
+                    ),
+                ),
 			)
 		);
 	}
@@ -105,10 +117,24 @@ class ApplePayV2 extends AbstractGateway {
 			'result' => 'success',
 		);
 
-		$applePayId = Util::getNonceCheckedPostValue( 'unzer-apple-pay-v2-id' );
+        $applePayId = Util::getNonceCheckedPostValue( 'unzer-apple-pay-v2-id' );
+        $this->logger->debug( 'fetched applePayId ' . $applePayId, array(  ) );
+        try {
+            if (!empty(WC()->session->get(ExpressCheckoutService::SESSION_APPLEPAY_PAYMENT_TYPE_ID))) {
+                $applePayId = (WC()->session->get(ExpressCheckoutService::SESSION_APPLEPAY_PAYMENT_TYPE_ID));
+
+                $client = ( new PaymentService() )->getUnzerManagerForOrder($order_id);
+                $paymentType = $client->fetchPaymentType(WC()->session->get(ExpressCheckoutService::SESSION_APPLEPAY_PAYMENT_TYPE_ID));
+                $this->logger->debug( 'fetched applePayId from Session ' . $applePayId, array( 'paymentType' => $paymentType ) );
+            }
+        } catch (\Throwable) {
+        }
+
 		if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
+            $this->logger->debug( 'apple pay authorization for order ' . $order_id, array( $applePayId ) );
 			$transaction = ( new PaymentService() )->performAuthorizationForOrder( $order_id, $this, $applePayId );
 		} else {
+            $this->logger->debug( 'apple pay charge for order ' . $order_id, array( $applePayId ) );
 			$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $applePayId );
 		}
 
@@ -123,4 +149,14 @@ class ApplePayV2 extends AbstractGateway {
 		}
 		return $return;
 	}
+
+    public function getPublicOptions() {
+        return array(
+            'countryCode' => 'DE',
+            'allowedCardNetworks' => ['masterCard', 'visa'],
+            'merchantCapabilities' => ['supports3DS'],
+            'shopName' => get_bloginfo('name'),
+        );
+    }
+
 }

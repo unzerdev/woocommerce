@@ -87,36 +87,38 @@ window.unzerInitiatePaymentMethod = (
                     }
 
                     if (longNameInSnakeCase === 'unzer_apple_pay_v2' && paymentComponent.setApplePayData) {
-                        const applePayPaymentRequest = {
-                            countryCode: settings.storeCountry,
-                            currencyCode: cartData.totals.currency_code,
-                            supportedNetworks: ['visa', 'masterCard'],
-                            merchantCapabilities: ['supports3DS'],
-                            total: {
-                                label: settings.storeName,
-                                amount: cartData.totals.total_price / 100
-                            }
-                        };
-                        // for some reason this does not get applied without timeout?
-                        setTimeout(
-                            function () {
-                                paymentComponent.setApplePayData(applePayPaymentRequest);
-                            },
-                            1000
-                        );
-
-                        const unzerCheckout = document.getElementById('unzer-apple-pay-v2-checkout-component');
-                        if (unzerCheckout) {
-                            unzerCheckout.onPaymentSubmit = function (response) {
-                                if (response.submitResponse && response.submitResponse.data && response.submitResponse.data.id && response.submitResponse.data.id.indexOf('-apl-') === -1) {
-                                    return
-                                }
-                                if (response.submitResponse && response.submitResponse.success) {
-                                    triggerSubmitForPaymentTypeId(paymentComponent, response.submitResponse.data.id);
-                                } else {
-                                    console.error(response);
+                        if (!unzer_parameters.express.is_express) {
+                            const applePayPaymentRequest = {
+                                countryCode: settings.storeCountry,
+                                currencyCode: cartData.totals.currency_code,
+                                supportedNetworks: ['visa', 'masterCard'],
+                                merchantCapabilities: ['supports3DS'],
+                                total: {
+                                    label: settings.storeName,
+                                    amount: cartData.totals.total_price / 100
                                 }
                             };
+                            // for some reason this does not get applied without timeout?
+                            setTimeout(
+                                function () {
+                                    paymentComponent.setApplePayData(applePayPaymentRequest);
+                                },
+                                1000
+                            );
+
+                            const unzerCheckout = document.getElementById('unzer-apple-pay-v2-checkout-component');
+                            if (unzerCheckout) {
+                                unzerCheckout.onPaymentSubmit = function (response) {
+                                    if (response.submitResponse && response.submitResponse.data && response.submitResponse.data.id && response.submitResponse.data.id.indexOf('-apl-') === -1) {
+                                        return
+                                    }
+                                    if (response.submitResponse && response.submitResponse.success) {
+                                        triggerSubmitForPaymentTypeId(paymentComponent, response.submitResponse.data.id);
+                                    } else {
+                                        console.error(response);
+                                    }
+                                };
+                            }
                         }
                     }
 
@@ -190,8 +192,10 @@ const updatePaymentMethodData = function (longNameInSnakeCase, cartData) {
             }, 1000
         )
     }
+}
 
-
+const updateExpressMethods = function (cartData) {
+    ExpressButtons.refresh();
 }
 
 function unzerCheckForPaymentMethodChanges(force = false) {
@@ -214,6 +218,7 @@ function unzerCheckForPaymentMethodChanges(force = false) {
         window.unzerCurrentPaymentMethod = paymentStore.getActivePaymentMethod();
         window.unzerCurrentAmount = cartData.totals.total_price;
         updatePaymentMethodData(window.unzerCurrentPaymentMethod, cartData);
+        updateExpressMethods(cartData);
     }
 
 }

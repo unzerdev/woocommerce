@@ -2,6 +2,7 @@ import unzerRegisterMethod from "../util/register-method";
 import {getSetting} from '@woocommerce/settings'
 import {useEffect} from '@wordpress/element'
 import onPaymentSetupFactory from "../util/on-payment-setup-factory";
+import unzerRegisterSimpleMethod from "../util/register-simple-method";
 
 const nameInSnakeCase = 'google_pay';
 const settings = getSetting('unzer_' + nameInSnakeCase + '_data', {})
@@ -39,4 +40,8 @@ const PaymentContent = ({eventRegistration, emitResponse}) => {
     )
 }
 
-unzerRegisterMethod(gatewayName, gatewayTitle, <PaymentContent/>);
+if (unzer_parameters.express.is_express) {
+    unzerRegisterSimpleMethod(nameInSnakeCase);
+} else {
+    unzerRegisterMethod(gatewayName, gatewayTitle, <PaymentContent/>);
+}

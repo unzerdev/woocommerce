@@ -6,6 +6,7 @@ use Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry;
 use UnzerPayments\Controllers\AccountController;
 use UnzerPayments\Controllers\AdminController;
 use UnzerPayments\Controllers\CheckoutController;
+use UnzerPayments\Controllers\ExpressController;
 use UnzerPayments\Controllers\WebhookController;
 use UnzerPayments\Gateways\AbstractGateway;
 use UnzerPayments\Gateways\Alipay;
@@ -30,8 +31,10 @@ use UnzerPayments\Gateways\Twint;
 use UnzerPayments\Gateways\WeChatPay;
 use UnzerPayments\Gateways\Wero;
 use UnzerPayments\Services\DashboardService;
+use UnzerPayments\Services\ExpressCheckoutService;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
+use UnzerSDK\Resources\PaymentTypes\Applepay;
 use WC_Payment_Gateway;
 
 class Main {
@@ -87,6 +90,12 @@ class Main {
 		add_action( 'woocommerce_api_' . WebhookController::WEBHOOK_ROUTE_SLUG, array( new WebhookController(), 'receiveWebhook' ) );
 		add_action( 'woocommerce_api_' . AccountController::DELETE_PAYMENT_INSTRUMENT_URL_SLUG, array( new AccountController(), 'deletePaymentInstrument' ) );
 		add_action( 'woocommerce_api_' . CheckoutController::GET_UNZER_CUSTOMER_SLUG, array( new CheckoutController(), 'getUnzerCustomerData' ) );
+
+        add_action( 'woocommerce_api_' . ExpressController::PAYPAL_EXPRESS_SLUG, array( new ExpressController(), 'paypalExpress' ) );
+        add_action( 'woocommerce_api_' . ExpressController::PAYPAL_EXPRESS_RETURN_SLUG, array( new ExpressController(), 'paypalExpressReturn' ) );
+        add_action( 'woocommerce_api_' . ExpressController::GOOGLE_PAY_EXPRESS_SLUG, array( new ExpressController(), 'googleExpress' ) );
+        add_action( 'woocommerce_api_' . ExpressController::APPLE_PAY_EXPRESS_SLUG, array( new ExpressController(), 'applepayExpress' ) );
+
 		add_filter( 'plugin_action_links_' . plugin_basename( UNZER_PLUGIN_PATH . 'unzer-payments.php' ), array( $this, 'addPluginSettingsLink' ) );
 		add_action( 'add_meta_boxes', array( $this, 'addMetaBoxes' ), 40 );
 		add_action( 'woocommerce_settings_checkout', array( AdminController::class, 'renderGlobalSettingsStart' ) );
@@ -104,6 +113,32 @@ class Main {
 		add_action( 'woocommerce_blocks_loaded', array( $this, 'addCheckoutBlocks' ) );
 		add_action( 'before_woocommerce_pay_form', array( $this, 'orderPayPaymentMethod' ), 20, 4 );
 		add_action( 'woocommerce_order_status_changed', array( $this, 'unzerPaymentStatusChange' ), 10, 4 );
+        add_filter(
+            'woocommerce_available_payment_gateways',
+            function (array $gateways): array {
+                if (is_admin() && !wp_doing_ajax()) {
+                    return $gateways;
+                }
+                if (!is_checkout()) {
+                    return $gateways;
+                }
+                if (empty($_GET['isExpressCheckout']) || $_GET['isExpressCheckout'] !== 'true') {
+                    return $gateways;
+                }
+                $expressMethod = WC()->session->get(
+                    ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD
+                );
+                if (!$expressMethod) {
+                    return $gateways;
+                }
+                foreach ($gateways as $id => $gateway) {
+                    if ($id !== $expressMethod) {
+                        unset($gateways[$id]);
+                    }
+                }
+                return $gateways;
+            }
+        );
 		add_action(
 			'admin_enqueue_scripts',
 			function () {
@@ -141,7 +176,14 @@ class Main {
 			10,
 			2
 		);
-	}
+
+        add_action('woocommerce_admin_order_data_after_payment_info', function ($order) {
+            if (in_array($order->get_payment_method(), [Paypal::GATEWAY_ID, GooglePay::GATEWAY_ID, ApplePayV2::GATEWAY_ID]) &&
+                strpos($order->get_payment_method_title(), '(Express)') !== false) {
+                echo '<div>Express Checkout</div>';
+            }
+        });
+    }
 
 	public function addOrderEmailData( $order ) {
 		( new OrderService() )->printPaymentInstructionsHtml( $order );
@@ -412,17 +454,17 @@ class Main {
 
 		try {
 			if ( in_array( $to, array( str_replace( 'wc-', '', get_option( 'unzer_capture_trigger_order_status' ) ) ), true ) ) {
-				if ( ! $order->is_paid() ) {
-					$unzer     = ( new PaymentService() )->getUnzerManagerForOrder( $order );
-					$paymentId = $order->get_meta( self::ORDER_META_KEY_PAYMENT_ID, true );
-					$payment   = $unzer->fetchPayment( $paymentId );
-					if ( $payment->getAmount()->getCharged() == 0 ) {
-						$order->update_meta_data( self::ORDER_CHARGE_AUTOMATICALLY_DONE, 'yes' );
-						$order->save_meta_data();
-						( new PaymentService() )->performChargeOnAuthorization( $order_id );
-					}
-				}
-			}
+
+                $unzer     = ( new PaymentService() )->getUnzerManagerForOrder( $order );
+                $paymentId = $order->get_meta( self::ORDER_META_KEY_PAYMENT_ID, true );
+                $payment   = $unzer->fetchPayment( $paymentId );
+                if ( $payment->getAmount()->getCharged() == 0 ) {
+                    $order->update_meta_data( self::ORDER_CHARGE_AUTOMATICALLY_DONE, 'yes' );
+                    $order->save_meta_data();
+                    ( new PaymentService() )->performChargeOnAuthorization( $order_id );
+                }
+            }
+
 		} catch ( \Exception $e ) {
 			// silent
 		}
