@@ -47,6 +47,7 @@ class CustomerService {
 	}
 
 	public function getCustomerFromData( AbstractGateway $paymentGateway, array $data ) {
+        $this->logger->debug( 'CustomerService::getCustomerFromData', array( ) );
 		$customer       = null;
 		$paymentService = new PaymentService();
 		$unzer          = $paymentService->getUnzerManager( $paymentGateway, ! empty( $data['billing_company'] ), get_woocommerce_currency() );
@@ -61,6 +62,8 @@ class CustomerService {
 			$customer = new Customer();
 			$customer->setCustomerId( $customerNumber );
 		}
+
+        $customer->setLanguage(substr(determine_locale(), 0, 2) ?: 'en');
 
 		$billingAddress = $customer->getBillingAddress();
 
@@ -112,17 +115,20 @@ class CustomerService {
 		if ( isset( $data['billing_country'] ) ) {
 			$billingAddress->setCountry( $data['billing_country'] );
 		}
+        $this->logger->debug( 'customer data', array( $customer->expose() ) );
 
 		if ( ! empty( $customer->getFirstname() ) && ! empty( $customer->getLastname() ) ) {
 			if ( empty( $customer->getId() ) ) {
 				try {
 					$customer = $unzer->createCustomer( $customer );
+                    $this->logger->debug( 'created customer', array( ) );
 				} catch ( Exception $e ) {
 					$this->logger->error( 'create customer failed: ' . $e->getMessage() );
 				}
 			} else {
 				try {
 					$customer = $unzer->updateCustomer( $customer );
+                    $this->logger->debug( 'updated customer', array( ) );
 				} catch ( Exception $e ) {
 					$this->logger->error( 'update customer failed: ' . $e->getMessage() );
 				}
@@ -147,6 +153,7 @@ class CustomerService {
 	 * @return Customer
 	 */
 	public function getCustomerFromOrder( $order ): Customer {
+        $this->logger->debug( 'CustomerService::getCustomerFromOrder', array( ) );
 		$order               = is_object( $order ) ? $order : wc_get_order( $order );
 		$paymentService      = new PaymentService();
 		$unzer               = $paymentService->getUnzerManagerForOrder( $order );
@@ -163,6 +170,7 @@ class CustomerService {
 		}
 
 		$customer
+            ->setLanguage(substr(determine_locale(), 0, 2) ?: 'en')
 			->setFirstname( $order->get_billing_first_name() ?: '' )
 			->setLastname( $order->get_billing_last_name() ?: '' )
 			->setPhone( $order->get_billing_phone() ?: '' )
@@ -175,12 +183,14 @@ class CustomerService {
 		if ( $customer->getId() ) {
 			try {
 				$unzer->updateCustomer( $customer );
+                $this->logger->debug( 'updated customer', array( ) );
 			} catch ( Exception $e ) {
 				$this->logger->warning( 'update customer failed: ' . $e->getMessage(), array( $customer->expose() ) );
 			}
 		} else {
 			try {
 				$customer = $unzer->createCustomer( $customer );
+                $this->logger->debug( 'created customer', array( ) );
 			} catch ( Exception $e ) {
 				$this->logger->warning( 'update customer failed: ' . $e->getMessage(), array( $customer->expose() ) );
 			}
@@ -188,6 +198,47 @@ class CustomerService {
 
 		return $customer;
 	}
+
+    /**
+     * @param int|WC_Order $order
+     * @param Customer $customer
+     * @return Customer
+     */
+    public function updatePaypalExpressCustomer($order, Customer $customer): Customer {
+        $this->logger->debug( 'CustomerService::updatePaypalExpressCustomer', array( ) );
+        $order               = is_object( $order ) ? $order : wc_get_order( $order );
+        $paymentService      = new PaymentService();
+        $unzer               = $paymentService->getUnzerManagerForOrder( $order );
+
+        $customer
+            ->setLanguage(substr(determine_locale(), 0, 2) ?: 'en')
+            ->setFirstname( $order->get_billing_first_name() ?: '' )
+            ->setLastname( $order->get_billing_last_name() ?: '' )
+            ->setPhone( $order->get_billing_phone() ?: '' )
+            ->setCompany( $order->get_billing_company() ?: '' )
+            ->setEmail( $order->get_billing_email() ?: '' );
+
+        $this->setAddresses( $customer, $order );
+        $this->logger->debug( 'customer data', array( $customer->expose() ) );
+
+        if ( $customer->getId() ) {
+            try {
+                $unzer->updateCustomer( $customer );
+                $this->logger->debug( 'updated customer', array( ) );
+            } catch ( Exception $e ) {
+                $this->logger->warning( 'update customer failed: ' . $e->getMessage(), array( $customer->expose() ) );
+            }
+        } else {
+            try {
+                $customer = $unzer->createCustomer( $customer );
+                $this->logger->debug( 'created customer', array( ) );
+            } catch ( Exception $e ) {
+                $this->logger->warning( 'update customer failed: ' . $e->getMessage(), array( $customer->expose() ) );
+            }
+        }
+
+        return $customer;
+    }
 
 
 	protected function setAddresses( Customer $customer, WC_Abstract_Order $order ) {

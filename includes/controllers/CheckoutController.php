@@ -4,8 +4,12 @@ namespace UnzerPayments\Controllers;
 
 use Exception;
 use UnzerPayments\Gateways\AbstractGateway;
+use UnzerPayments\Gateways\ApplePayV2;
+use UnzerPayments\Gateways\GooglePay;
+use UnzerPayments\Gateways\Paypal;
 use UnzerPayments\Main;
 use UnzerPayments\Services\CustomerService;
+use UnzerPayments\Services\ExpressCheckoutService;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
@@ -82,10 +86,19 @@ class CheckoutController {
 				$paymentGateway->maybeSavePaymentInstrument( $transaction->getPayment()->getPaymentType()->getId() );
 			}
 		}
+
+        if ((string)WC()->session->get(ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD) !== '') {
+            if (in_array($order->get_payment_method(), [Paypal::GATEWAY_ID, GooglePay::GATEWAY_ID, ApplePayV2::GATEWAY_ID])) {
+                $order->set_payment_method_title($order->get_payment_method_title() . ' (Express)');
+                $order->save();
+            }
+        }
+
 		$orderService = new OrderService();
 		try {
 			$orderService->processPaymentStatus( $transaction, $order );
 			self::clearSessionData();
+            self::resetExpressCheckoutSessionData();
 			wp_redirect( $order->get_checkout_order_received_url() );
 		} catch ( Exception $e ) {
 			$logger->error(
@@ -101,6 +114,7 @@ class CheckoutController {
 			wp_redirect( wc_get_checkout_url() );
 		}
 		WC()->session->set( 'save_payment_instrument', false );
+        self::resetExpressCheckoutSessionData();
 		die;
 	}
 
@@ -131,6 +145,7 @@ class CheckoutController {
 	 */
 	public static function checkoutSuccess( $order ) {
 		self::clearSessionData();
+        self::resetExpressCheckoutSessionData();
 		( new OrderService() )->printPaymentInstructionsHtml( $order );
 	}
 
@@ -139,6 +154,14 @@ class CheckoutController {
 		echo wp_json_encode( Util::escape_array_html( $data ) );
 		die;
 	}
+
+    public static function resetExpressCheckoutSessionData() {
+        WC()->session->set(ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD, false);
+        WC()->session->set(ExpressCheckoutService::SESSION_GOOGLE_PAYMENT_TYPE_ID, false);
+        WC()->session->set(ExpressCheckoutService::SESSION_APPLEPAY_PAYMENT_TYPE_ID, false);
+        WC()->session->set(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID, false);
+        WC()->session->set(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_TYPE_ID, false);
+    }
 
 	protected static function clearSessionData() {
 		setcookie( CustomerService::SESSION_KEY_USER_ID, '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN );

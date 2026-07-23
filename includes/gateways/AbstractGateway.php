@@ -3,8 +3,10 @@
 namespace UnzerPayments\Gateways;
 
 use UnzerPayments\Controllers\AdminController;
+use UnzerPayments\Controllers\ExpressController;
 use UnzerPayments\Main;
 use UnzerPayments\Services\CustomerService;
+use UnzerPayments\Services\ExpressCheckoutService;
 use UnzerPayments\Services\LogService;
 use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Util;
@@ -80,6 +82,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	const TRANSACTION_TYPE_CHARGE    = 'charge';
 
 	const SETTINGS_KEY_SAVE_INSTRUMENTS = 'save_instruments';
+    const SETTINGS_KEY_EXPRESS_OPTION = 'express_option';
 	/**
 	 * @var string
 	 */
@@ -88,6 +91,8 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	 * @var LogService
 	 */
 	protected $logger;
+
+    public static $haveDoneScriptsOnce = false;
 
 	/**
 	 * @var null|array
@@ -110,7 +115,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		$this->title       = $this->get_option( 'title' );
 		$this->description = $this->get_option( 'description' );
 		add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
-	}
+    }
 
 	protected function get_allowed_html_tags() {
 		$response                     = array_merge( wp_kses_allowed_html( 'post' ), self::ALLOWED_HTML );
@@ -118,10 +123,37 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		return $response;
 	}
 
+    public function has_at_least_one_express_checkout()
+    {
+        foreach (['ApplePayV2', 'Paypal', 'GooglePay'] as $expressMethod) {
+            $class = '\\UnzerPayments\\Gateways\\' . $expressMethod;
+            if (!class_exists($class)) {
+                continue;
+            }
+            $gateway = new $class;
+            if ($gateway->has_express_checkout()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function has_express_checkout()
+    {
+        if ($this->is_enabled()) {
+            if ($this->get_option( AbstractGateway::SETTINGS_KEY_EXPRESS_OPTION ) === 'yes') {
+                return true;
+            }
+        }
+        return false;
+    }
+
 	public function payment_scripts() {
-		if ( ! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
-			return;
-		}
+        if (!$this->has_at_least_one_express_checkout()) {
+            if (! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
+                return;
+            }
+        }
 
 		if ( ! $this->is_enabled() ) {
 			return;
@@ -448,6 +480,10 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	}
 
 	protected function addCheckoutAssets() {
+        if (self::$haveDoneScriptsOnce) {
+            return;
+        }
+
 		global $wp;
 		// TODO replace when minimum WP version is 6.5 (wp_enqueue_script_module)
 		add_filter(
@@ -474,11 +510,15 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		}
 
 		wp_register_script( 'woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', array( 'jquery' ), UNZER_VERSION, array( 'in_footer' => false ) );
+        wp_register_script( 'woocommerce_unzer_express', UNZER_PLUGIN_URL . '/assets/js/express.js', array( 'jquery' ), UNZER_VERSION, array( 'in_footer' => false ) );
+
 		// for separate api keys
 		$paylaterGateway           = new Invoice();
 		$installmentGateway        = new Installment();
 		$directDebitSecuredGateway = new DirectDebitSecured();
 		$googlePayGateway          = new GooglePay();
+        $applePayGateway           = new ApplePayV2();
+        $paypalGateway             = new PayPal();
 
 		wp_localize_script(
 			'woocommerce_unzer',
@@ -493,12 +533,27 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 				'publicKey_installment_chf_b2c'        => $installmentGateway->get_option( 'public_key_chf_b2c' ),
 				'publicKey_directdebitsecured_eur_b2c' => $directDebitSecuredGateway->get_option( 'public_key_eur_b2c' ),
 				'generic_error_message'                => __( 'An error occurred while processing your payment. Please try another payment method.', 'unzer-payments' ),
+                'generic_error_message_express'        => __( 'An error occurred while processing your request. Please try again.', 'unzer-payments' ),
 				'locale'                               => get_locale(),
 				'store_name'                           => get_bloginfo( 'name' ),
 				'store_country'                        => strtoupper( substr( get_option( 'woocommerce_default_country' ), 0, 2 ) ),
 				'is_order_pay'                         => self::isOrderPay() ? 'true' : 'false',
 				'currency'                             => get_woocommerce_currency(),
 				'google_pay_options'                   => $googlePayGateway->getPublicOptions(),
+                'applepay_options'                     => $applePayGateway->getPublicOptions(),
+                'urls'                                 => [
+                    'paypal'       => WC()->api_request_url(ExpressController::PAYPAL_EXPRESS_SLUG),
+                    'paypalReturn' => WC()->api_request_url(ExpressController::PAYPAL_EXPRESS_RETURN_SLUG),
+                    'googlePay'    => WC()->api_request_url(ExpressController::GOOGLE_PAY_EXPRESS_SLUG),
+                    'applePay'     => WC()->api_request_url(ExpressController::APPLE_PAY_EXPRESS_SLUG),
+                ],
+                'express'                              => [
+                    'is_express'             => (empty($_GET['isExpressCheckout']) || $_GET['isExpressCheckout'] !== 'true') ? false : true,
+                    'current_express_method' => WC()->session->get(ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD),
+                    'paypal'                 => $paypalGateway->has_express_checkout(),
+                    'googlepay'              => $googlePayGateway->has_express_checkout(),
+                    'applepay'               => $applePayGateway->has_express_checkout(),
+                ]
 			)
 		);
 		wp_localize_script(
@@ -509,6 +564,8 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 			)
 		);
 		wp_enqueue_script( 'woocommerce_unzer' );
+        wp_enqueue_script( 'woocommerce_unzer_express' );
+        self::$haveDoneScriptsOnce = true;
 	}
 
 	public static function isOrderPay() {
@@ -536,4 +593,5 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	public static function isUnzerPaymentMethod( string $paymentMethodId ) {
 		return substr( $paymentMethodId, 0, 6 ) === 'unzer_';
 	}
+
 }

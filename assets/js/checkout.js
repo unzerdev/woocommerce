@@ -12,6 +12,7 @@ const UnzerManager = {
         UnzerManager.initTimeout = setTimeout(
             function () {
                 UnzerManager.currency = unzer_parameters.currency;
+                UnzerManager.hideNoneExpressMethods();
                 UnzerManager.initCard();
                 UnzerManager.initDirectDebit();
                 UnzerManager.initDirectDebitSecured();
@@ -45,6 +46,16 @@ const UnzerManager = {
         } else {
             UnzerManager.error('EXCEPTIONAL ERROR');
             return null;
+        }
+    },
+
+    hideNoneExpressMethods() {
+        if (unzer_parameters.express.current_express_method != '' && unzer_parameters.express.is_express) {
+            document.querySelectorAll('.wc_payment_method').forEach((element) => {
+                if (!element.classList.contains('payment_method_' + unzer_parameters.express.current_express_method)) {
+                    element.style.display = 'none';
+                }
+            });
         }
     },
 
@@ -171,6 +182,9 @@ const UnzerManager = {
 
 
     initGooglePay() {
+        if (unzer_parameters.express.is_express) {
+            return;
+        }
 
         const options = unzer_parameters.google_pay_options;
         if (!options) {
@@ -229,6 +243,10 @@ const UnzerManager = {
     },
 
     initApplePay() {
+        if (unzer_parameters.express.is_express) {
+            return;
+        }
+
         UnzerManager.createApplePayButtonContainer();
         const unzerPaymentElement = document.getElementById('unzer-apple-pay-payment-component');
         if (unzerPaymentElement && unzerPaymentElement.setApplePayData) {
@@ -268,6 +286,9 @@ const UnzerManager = {
             'checkout_place_order_unzer_apple_pay_v2',
             function () {
                 if (document.getElementById('unzer-apple-pay-v2-id').value) {
+                    return true;
+                }
+                if (unzer_parameters.express.is_express) {
                     return true;
                 }
                 console.error('Apple Pay: Checkout triggered without payment data.');
@@ -415,6 +436,7 @@ const UnzerManager = {
         return selectedRadio.value;
     },
     renderCurrentPaymentMethod() {
+        this.hideNoneExpressMethods();
         const method = UnzerManager.getSelectedPaymentMethod();
         document.querySelectorAll('.unzer-ui-container').forEach(
             function (el) {
