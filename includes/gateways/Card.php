@@ -8,22 +8,24 @@ use UnzerPayments\Services\PaymentService;
 use UnzerPayments\Traits\SavePaymentInstrumentTrait;
 use UnzerPayments\Util;
 use UnzerSDK\Constants\RecurrenceTypes;
+use UnzerSDK\Resources\PaymentTypes\BasePaymentType;
 use UnzerSDK\Resources\TransactionTypes\Authorization;
 use UnzerSDK\Resources\TransactionTypes\Charge;
 use WC_Order;
+use WC_Payment_Token;
+use WC_Payment_Token_CC;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class Card extends AbstractGateway {
-
-
+class Card extends SubscriptionGateway {
 
 	use SavePaymentInstrumentTrait;
 
 	const GATEWAY_ID            = 'unzer_card';
 	const BLOCK_CLASS           = CardBlock::class;
+	public $paymentRecurrence   = null;
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Card::class;
 	public $method_title        = 'Unzer Credit Card';
 	public $method_description;
@@ -36,6 +38,11 @@ class Card extends AbstractGateway {
 		'refunds',
 	);
 
+	public function __construct() {
+		parent::__construct();
+
+		$this->maybe_init_subscriptions();
+	}
 
 	public function has_fields() {
 		return true;
@@ -135,11 +142,6 @@ class Card extends AbstractGateway {
 	}
 
 	public function process_payment( $order_id ) {
-		$this->logger->debug( 'start payment for #' . $order_id . ' with ' . self::GATEWAY_ID );
-		$return = array(
-			'result' => 'success',
-		);
-
 		// for saved payment instruments
 		$selectedSavedPaymentInstrument = Util::getNonceCheckedPostValue( static::GATEWAY_ID . '_payment_instrument' );
 		$isSavedPaymentInstrument       = ! empty( $selectedSavedPaymentInstrument );
@@ -147,31 +149,86 @@ class Card extends AbstractGateway {
 		$savePaymentInstrument          = ! empty( Util::getNonceCheckedPostValue( 'unzer-save-payment-instrument-' . $this->id ) );
 
 		WC()->session->set( 'save_payment_instrument', $savePaymentInstrument );
-		$transactionEditorFunction = null;
+
+		$order = wc_get_order( $order_id );
+
 		if ( $savePaymentInstrument || $isSavedPaymentInstrument ) {
+			$this->paymentRecurrence = RecurrenceTypes::ONE_CLICK;
+		}
+
+		if ( $this->is_payment_method_change( $order ) ) {
+			return $this->process_payment_method_change( $order, $cardId );
+		}
+
+		if ( $this->is_payment_for_subscription( $order ) ) {
+			return $this->process_payment_for_subscription( $order, $cardId );
+		}
+
+		return $this->process_payment_for_order( $order, $cardId );
+	}
+
+	public function process_payment_for_order( WC_Order $order, string $paymentTypeId ): array {
+		$this->logger->debug( 'start payment for #' . $order->get_id() . ' with ' . self::GATEWAY_ID );
+
+		$transactionEditorFunction = null;
+
+		if ( $this->paymentRecurrence ) {
 			/**
 			 * @param Charge|Authorization $transaction
 			 * @return void
 			 */
 			$transactionEditorFunction = function ( $transaction ) {
-				$transaction->setRecurrenceType( RecurrenceTypes::ONE_CLICK );
+				$transaction->setRecurrenceType( $this->paymentRecurrence );
 			};
 		}
 
 		if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
-			$transaction = ( new PaymentService() )->performAuthorizationForOrder( $order_id, $this, $cardId, $transactionEditorFunction );
+			$transaction = ( new PaymentService() )->performAuthorizationForOrder( $order->get_id(), $this, $paymentTypeId, $transactionEditorFunction );
 		} else {
-			$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $cardId, $transactionEditorFunction );
+			$transaction = ( new PaymentService() )->performChargeForOrder( $order->get_id(), $this, $paymentTypeId, $transactionEditorFunction );
 		}
-		$this->before_payment_redirect( $order_id );
+
+		$this->before_payment_redirect( $order->get_id() );
+
+		$return = array('result' => 'success');
+
 		if ( $transaction->getPayment()->getRedirectUrl() ) {
 			$return['redirect'] = $transaction->getPayment()->getRedirectUrl();
 		} elseif ( $transaction->isSuccess() ) {
-			$return['redirect'] = $this->get_confirm_url( $order_id );
+			$return['redirect'] = $this->get_confirm_url( $order->get_id() );
 		}
+
 		return $return;
 	}
 
+	public function process_payment_for_subscription( WC_Order $order, string $paymentTypeId ): array {
+		if ( empty( $this->settings ) ) {
+			$this->init_settings();
+		}
+
+		$this->settings['transaction_type'] = AbstractGateway::TRANSACTION_TYPE_CHARGE;
+		$this->paymentRecurrence = RecurrenceTypes::SCHEDULED;
+
+		return $this->process_payment_for_order( $order, $paymentTypeId );
+	}
+
+	/**
+	 * @param \UnzerSDK\Resources\PaymentTypes\Card $paymentType
+	 */
+	public function create_payment_token( BasePaymentType $paymentType ): WC_Payment_Token {
+		$token = new WC_Payment_Token_CC();
+		$token->set_gateway_id( $this->id );
+		$token->set_token( $paymentType->getId() );
+		$token->set_card_type( strtolower( $paymentType->getBrand() ) ?: 'card' );
+		$token->set_last4( substr( $paymentType->getNumber(), -4 ) );
+
+		if ( preg_match( '/^(\d{2})\/(\d{4})$/', $paymentType->getExpiryDate() ?? '', $expiryParts ) ) {
+			$token->set_expiry_month( $expiryParts[1] );
+			$token->set_expiry_year( $expiryParts[2] );
+		}
+
+		return $token;
+	}
 
 	/**
 	 * @param WC_Order $order
