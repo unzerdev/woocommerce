@@ -8,9 +8,9 @@
  * Version: 2.2.0
  * License: Apache-2.0
  * Requires at least: 4.5
- * Tested up to: 7.0
+ * Tested up to: 7.1
  * WC requires at least: 6.0
- * WC tested up to: 10.9
+ * WC tested up to: 11.0
  * Text Domain: unzer-payments
  */
 
