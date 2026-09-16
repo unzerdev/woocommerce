@@ -95,12 +95,8 @@ const ExpressButtons = {
         if ( ! ExpressButtons.attemptToPlaceButton()) {
             return false;
         }
-        Promise.all([
-            customElements.whenDefined('unzer-payment'),
-            customElements.whenDefined('unzer-google-pay'),
-            customElements.whenDefined('unzer-paypal-express'),
-            customElements.whenDefined('unzer-apple-pay'),
-        ]).then(() => {
+
+        customElements.whenDefined('unzer-payment').then(() => {
             const unzerExpressPayment = document.querySelector(
                 '.unzer-express-payment'
             );

@@ -521,7 +521,7 @@ const UnzerManager = {
     _setCustomerDataToPaymentComponent(selector) {
         const paymentElement = document.querySelector(selector);
         if (paymentElement) {
-            Promise.all([customElements.whenDefined('unzer-payment')]).then(
+            customElements.whenDefined('unzer-payment').then(
                 () => {
                     try {
                         const customerData = JSON.parse(atob(paymentElement.getAttribute('data-customer')));

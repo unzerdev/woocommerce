@@ -32,7 +32,7 @@ window.unzerInitiatePaymentMethod = (
     });
     if (paymentComponent) {
         paymentComponent.style.display = '';
-        Promise.all([customElements.whenDefined('unzer-payment')]).then(
+        customElements.whenDefined('unzer-payment').then(
             () => {
                 try {
 
