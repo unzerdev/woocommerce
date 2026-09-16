@@ -13,7 +13,6 @@ class Wero extends AbstractGateway {
 
 	const GATEWAY_ID            = 'unzer_wero';
 	const BLOCK_CLASS           = WeroBlock::class;
-	public $allowedCountries    = array( 'DE' );
 	public $allowedCurrencies   = array( 'EUR' );
 	public $isAllowedForB2B     = false;
 	public $paymentTypeResource = \UnzerSDK\Resources\PaymentTypes\Wero::class;
