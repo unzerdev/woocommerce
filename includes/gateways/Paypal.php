@@ -2,30 +2,41 @@
 
 namespace UnzerPayments\Gateways;
 
+use Exception;
+use Throwable;
 use UnzerPayments\Controllers\CheckoutController;
+use UnzerPayments\Controllers\SubscriptionController;
 use UnzerPayments\Gateways\Blocks\PaypalBlock;
 use UnzerPayments\Main;
 use UnzerPayments\Services\CustomerService;
 use UnzerPayments\Services\ExpressCheckoutService;
 use UnzerPayments\Services\OrderService;
 use UnzerPayments\Services\PaymentService;
+use UnzerPayments\Tokens\PaypalPaymentToken;
 use UnzerPayments\Traits\SavePaymentInstrumentTrait;
 use UnzerPayments\Util;
+use UnzerSDK\Constants\RecurrenceTypes;
+use UnzerSDK\Exceptions\UnzerApiException;
+use UnzerSDK\Resources\PaymentTypes\BasePaymentType;
 use UnzerSDK\Resources\PaymentTypes\Paypal as PaypalResource;
 use UnzerSDK\Resources\TransactionTypes\Authorization;
 use UnzerSDK\Resources\TransactionTypes\Charge;
+use WC_Order;
+use WC_Payment_Token;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class Paypal extends AbstractGateway {
+class Paypal extends SubscriptionGateway {
 
-    use SavePaymentInstrumentTrait;
+	use SavePaymentInstrumentTrait;
 
 	public $paymentTypeResource = PaypalResource::class;
 	const GATEWAY_ID            = 'unzer_paypal';
 	const BLOCK_CLASS           = PaypalBlock::class;
+	const COMPLETION_ROUTE_SLUG = 'unzer_paypal_subscription';
+	public $paymentRecurrence   = null;
 	public $method_title        = 'Unzer PayPal';
 	public $method_description;
 	public $title       = 'PayPal';
@@ -36,6 +47,19 @@ class Paypal extends AbstractGateway {
 		'products',
 		'refunds',
 	);
+
+	public function __construct() {
+		parent::__construct();
+
+		$this->maybe_init_subscriptions();
+	}
+
+	public function register_subscription_hooks(): void {
+		parent::register_subscription_hooks();
+
+		add_filter( 'woocommerce_payment_token_class', array( PaypalPaymentToken::class, 'get_token_class' ), 10, 2 );
+		add_action(	'woocommerce_api_' . self::COMPLETION_ROUTE_SLUG, array( new SubscriptionController( $this ), 'completePaypalSubscription' ) );
+	}
 
 	public function has_fields() {
 		return $this->isSaveInstruments();
@@ -112,43 +136,120 @@ class Paypal extends AbstractGateway {
 	}
 
 	public function process_payment( $order_id ) {
-
-        if (WC()->session->get(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID)) {
-            try {
-                return $this->payExpress(
-                    WC()->session->get(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID),
-                    $order_id
-                );
-            } catch (\Throwable $e) {
-                $this->logger->error('Express CO failed: ' . $e->getMessage());
-                WC()->session->set(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID, false);
-                // continue with default paypal flow
-            }
-        }
-		$return                 = array(
-			'result' => 'success',
-		);
 		$savedPaymentInstrument = Util::getNonceCheckedPostValue( 'unzer_paypal_payment_instrument' );
 		$paymentMean            = empty( $savedPaymentInstrument ) ? PaypalResource::class : $savedPaymentInstrument;
+		$savePaymentInstrument  = ! empty( Util::getNonceCheckedPostValue( 'unzer-save-payment-instrument-' . $this->id ) );
 
-		$savePaymentInstrument = ! empty( Util::getNonceCheckedPostValue( 'unzer-save-payment-instrument-' . $this->id ) );
 		WC()->session->set( 'save_payment_instrument', $savePaymentInstrument );
-		$transactionEditorFunction = null;
 
-		if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
-			$transaction = ( new PaymentService() )->performAuthorizationForOrder( $order_id, $this, $paymentMean, $transactionEditorFunction );
-		} else {
-			$transaction = ( new PaymentService() )->performChargeForOrder( $order_id, $this, $paymentMean, $transactionEditorFunction );
+		$order = wc_get_order( $order_id );
+
+		if ( $this->is_payment_method_change( $order ) ) {
+			return $this->process_payment_method_change( $order, $paymentMean );
 		}
 
-		$this->before_payment_redirect( $order_id );
+		if ( $this->is_payment_for_subscription( $order ) ) {
+			return $this->process_payment_for_subscription( $order, $paymentMean );
+		}
+
+		if ( WC()->session->get( ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID ) ) {
+			try {
+				return $this->payExpress(
+					WC()->session->get( ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID ),
+					$order_id
+				);
+			} catch ( Throwable $e ) {
+				$this->logger->error( 'Express CO failed: ' . $e->getMessage() );
+				WC()->session->set( ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID, false );
+			}
+		}
+
+		return $this->process_payment_for_order( $order, $paymentMean );
+	}
+
+	public function process_payment_for_order( WC_Order $order, string $paymentTypeId ): array {
+		$transactionEditorFunction = null;
+
+		if ( $this->paymentRecurrence ) {
+			$transactionEditorFunction = function ( $transaction ) {
+				$transaction->setRecurrenceType( $this->paymentRecurrence );
+			};
+		}
+
+		if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
+			$transaction = ( new PaymentService() )->performAuthorizationForOrder( $order->get_id(), $this, $paymentTypeId, $transactionEditorFunction );
+		} else {
+			$transaction = ( new PaymentService() )->performChargeForOrder( $order->get_id(), $this, $paymentTypeId, $transactionEditorFunction );
+		}
+
+		$this->before_payment_redirect( $order->get_id() );
+
+		$return = array( 'result' => 'success' );
 
 		if ( $transaction->getPayment()->getRedirectUrl() ) {
 			$return['redirect'] = $transaction->getPayment()->getRedirectUrl();
 		} elseif ( $transaction->isSuccess() ) {
-			$return['redirect'] = $this->get_confirm_url( $order_id );
+			$return['redirect'] = $this->get_confirm_url( $order->get_id() );
 		}
+
 		return $return;
+	}
+
+	public function process_payment_for_subscription( WC_Order $order, string $paymentTypeId ): array {
+		$nonce = wp_create_nonce( "{$this->id}_subscription_{$order->get_id()}_{$paymentTypeId}" );
+		$params = array( 'id' => $order->get_id(), 'type' => $paymentTypeId,	'_wpnonce' => $nonce );
+		$returnUrl = add_query_arg( $params, WC()->api_request_url( self::COMPLETION_ROUTE_SLUG ) );
+
+		try {
+			$unzer = ( new PaymentService() )->getUnzerManager( $this );
+
+			if ( $paymentTypeId === PaypalResource::class ) {
+				$paymentTypeId = $unzer->createPaymentType( new $paymentTypeId() )->getId();
+			}
+
+			$recurring = $unzer->activateRecurringPayment( $paymentTypeId, $returnUrl, RecurrenceTypes::SCHEDULED );
+
+			if ( $recurring->isSuccess() && ! $recurring->getRedirectUrl() ) {
+				return array(
+					'result'   => 'success',
+					'redirect' => $returnUrl,
+				);
+			}
+
+			if ( $recurring->isPending() && $recurring->getRedirectUrl() ) {
+				return array(
+					'result'   => 'success',
+					'redirect' => $recurring->getRedirectUrl(),
+				);
+			}
+
+			throw new Exception( 'Recurring payment setup did not succeed.' );
+		} catch ( Throwable $e ) {
+			$message = $e instanceof UnzerApiException ? $e->getMerchantMessage() : $e->getMessage();
+
+			$this->logger->error(
+				'Subscription payment setup failed',
+				array(
+					'message' => $message,
+					'orderId' => $order->get_id(),
+				),
+			);
+			wc_add_notice( __( 'Payment error', 'unzer-payments' ), 'error' );
+
+			return array( 'result' => 'failure' );
+		}
+	}
+
+	/**
+	 * @param \UnzerSDK\Resources\PaymentTypes\Paypal $paymentType
+	 */
+	public function create_payment_token( BasePaymentType $paymentType ): WC_Payment_Token {
+		$token = new PaypalPaymentToken();
+		$token->set_gateway_id( $this->id );
+		$token->set_token( $paymentType->getId() );
+		$token->set_email( $paymentType->getEmail() );
+
+		return $token;
 	}
 
     public function payExpress( $unzer_payment_id, $order_id)
