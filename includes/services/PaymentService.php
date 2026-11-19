@@ -94,6 +94,9 @@ class PaymentService {
 			throw new Exception( 'empty order id for performChargeOnAuthorization' );
 		}
 		$order = wc_get_order( $orderId );
+		if ( ! $order ) {
+			throw new Exception( 'Order not found' );
+		}
 
 		$paymentId = $order->get_meta( Main::ORDER_META_KEY_PAYMENT_ID, true );
 		if ( empty( $paymentId ) ) {
@@ -185,13 +188,13 @@ class PaymentService {
 				if ( $transactionEditor !== null ) {
 					$transactionEditor( $authorization );
 				}
-                $this->logger->debug(
-                    'calling authorization #' . $orderId . ' with ' . $order->get_payment_method(),
-                    array(
-                        'authorization'     => $authorization,
-                        'metadata'   => ( new ShopService() )->getMetadata()
-                    )
-                );
+				$this->logger->debug(
+					'calling authorization #' . $orderId . ' with ' . $order->get_payment_method(),
+					array(
+						'authorization' => $authorization,
+						'metadata'      => ( new ShopService() )->getMetadata(),
+					)
+				);
 				$transactionObject = $unzer->performAuthorization( $authorization, $paymentType, $customer, ( new ShopService() )->getMetadata(), $basket );
 				$order->update_meta_data( Main::ORDER_META_KEY_AUTHORIZATION_ID, $transactionObject->getId() );
 			} else {
@@ -200,13 +203,13 @@ class PaymentService {
 				if ( $transactionEditor !== null ) {
 					$transactionEditor( $charge );
 				}
-                $this->logger->debug(
-                    'calling charge #' . $orderId . ' with ' . $order->get_payment_method(),
-                    array(
-                        'charge'     => $charge,
-                        'metadata'   => ( new ShopService() )->getMetadata()
-                    )
-                );
+				$this->logger->debug(
+					'calling charge #' . $orderId . ' with ' . $order->get_payment_method(),
+					array(
+						'charge'   => $charge,
+						'metadata' => ( new ShopService() )->getMetadata(),
+					)
+				);
 				$transactionObject = $unzer->performCharge( $charge, $paymentType, $customer, ( new ShopService() )->getMetadata(), $basket );
 				$order->update_meta_data( Main::ORDER_META_KEY_CHARGE_ID, $transactionObject->getId() );
 			}
@@ -330,7 +333,9 @@ class PaymentService {
 			$errorMessages[] = $e->getMessage();
 		}
 		throw new Exception(
+			/* translators: %s: formatted maximum refund amount including currency */
 			( $maxCaptureRefund > 0 ? wp_kses_post( sprintf( __( 'Unable to do refund: Maximum amount for single refund is %s.', 'unzer-payments' ), html_entity_decode( wp_strip_all_tags( wc_price( $maxCaptureRefund, array( 'currency' => $payment->getCurrency() ) ) ) ) ) ) : '' ) .
+			/* translators: %s: number of partial refunds that are still possible */
 			( $numberOfRefundsPossible > 1 ? ' ' . esc_html( sprintf( __( 'However, you may refund in up to %s smaller chunks.', 'unzer-payments' ), $numberOfRefundsPossible ) ) : '' ) .
 			( $errorMessages ? "\n\n" . esc_html__( 'Original error message: ', 'unzer-payments' ) . esc_html( implode( ' ', $errorMessages ) ) : '' )
 		);
@@ -382,5 +387,6 @@ class PaymentService {
 		foreach ( Main::ORDER_META_KEYS as $metaKey ) {
 			$order->delete_meta_data( $metaKey );
 		}
+		$order->save();
 	}
 }

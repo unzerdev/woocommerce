@@ -14,9 +14,9 @@ use UnzerSDK\Resources\PaymentTypes\SepaDirectDebit;
 trait SavePaymentInstrumentTrait {
 
 	public function isSaveInstruments(): bool {
-        if (WC()->session->get(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID)) {
-            return false;
-        }
+		if ( WC()->session->get( ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID ) ) {
+			return false;
+		}
 		return $this->get_option( AbstractGateway::SETTINGS_KEY_SAVE_INSTRUMENTS ) === 'yes' && is_user_logged_in();
 	}
 
@@ -94,15 +94,19 @@ trait SavePaymentInstrumentTrait {
 	}
 
 	public function deleteAllSavedPaymentInstruments() {
-		global $wpdb;
-
-		$results = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . $wpdb->usermeta . ' WHERE meta_key = %s', Main::USER_META_KEY_PAYMENT_INSTRUMENTS ) );
-		foreach ( $results as $result ) {
-			$data = unserialize( $result->meta_value );
+		$userIds = get_users(
+			array(
+				'blog_id'  => 0, // all sites of a multisite network, like the previous table-wide query.
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- only runs when a merchant turns off saved payment instruments.
+				'meta_key' => Main::USER_META_KEY_PAYMENT_INSTRUMENTS,
+				'fields'   => 'ID',
+			)
+		);
+		foreach ( $userIds as $userId ) {
+			$data = get_user_meta( $userId, Main::USER_META_KEY_PAYMENT_INSTRUMENTS, true );
 			if ( is_array( $data ) && ! empty( $data[ $this->paymentTypeResource ] ) ) {
 				unset( $data[ $this->paymentTypeResource ] );
-				$data = serialize( $data );
-				$wpdb->query( $wpdb->prepare( 'UPDATE ' . $wpdb->usermeta . ' SET meta_value = %s WHERE umeta_id = %d', $data, $result->umeta_id ) );
+				update_user_meta( $userId, Main::USER_META_KEY_PAYMENT_INSTRUMENTS, $data );
 			}
 		}
 	}

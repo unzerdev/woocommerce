@@ -2,39 +2,22 @@
 
 namespace UnzerPayments\Services;
 
-use Exception;
-
 class LogService {
-	private $logDir;
+	const SOURCE = 'unzer';
 
-	public function __construct() {
-		if ( defined( 'WC_LOG_DIR' ) ) {
-			$this->logDir = WC_LOG_DIR;
-		} else {
-			$this->logDir = ABSPATH . 'wc-content/uploads/';
-		}
-	}
-
-	private function getLogFile( $level ) {
-		return $this->logDir . 'unzer-' . $level . '-' . gmdate( 'Y-m-d' ) . '.log';
-	}
+	/**
+	 * @var \WC_Logger|null
+	 */
+	private static $logger;
 
 	public function log( $message, $level = 'debug', $data = null ) {
-		try {
-			$serializedData = serialize( $data );
-		} catch ( Exception $e ) {
-			if ( is_array( $data ) ) {
-				foreach ( $data as $key => $value ) {
-					try {
-						$serializedData[ $key ] = serialize( $value );
-					} catch ( Exception $e ) {
-						$serializedData[ $key ] = gettype( $value );
-					}
-				}
-			}
-			$serializedData = serialize( $serializedData );
+		if ( ! class_exists( '\WC_Logger' ) ) {
+			return;
 		}
-		file_put_contents( $this->getLogFile( $level ), '[' . gmdate( 'Y-m-d H:i:s' ) . '] ' . $message . ' | ' . $serializedData . "\n", 8 );
+		if ( self::$logger === null ) {
+			self::$logger = new \WC_Logger( null, 'debug' );
+		}
+		self::$logger->log( $level, $message . ' | ' . $this->serializeData( $data ), array( 'source' => self::SOURCE ) );
 	}
 
 	public function debug( $message, $data = null ) {
@@ -42,12 +25,30 @@ class LogService {
 	}
 
 	public function warning( $message, $data = null ) {
-		$this->log( '⚠ ' . $message, 'debug', $data );
 		$this->log( $message, 'warning', $data );
 	}
 
 	public function error( $message, $data = null ) {
-		$this->log( '💣 ' . $message, 'debug', $data );
 		$this->log( $message, 'error', $data );
+	}
+
+	private function serializeData( $data ): string {
+		try {
+			return serialize( $data );
+		} catch ( \Throwable $e ) {
+			$parts = array();
+			if ( is_array( $data ) ) {
+				foreach ( $data as $key => $value ) {
+					try {
+						$parts[ $key ] = serialize( $value );
+					} catch ( \Throwable $e ) {
+						$parts[ $key ] = gettype( $value );
+					}
+				}
+			} else {
+				$parts[] = gettype( $data );
+			}
+			return serialize( $parts );
+		}
 	}
 }

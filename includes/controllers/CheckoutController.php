@@ -3,7 +3,7 @@
 namespace UnzerPayments\Controllers;
 
 use Exception;
-use UnzerPayments\Gateways\AbstractGateway;
+
 use UnzerPayments\Gateways\ApplePayV2;
 use UnzerPayments\Gateways\GooglePay;
 use UnzerPayments\Gateways\Paypal;
@@ -36,32 +36,37 @@ class CheckoutController {
 		}
 		if ( empty( $orderId ) ) {
 			$logger->debug( 'order id from get query' );
-			$orderId = (int) ( $_GET['unzer_confirm_order_id'] ?? 0 );
+			$orderId = $this->getOrderIdFromReturnUrl();
 		}
-		if ( empty( $orderId ) ) {
-			$logger->error( 'empty order id for confirmation endpoint' );
-			wp_redirect( wc_get_checkout_url() );
+		$order = empty( $orderId ) ? false : wc_get_order( $orderId );
+		if ( ! $order ) {
+			$logger->error( 'no valid order for confirmation endpoint' );
+			wp_safe_redirect( wc_get_checkout_url() );
 			die;
 		}
-		$order              = wc_get_order( $orderId );
 		$unzerPluginManager = Main::getInstance();
 		$paymentGateway     = $unzerPluginManager->getPaymentGateway( $order->get_payment_method() );
 		if ( ! $paymentGateway ) {
-			$order->update_status( 'failed' );
+			// Not an Unzer order
 			$logger->error( 'payment method unknown', $order->get_payment_method() );
 			wc_add_notice( __( 'Payment error', 'unzer-payments' ), 'error' );
-			wp_redirect( wc_get_checkout_url() );
+			wp_safe_redirect( wc_get_checkout_url() );
 			die;
 		}
 		$paymentService = new PaymentService();
 		$transaction    = $paymentService->getChargeOrAuthorizationFromOrder( $orderId, $paymentGateway );
 
 		if ( ! $transaction ) {
+			if ( $order->is_paid() ) {
+				$logger->warning( 'no authorization/charge found for an already paid order, order left unchanged', array( 'order' => $orderId ) );
+				wp_safe_redirect( $order->get_checkout_order_received_url() );
+				die;
+			}
 			$order->update_status( 'failed' );
 			$paymentService->removeTransactionMetaData( $orderId );
 			$logger->error( 'no authorization/charge found', array( 'order' => $orderId ) );
 			wc_add_notice( __( 'Payment error', 'unzer-payments' ), 'error' );
-			wp_redirect( wc_get_checkout_url() );
+			wp_safe_redirect( wc_get_checkout_url() );
 			die;
 		}
 
@@ -77,7 +82,7 @@ class CheckoutController {
 			);
 			$order->update_status( 'failed' );
 			wc_add_notice( __( 'Payment cancelled', 'unzer-payments' ), 'error' );
-			wp_redirect( wc_get_checkout_url() );
+			wp_safe_redirect( wc_get_checkout_url() );
 			die;
 		}
 
@@ -87,19 +92,19 @@ class CheckoutController {
 			}
 		}
 
-        if ((string)WC()->session->get(ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD) !== '') {
-            if (in_array($order->get_payment_method(), [Paypal::GATEWAY_ID, GooglePay::GATEWAY_ID, ApplePayV2::GATEWAY_ID])) {
-                $order->set_payment_method_title($order->get_payment_method_title() . ' (Express)');
-                $order->save();
-            }
-        }
+		if ( (string) WC()->session->get( ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD ) !== '' ) {
+			if ( in_array( $order->get_payment_method(), array( Paypal::GATEWAY_ID, GooglePay::GATEWAY_ID, ApplePayV2::GATEWAY_ID ) ) ) {
+				$order->set_payment_method_title( $order->get_payment_method_title() . ' (Express)' );
+				$order->save();
+			}
+		}
 
 		$orderService = new OrderService();
 		try {
 			$orderService->processPaymentStatus( $transaction, $order );
 			self::clearSessionData();
-            self::resetExpressCheckoutSessionData();
-			wp_redirect( $order->get_checkout_order_received_url() );
+			self::resetExpressCheckoutSessionData();
+			wp_safe_redirect( $order->get_checkout_order_received_url() );
 		} catch ( Exception $e ) {
 			$logger->error(
 				'exception in trying to process payment status',
@@ -111,11 +116,27 @@ class CheckoutController {
 			);
 			$order->update_status( 'failed' );
 			wc_add_notice( __( 'Payment error', 'unzer-payments' ), 'error' );
-			wp_redirect( wc_get_checkout_url() );
+			wp_safe_redirect( wc_get_checkout_url() );
 		}
 		WC()->session->set( 'save_payment_instrument', false );
-        self::resetExpressCheckoutSessionData();
+		self::resetExpressCheckoutSessionData();
 		die;
+	}
+
+	private function getOrderIdFromReturnUrl(): int {
+        // URL parameters from outside, no nonce check
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		$orderId  = isset( $_GET['unzer_confirm_order_id'] ) ? absint( wp_unslash( $_GET['unzer_confirm_order_id'] ) ) : 0;
+		$orderKey = isset( $_GET['unzer_confirm_order_key'] ) ? sanitize_text_field( wp_unslash( $_GET['unzer_confirm_order_key'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		if ( ! $orderId || $orderKey === '' ) {
+			return 0;
+		}
+		$order = wc_get_order( $orderId );
+		if ( ! $order || ! hash_equals( (string) $order->get_order_key(), $orderKey ) ) {
+			return 0;
+		}
+		return $orderId;
 	}
 
 	public function getUnzerCustomerData() {
@@ -145,7 +166,7 @@ class CheckoutController {
 	 */
 	public static function checkoutSuccess( $order ) {
 		self::clearSessionData();
-        self::resetExpressCheckoutSessionData();
+		self::resetExpressCheckoutSessionData();
 		( new OrderService() )->printPaymentInstructionsHtml( $order );
 	}
 
@@ -155,13 +176,13 @@ class CheckoutController {
 		die;
 	}
 
-    public static function resetExpressCheckoutSessionData() {
-        WC()->session->set(ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD, false);
-        WC()->session->set(ExpressCheckoutService::SESSION_GOOGLE_PAYMENT_TYPE_ID, false);
-        WC()->session->set(ExpressCheckoutService::SESSION_APPLEPAY_PAYMENT_TYPE_ID, false);
-        WC()->session->set(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID, false);
-        WC()->session->set(ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_TYPE_ID, false);
-    }
+	public static function resetExpressCheckoutSessionData() {
+		WC()->session->set( ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD, false );
+		WC()->session->set( ExpressCheckoutService::SESSION_GOOGLE_PAYMENT_TYPE_ID, false );
+		WC()->session->set( ExpressCheckoutService::SESSION_APPLEPAY_PAYMENT_TYPE_ID, false );
+		WC()->session->set( ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_ID, false );
+		WC()->session->set( ExpressCheckoutService::SESSION_PAYPAL_PAYMENT_TYPE_ID, false );
+	}
 
 	protected static function clearSessionData() {
 		setcookie( CustomerService::SESSION_KEY_USER_ID, '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN );

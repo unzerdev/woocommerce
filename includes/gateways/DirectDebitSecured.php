@@ -57,6 +57,7 @@ class DirectDebitSecured extends AbstractGateway {
 		 <input type="hidden" id="unzer-direct-debit-secured-id" name="unzer-direct-debit-secured-id" value=""/>
 		 <input type="hidden" id="unzer-direct-debit-secured-customer-id" name="unzer-direct-debit-secured-customer-id" value=""/>
 		 <input type="hidden" id="unzer-direct-debit-secured-risk-id" name="unzer-direct-debit-secured-risk-id" value=""/>
+		 <input type="hidden" id="unzer-direct-debit-secured-amount" name="unzer-direct-debit-secured-amount" value="' . esc_attr( $this->get_amount() ) . '" />
             <div class="unzer-ui-container"></div>
             <template class="unzer-ui-template">
                 <unzer-payment

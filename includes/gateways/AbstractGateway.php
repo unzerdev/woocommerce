@@ -82,7 +82,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	const TRANSACTION_TYPE_CHARGE    = 'charge';
 
 	const SETTINGS_KEY_SAVE_INSTRUMENTS = 'save_instruments';
-    const SETTINGS_KEY_EXPRESS_OPTION = 'express_option';
+	const SETTINGS_KEY_EXPRESS_OPTION   = 'express_option';
 	/**
 	 * @var string
 	 */
@@ -92,7 +92,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	 */
 	protected $logger;
 
-    public static $haveDoneScriptsOnce = false;
+	public static $haveDoneScriptsOnce = false;
 
 	/**
 	 * @var null|array
@@ -107,15 +107,17 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		$this->plugin_id = 'unzer-payments';
 		$this->init_settings();
 		if ( $this->get_public_key() && $this->get_private_key() ) {
+			/* translators: %s: URL of the Unzer API settings page */
 			$this->method_description = sprintf( __( 'The Unzer API settings can be adjusted <a href="%s">here</a>', 'unzer-payments' ), admin_url( 'admin.php?page=wc-settings&tab=checkout&section=unzer_general' ) );
 		} else {
+			/* translators: %s: URL of the Unzer API settings page */
 			$this->method_description = '<div class="error inline" style="padding:10px;">' . sprintf( __( 'To start using Unzer payment methods, please enter your credentials first. <br><a href="%s" class="button-primary">API settings</a>', 'unzer-payments' ), admin_url( 'admin.php?page=wc-settings&tab=checkout&section=unzer_general' ) ) . '</div>';
 		}
 		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
 		$this->title       = $this->get_option( 'title' );
 		$this->description = $this->get_option( 'description' );
 		add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
-    }
+	}
 
 	protected function get_allowed_html_tags() {
 		$response                     = array_merge( wp_kses_allowed_html( 'post' ), self::ALLOWED_HTML );
@@ -123,37 +125,36 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		return $response;
 	}
 
-    public function has_at_least_one_express_checkout()
-    {
-        foreach (['ApplePayV2', 'Paypal', 'GooglePay'] as $expressMethod) {
-            $class = '\\UnzerPayments\\Gateways\\' . $expressMethod;
-            if (!class_exists($class)) {
-                continue;
-            }
-            $gateway = new $class;
-            if ($gateway->has_express_checkout()) {
-                return true;
-            }
-        }
-        return false;
-    }
+	public function has_at_least_one_express_checkout() {
+		foreach ( array( 'ApplePayV2', 'Paypal', 'GooglePay' ) as $expressMethod ) {
+			$class = '\\UnzerPayments\\Gateways\\' . $expressMethod;
+			if ( ! class_exists( $class ) ) {
+				continue;
+			}
+			$gateway = new $class();
+			if ( $gateway->has_express_checkout() ) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-    public function has_express_checkout()
-    {
-        if ($this->is_enabled()) {
-            if ($this->get_option( AbstractGateway::SETTINGS_KEY_EXPRESS_OPTION ) === 'yes') {
-                return true;
-            }
-        }
-        return false;
-    }
+	public function has_express_checkout() {
+		if ( $this->is_enabled() ) {
+			if ( $this->get_option( self::SETTINGS_KEY_EXPRESS_OPTION ) === 'yes' ) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	public function payment_scripts() {
-        if (!$this->has_at_least_one_express_checkout()) {
-            if (! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
-                return;
-            }
-        }
+		if ( ! $this->has_at_least_one_express_checkout() ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only flag that only decides whether scripts are enqueued.
+			if ( ! is_cart() && ! is_checkout() && ! isset( $_GET['pay_for_order'] ) ) {
+				return;
+			}
+		}
 
 		if ( ! $this->is_enabled() ) {
 			return;
@@ -322,11 +323,23 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		}
 	}
 
+	/**
+	 * @param int|\WC_Order|null $order_id
+	 */
 	public function get_confirm_url( $order_id = null ): string {
 		$url = WC()->api_request_url( static::CONFIRMATION_ROUTE_SLUG );
 		if ( $order_id !== null ) {
-			$separator = strpos( $url, '?' ) === false ? '?' : '&';
-			$url      .= $separator . 'unzer_confirm_order_id=' . $order_id;
+			$order = $order_id instanceof \WC_Order ? $order_id : wc_get_order( $order_id );
+			if ( $order ) {
+				// The order key lets the confirmation endpoint verify the order id when the session is gone.
+				$url = add_query_arg(
+					array(
+						'unzer_confirm_order_id'  => $order->get_id(),
+						'unzer_confirm_order_key' => rawurlencode( $order->get_order_key() ),
+					),
+					$url
+				);
+			}
 		}
 		return $url;
 	}
@@ -363,7 +376,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
             <tr valign="top" class="unzer-alert-info-row">
                 <td colspan="2">
                     <div class="unzer-alert-info">
-                        ' . esc_html__( 'In the section below you may enter additional key pairs. If you leave fields empty, the main key pair will be used by default.' ) . '
+                        ' . esc_html__( 'In the section below you may enter additional key pairs. If you leave fields empty, the main key pair will be used by default.', 'unzer-payments' ) . '
                     </div>
                 </td>
             </tr>
@@ -472,7 +485,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		global $wp;
 		$orderId  = $this->isOrderPay() ? (int) $wp->query_vars['order-pay'] : null;
 		$customer = ( new CustomerService() )->getCustomerFromSession( $this, $orderId );
-		return $customer !== null ? json_encode( $customer->expose() ) : '';
+		return $customer !== null ? wp_json_encode( $customer->expose() ) : '';
 	}
 
 	protected function get_checkout_customer_json_encoded() {
@@ -480,9 +493,9 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	}
 
 	protected function addCheckoutAssets() {
-        if (self::$haveDoneScriptsOnce) {
-            return;
-        }
+		if ( self::$haveDoneScriptsOnce ) {
+			return;
+		}
 
 		global $wp;
 		// TODO replace when minimum WP version is 6.5 (wp_enqueue_script_module)
@@ -494,6 +507,7 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 					return $tag;
 				}
 				// change the script tag by adding type="module" and return it.
+				// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- the script is enqueued; this filter only rewrites its tag to type="module".
 				$tag = '<script type="module" src="' . esc_url( $src ) . '"></script>';
 				return $tag;
 			},
@@ -510,15 +524,15 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 		}
 
 		wp_register_script( 'woocommerce_unzer', UNZER_PLUGIN_URL . '/assets/js/checkout.js', array( 'jquery' ), UNZER_VERSION, array( 'in_footer' => false ) );
-        wp_register_script( 'woocommerce_unzer_express', UNZER_PLUGIN_URL . '/assets/js/express.js', array( 'jquery' ), UNZER_VERSION, array( 'in_footer' => false ) );
+		wp_register_script( 'woocommerce_unzer_express', UNZER_PLUGIN_URL . '/assets/js/express.js', array( 'woocommerce_unzer' ), UNZER_VERSION, array( 'in_footer' => false ) );
 
 		// for separate api keys
 		$paylaterGateway           = new Invoice();
 		$installmentGateway        = new Installment();
 		$directDebitSecuredGateway = new DirectDebitSecured();
 		$googlePayGateway          = new GooglePay();
-        $applePayGateway           = new ApplePayV2();
-        $paypalGateway             = new PayPal();
+		$applePayGateway           = new ApplePayV2();
+		$paypalGateway             = new PayPal();
 
 		wp_localize_script(
 			'woocommerce_unzer',
@@ -533,27 +547,29 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 				'publicKey_installment_chf_b2c'        => $installmentGateway->get_option( 'public_key_chf_b2c' ),
 				'publicKey_directdebitsecured_eur_b2c' => $directDebitSecuredGateway->get_option( 'public_key_eur_b2c' ),
 				'generic_error_message'                => __( 'An error occurred while processing your payment. Please try another payment method.', 'unzer-payments' ),
-                'generic_error_message_express'        => __( 'An error occurred while processing your request. Please try again.', 'unzer-payments' ),
+				'generic_error_message_express'        => __( 'An error occurred while processing your request. Please try again.', 'unzer-payments' ),
 				'locale'                               => get_locale(),
+				'nonce'                                => Util::getNonce(),
 				'store_name'                           => get_bloginfo( 'name' ),
 				'store_country'                        => strtoupper( substr( get_option( 'woocommerce_default_country' ), 0, 2 ) ),
 				'is_order_pay'                         => self::isOrderPay() ? 'true' : 'false',
 				'currency'                             => get_woocommerce_currency(),
 				'google_pay_options'                   => $googlePayGateway->getPublicOptions(),
-                'applepay_options'                     => $applePayGateway->getPublicOptions(),
-                'urls'                                 => [
-                    'paypal'       => WC()->api_request_url(ExpressController::PAYPAL_EXPRESS_SLUG),
-                    'paypalReturn' => WC()->api_request_url(ExpressController::PAYPAL_EXPRESS_RETURN_SLUG),
-                    'googlePay'    => WC()->api_request_url(ExpressController::GOOGLE_PAY_EXPRESS_SLUG),
-                    'applePay'     => WC()->api_request_url(ExpressController::APPLE_PAY_EXPRESS_SLUG),
-                ],
-                'express'                              => [
-                    'is_express'             => (empty($_GET['isExpressCheckout']) || $_GET['isExpressCheckout'] !== 'true') ? false : true,
-                    'current_express_method' => WC()->session->get(ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD),
-                    'paypal'                 => $paypalGateway->has_express_checkout(),
-                    'googlepay'              => $googlePayGateway->has_express_checkout(),
-                    'applepay'               => $applePayGateway->has_express_checkout(),
-                ]
+				'applepay_options'                     => $applePayGateway->getPublicOptions(),
+				'urls'                                 => array(
+					'paypal'       => WC()->api_request_url( ExpressController::PAYPAL_EXPRESS_SLUG ),
+					'paypalReturn' => WC()->api_request_url( ExpressController::PAYPAL_EXPRESS_RETURN_SLUG ),
+					'googlePay'    => WC()->api_request_url( ExpressController::GOOGLE_PAY_EXPRESS_SLUG ),
+					'applePay'     => WC()->api_request_url( ExpressController::APPLE_PAY_EXPRESS_SLUG ),
+				),
+				'express'                              => array(
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display flag from the redirect URL; the selected method comes from the session.
+					'is_express'             => ( empty( $_GET['isExpressCheckout'] ) || $_GET['isExpressCheckout'] !== 'true' ) ? false : true,
+					'current_express_method' => WC()->session->get( ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD ),
+					'paypal'                 => $paypalGateway->has_express_checkout(),
+					'googlepay'              => $googlePayGateway->has_express_checkout(),
+					'applepay'               => $applePayGateway->has_express_checkout(),
+				),
 			)
 		);
 		wp_localize_script(
@@ -564,8 +580,8 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 			)
 		);
 		wp_enqueue_script( 'woocommerce_unzer' );
-        wp_enqueue_script( 'woocommerce_unzer_express' );
-        self::$haveDoneScriptsOnce = true;
+		wp_enqueue_script( 'woocommerce_unzer_express' );
+		self::$haveDoneScriptsOnce = true;
 	}
 
 	public static function isOrderPay() {
@@ -593,5 +609,4 @@ abstract class AbstractGateway extends WC_Payment_Gateway {
 	public static function isUnzerPaymentMethod( string $paymentMethodId ) {
 		return substr( $paymentMethodId, 0, 6 ) === 'unzer_';
 	}
-
 }

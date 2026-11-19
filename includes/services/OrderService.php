@@ -287,6 +287,7 @@ class OrderService {
 			if ( get_option( 'unzer_authorized_order_status' ) ) {
 				$order->set_status( get_option( 'unzer_authorized_order_status' ) );
 			} else {
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- deliberately applies WooCommerce's own filter so other plugins' status rules also apply here.
 				$order->set_status( apply_filters( 'woocommerce_payment_complete_order_status', $order->needs_processing() ? 'processing' : 'completed', $order->get_id(), $order ) );
 			}
 
@@ -319,11 +320,12 @@ class OrderService {
 		if ( Util::isHPOS() ) {
 			$orders = wc_get_orders(
 				array(
+					'limit'      => 1,
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- the Unzer payment id is only stored as order meta; exact match on a single key.
 					'meta_query' => array(
 						array(
-							'key'        => Main::ORDER_META_KEY_PAYMENT_ID,
-							'value'      => $paymentId,
-							'comparison' => 'LIKE',
+							'key'   => Main::ORDER_META_KEY_PAYMENT_ID,
+							'value' => $paymentId,
 						),
 					),
 				)
@@ -333,6 +335,7 @@ class OrderService {
 			}
 		} else {
 			global $wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- legacy (non-HPOS) lookup of one order by payment id; prepared, read-only, and must not be cached because webhooks need the current row.
 			$metaData = $wpdb->get_row( $wpdb->prepare( 'SELECT post_id FROM ' . $wpdb->postmeta . ' WHERE meta_key = %s AND meta_value = %s', 'unzer_payment_id', $paymentId ), ARRAY_A );
 			if ( isset( $metaData['post_id'] ) ) {
 				$orderId = $metaData['post_id'];

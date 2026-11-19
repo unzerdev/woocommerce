@@ -23,6 +23,7 @@ class WebhookManagementService {
 
 			$gateway = Main::getInstance()->getPaymentGateway( (string) $paymentMethod );
 			if ( empty( $gateway ) ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not output here; AdminController::webhookManagement() catches it and escapes the message in renderJson().
 				throw new \Exception( 'No gateway found: ' . $paymentMethod );
 			}
 			$privateKey = $gateway->get_option( 'private_key_' . $slug );

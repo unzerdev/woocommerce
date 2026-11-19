@@ -1,9 +1,9 @@
 const ExpressButtons = {
-    interval: null,
     intervalCounter: 0,
     cartTotal: null,
     attemptToPlaceButton: function () {
-        let container = document.querySelector( '.wc-block-mini-cart__footer');
+        let container = document.querySelector('.woocommerce-cart .wc-proceed-to-checkout')?.parentElement
+            || document.querySelector('.wc-block-mini-cart__footer');
 
         if ( ! container ) {
             container = document.querySelector( '.wc-block-cart__submit-container' );
@@ -177,10 +177,16 @@ const ExpressButtons = {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    unzer_nonce: unzer_parameters.nonce,
                     paymentTypeId: paymentTypeId,
                 }),
             })
-                .then((response) => response.json())
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('express request failed');
+                    }
+                    return response.json();
+                })
                 .then((json) => {
                     location.href = json.redirectUrl;
                 })
@@ -231,11 +237,17 @@ const ExpressButtons = {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        unzer_nonce: unzer_parameters.nonce,
                         paymentTypeId,
                         paymentData,
                     }),
                 })
-                    .then((response) => response.json())
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error('express request failed');
+                        }
+                        return response.json();
+                    })
                     .then((json) => {
                         location.href = json.redirectUrl;
                     })
@@ -299,13 +311,19 @@ const ExpressButtons = {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        unzer_nonce: unzer_parameters.nonce,
                         paymentTypeId,
                         paymentData,
                         shippingContact,
                         billingContact,
                     }),
                 })
-                    .then((response) => response.json())
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error('express request failed');
+                        }
+                        return response.json();
+                    })
                     .then((json) => {
                         location.href = json.redirectUrl;
                     })
@@ -320,16 +338,6 @@ const ExpressButtons = {
         unzerExpressPayment?.setApplePayData(applePayPaymentRequest);
     }
 }
-
-ExpressButtons.interval = setInterval(
-    async function () {
-        ExpressButtons.intervalCounter++;
-        if (ExpressButtons.init() || ExpressButtons.intervalCounter > 10) {
-            clearInterval( ExpressButtons.interval );
-        }
-    },
-    500
-);
 
 async function getWooCommerceCartAmount() {
 
@@ -409,6 +417,16 @@ function getCurrencyFromPriceText(priceText) {
 }
 
 jQuery( function( $ ) {
+    if (!unzer_parameters.express.is_express &&
+        (unzer_parameters.express.paypal || unzer_parameters.express.googlepay || unzer_parameters.express.applepay)) {
+        const tryInit = async function () {
+            ExpressButtons.intervalCounter++;
+            if (!(await ExpressButtons.init()) && ExpressButtons.intervalCounter < 10) {
+                setTimeout(tryInit, 500);
+            }
+        };
+        tryInit();
+    }
     $( document.body ).on( 'updated_cart_totals', function() {
         ExpressButtons.refresh();
     });

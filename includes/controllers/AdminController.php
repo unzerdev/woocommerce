@@ -29,10 +29,13 @@ class AdminController {
 
 	public function getOrderTransactions() {
 		try {
+			// Read-only and capability-checked: a forged request changes nothing and the attacker cannot read the response.
+			// phpcs:disable WordPress.Security.NonceVerification.Recommended
 			if ( ! current_user_can( 'edit_shop_orders' ) || empty( $_GET['order_id'] ) ) {
 				wp_die();
 			}
-			$order     = wc_get_order( (int) $_GET['order_id'] );
+			$order = wc_get_order( (int) $_GET['order_id'] );
+			// phpcs:enable WordPress.Security.NonceVerification.Recommended
 			$paymentId = $order->get_meta( Main::ORDER_META_KEY_PAYMENT_ID, true );
 
 			if ( empty( $paymentId ) ) {
@@ -110,6 +113,8 @@ class AdminController {
 				'remainingPlain' => $payment->getAmount()->getRemaining(),
 				'transactions'   => $transactions,
 				'status'         => $payment->getStateName(),
+				// Intended: raw payment dump for the "Debug" block on the order screen, only sent to users with edit_shop_orders.
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- deliberate debug output for the admin order screen.
 				'raw'            => print_r( $payment, true ),
 			);
 
@@ -125,7 +130,7 @@ class AdminController {
 
 
 	public function doCharge() {
-
+		$this->denyUnlessCan( 'edit_shop_orders' );
 		try {
 			$orderId = Util::getNonceCheckedPostValue( 'order_id' );
 			$amount  = Util::getNonceCheckedPostValue( 'amount' );
@@ -142,6 +147,7 @@ class AdminController {
 	}
 
 	public function webhookManagement() {
+		$this->denyUnlessCan( 'manage_woocommerce' );
 		try {
 			$slug          = Util::getNonceCheckedPostValue( 'slug' );
 			$action        = Util::getNonceCheckedPostValue( 'action' );
@@ -174,6 +180,7 @@ class AdminController {
 	}
 
 	public function handleNotification() {
+		$this->denyUnlessCan( 'manage_woocommerce' );
 		$dashboardService   = new DashboardService();
 		$removeNotification = Util::getNonceCheckedPostValue( 'remove_notification' );
 		if ( $removeNotification ) {
@@ -192,6 +199,7 @@ class AdminController {
 	}
 
 	public function validateKeypair() {
+		$this->denyUnlessCan( 'manage_woocommerce' );
 		try {
 			$paymentService = new PaymentService();
 			$slug           = Util::getNonceCheckedPostValue( 'slug' );
@@ -247,6 +255,7 @@ class AdminController {
 	}
 
 	public static function renderGlobalSettingsStart() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only selects which settings template is rendered.
 		if ( empty( $_GET['section'] ) || $_GET['section'] !== 'unzer_general' ) {
 			return;
 		}
@@ -254,6 +263,7 @@ class AdminController {
 	}
 
 	public static function renderGlobalSettingsEnd() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only selects which settings template is rendered.
 		if ( empty( $_GET['section'] ) || $_GET['section'] !== 'unzer_general' ) {
 			return;
 		}
@@ -261,10 +271,18 @@ class AdminController {
 	}
 
 	public static function renderWebhookManagement() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only selects which settings template is rendered.
 		if ( empty( $_GET['section'] ) || $_GET['section'] !== 'unzer_general' ) {
 			return;
 		}
 		include UNZER_PLUGIN_PATH . 'html/admin/webhooks.php';
+	}
+
+    private function denyUnlessCan( string $capability ): void {
+		if ( ! current_user_can( $capability ) ) {
+			status_header( 403 );
+			$this->renderJson( array( 'error' => 'Forbidden' ) );
+		}
 	}
 
 	protected function renderJson( array $data ) {

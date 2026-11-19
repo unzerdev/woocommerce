@@ -89,13 +89,10 @@ class Prepayment extends AbstractGateway {
 
 	public function get_payment_information( Charge $charge ) {
 		return sprintf(
+			/* translators: 1: amount, 2: account holder, 3: IBAN, 4: BIC, 5: payment descriptor */
 			__(
-				'Please transfer the amount of %s to the following account:<br /><br />'
-				. 'Holder: %s<br/>'
-				. 'IBAN: %s<br/>'
-				. 'BIC: %s<br/><br/>'
-				. '<i>Please use only this identification number as the descriptor: </i><br/>'
-				. '%s',
+				// phpcs:ignore WordPress.WP.I18n.UnorderedPlaceholdersText -- numbering the placeholders would change the msgid and drop the existing translations.
+				'Please transfer the amount of %s to the following account:<br /><br />Holder: %s<br/>IBAN: %s<br/>BIC: %s<br/><br/><i>Please use only this identification number as the descriptor: </i><br/>%s',
 				'unzer-payments'
 			),
 			wc_price( $charge->getAmount(), array( 'currency' => $charge->getCurrency() ) ),

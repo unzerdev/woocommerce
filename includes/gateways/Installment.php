@@ -205,13 +205,10 @@ class Installment extends AbstractGateway {
 	 */
 	public function get_payment_information( AbstractTransactionType $chargeOrAuthorization ) {
 		return sprintf(
+			/* translators: 1: account holder, 2: IBAN, 3: BIC, 4: payment descriptor */
 			__(
-				'Payment details:<br /><br />'
-				. 'Holder: %s<br/>'
-				. 'IBAN: %s<br/>'
-				. 'BIC: %s<br/><br/>'
-				. '<i>Descriptor: </i><br/>'
-				. '%s',
+				// phpcs:ignore WordPress.WP.I18n.UnorderedPlaceholdersText -- numbering the placeholders would change the msgid and drop the existing translations.
+				'Payment details:<br /><br />Holder: %s<br/>IBAN: %s<br/>BIC: %s<br/><br/><i>Descriptor: </i><br/>%s',
 				'unzer-payments'
 			),
 			$chargeOrAuthorization->getHolder(),
