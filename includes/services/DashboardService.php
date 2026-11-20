@@ -29,6 +29,7 @@ class DashboardService {
 			$message = isset( $notification['message'] ) ? $notification['message'] : '';
 			switch ( $notification['messageType'] ) {
 				case 'chargeback':
+					/* translators: %s: order number */
 					$message = sprintf( __( 'A chargeback has been received. Please check the payment details for order %s', 'unzer-payments' ), $notification['parameters'][0] );
 					break;
 				case 'apple_pay_id_file':

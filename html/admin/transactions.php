@@ -3,6 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- this template is included from inside an AdminController method, so its variables are local, not global.
+
 use UnzerPayments\Controllers\AdminController;
 use UnzerPayments\Main;
 use UnzerPayments\Util;

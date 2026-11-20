@@ -1,9 +1,10 @@
 === Unzer Payments ===
 Contributors: Unzer
 Tags: payments, woocommerce
-Requires at least: 4.5
+Requires at least: 5.9
+Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 2.2.1
+Stable tag: 2.2.2
 License: Apache-2.0
 License URI: http://www.apache.org/licenses/LICENSE-2.0
 Author URI: https://unzer.com
@@ -58,6 +59,11 @@ Personal support via e-mail to support@unzer.com or +49 (6221) 43101-00
 Unzer is one of the leading payment companies in Europe. Over 70,000 retailers trust in the end-to-end solutions for more growth * online, mobile or at the point of sale. Whether international payment processing, risk management or analysis of customer behavior: merchants can put together the data-driven services in a modular way. This means that merchants only need one partner to make their payment future-proof, flexible and innovative.
 
 ## Changelog ##
+
+# 2.2.2 #
+* Critical security fix for Google Pay Express Checkout
+* Express buttons on classic cart themes such as Flatsome
+* Basket amount and currency for Paylater Invoice and Direct Debit in the classic checkout
 
 # 2.2.1 #
 * Improved loading of UI Components for faster checkout experience for the customers

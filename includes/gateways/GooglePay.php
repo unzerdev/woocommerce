@@ -222,17 +222,17 @@ class GooglePay extends AbstractGateway {
 					),
 					'default'     => 'fill',
 				),
-                AbstractGateway::SETTINGS_KEY_EXPRESS_OPTION => array(
-                    'title'       => __( 'Offer Google Pay Express Checkout', 'unzer-payments' ),
-                    'label'       => __( '&nbsp;', 'unzer-payments' ),
-                    'type'        => 'select',
-                    'description' => '',
-                    'default'     => 'no',
-                    'options'     => array(
-                        'no'  => __( 'No', 'unzer-payments' ),
-                        'yes' => __( 'Yes', 'unzer-payments' ),
-                    ),
-                ),
+				AbstractGateway::SETTINGS_KEY_EXPRESS_OPTION => array(
+					'title'       => __( 'Offer Google Pay Express Checkout', 'unzer-payments' ),
+					'label'       => __( '&nbsp;', 'unzer-payments' ),
+					'type'        => 'select',
+					'description' => '',
+					'default'     => 'no',
+					'options'     => array(
+						'no'  => __( 'No', 'unzer-payments' ),
+						'yes' => __( 'Yes', 'unzer-payments' ),
+					),
+				),
 			)
 		);
 	}
@@ -243,13 +243,13 @@ class GooglePay extends AbstractGateway {
 			'result' => 'success',
 		);
 
-        $googlePayId = Util::getNonceCheckedPostValue( 'unzer-google-pay-id' );
-        try {
-            if (!empty(WC()->session->get(ExpressCheckoutService::SESSION_GOOGLE_PAYMENT_TYPE_ID))) {
-                $googlePayId = (WC()->session->get(ExpressCheckoutService::SESSION_GOOGLE_PAYMENT_TYPE_ID));
-            }
-        } catch (\Throwable) {
-        }
+		$googlePayId = Util::getNonceCheckedPostValue( 'unzer-google-pay-id' );
+		try {
+			if ( ! empty( WC()->session->get( ExpressCheckoutService::SESSION_GOOGLE_PAYMENT_TYPE_ID ) ) ) {
+				$googlePayId = ( WC()->session->get( ExpressCheckoutService::SESSION_GOOGLE_PAYMENT_TYPE_ID ) );
+			}
+		} catch ( \Throwable ) {
+		}
 
 		if ( $this->get_option( 'transaction_type' ) === AbstractGateway::TRANSACTION_TYPE_AUTHORIZE ) {
 			$transaction = ( new PaymentService() )->performAuthorizationForOrder( $order_id, $this, $googlePayId );

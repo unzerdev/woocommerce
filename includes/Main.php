@@ -77,6 +77,14 @@ class Main {
 	public function registerEvents(): void {
 		add_filter( 'woocommerce_get_settings_checkout', array( $this, 'addGlobalSettings' ), 10, 3 );
 		add_filter( 'woocommerce_payment_gateways', array( $this, 'addPaymentGateways' ) );
+		add_action(
+			'wp',
+			static function () {
+				if ( is_cart() ) {
+					WC()->payment_gateways();
+				}
+			}
+		);
 		add_filter( 'is_protected_meta', array( $this, 'setMetaProtected' ), 10, 3 );
 		add_filter( 'woocommerce_valid_order_statuses_for_payment_complete', array( $this, 'addOrderStatusesForPaymentComplete' ) );
 
@@ -91,10 +99,10 @@ class Main {
 		add_action( 'woocommerce_api_' . AccountController::DELETE_PAYMENT_INSTRUMENT_URL_SLUG, array( new AccountController(), 'deletePaymentInstrument' ) );
 		add_action( 'woocommerce_api_' . CheckoutController::GET_UNZER_CUSTOMER_SLUG, array( new CheckoutController(), 'getUnzerCustomerData' ) );
 
-        add_action( 'woocommerce_api_' . ExpressController::PAYPAL_EXPRESS_SLUG, array( new ExpressController(), 'paypalExpress' ) );
-        add_action( 'woocommerce_api_' . ExpressController::PAYPAL_EXPRESS_RETURN_SLUG, array( new ExpressController(), 'paypalExpressReturn' ) );
-        add_action( 'woocommerce_api_' . ExpressController::GOOGLE_PAY_EXPRESS_SLUG, array( new ExpressController(), 'googleExpress' ) );
-        add_action( 'woocommerce_api_' . ExpressController::APPLE_PAY_EXPRESS_SLUG, array( new ExpressController(), 'applepayExpress' ) );
+		add_action( 'woocommerce_api_' . ExpressController::PAYPAL_EXPRESS_SLUG, array( new ExpressController(), 'paypalExpress' ) );
+		add_action( 'woocommerce_api_' . ExpressController::PAYPAL_EXPRESS_RETURN_SLUG, array( new ExpressController(), 'paypalExpressReturn' ) );
+		add_action( 'woocommerce_api_' . ExpressController::GOOGLE_PAY_EXPRESS_SLUG, array( new ExpressController(), 'googleExpress' ) );
+		add_action( 'woocommerce_api_' . ExpressController::APPLE_PAY_EXPRESS_SLUG, array( new ExpressController(), 'applepayExpress' ) );
 
 		add_filter( 'plugin_action_links_' . plugin_basename( UNZER_PLUGIN_PATH . 'unzer-payments.php' ), array( $this, 'addPluginSettingsLink' ) );
 		add_action( 'add_meta_boxes', array( $this, 'addMetaBoxes' ), 40 );
@@ -113,32 +121,33 @@ class Main {
 		add_action( 'woocommerce_blocks_loaded', array( $this, 'addCheckoutBlocks' ) );
 		add_action( 'before_woocommerce_pay_form', array( $this, 'orderPayPaymentMethod' ), 20, 4 );
 		add_action( 'woocommerce_order_status_changed', array( $this, 'unzerPaymentStatusChange' ), 10, 4 );
-        add_filter(
-            'woocommerce_available_payment_gateways',
-            function (array $gateways): array {
-                if (is_admin() && !wp_doing_ajax()) {
-                    return $gateways;
-                }
-                if (!is_checkout()) {
-                    return $gateways;
-                }
-                if (empty($_GET['isExpressCheckout']) || $_GET['isExpressCheckout'] !== 'true') {
-                    return $gateways;
-                }
-                $expressMethod = WC()->session->get(
-                    ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD
-                );
-                if (!$expressMethod) {
-                    return $gateways;
-                }
-                foreach ($gateways as $id => $gateway) {
-                    if ($id !== $expressMethod) {
-                        unset($gateways[$id]);
-                    }
-                }
-                return $gateways;
-            }
-        );
+		add_filter(
+			'woocommerce_available_payment_gateways',
+			function ( array $gateways ): array {
+				if ( is_admin() && ! wp_doing_ajax() ) {
+					return $gateways;
+				}
+				if ( ! is_checkout() ) {
+					return $gateways;
+				}
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- flag from the redirect URL, only compared with 'true'; the selected method comes from the session.
+				if ( empty( $_GET['isExpressCheckout'] ) || $_GET['isExpressCheckout'] !== 'true' ) {
+					return $gateways;
+				}
+				$expressMethod = WC()->session->get(
+					ExpressCheckoutService::SESSION_SELECTED_EXPRESS_METHOD
+				);
+				if ( ! $expressMethod ) {
+					return $gateways;
+				}
+				foreach ( $gateways as $id => $gateway ) {
+					if ( $id !== $expressMethod ) {
+						unset( $gateways[ $id ] );
+					}
+				}
+				return $gateways;
+			}
+		);
 		add_action(
 			'admin_enqueue_scripts',
 			function () {
@@ -177,13 +186,16 @@ class Main {
 			2
 		);
 
-        add_action('woocommerce_admin_order_data_after_payment_info', function ($order) {
-            if (in_array($order->get_payment_method(), [Paypal::GATEWAY_ID, GooglePay::GATEWAY_ID, ApplePayV2::GATEWAY_ID]) &&
-                strpos($order->get_payment_method_title(), '(Express)') !== false) {
-                echo '<div>Express Checkout</div>';
-            }
-        });
-    }
+		add_action(
+			'woocommerce_admin_order_data_after_payment_info',
+			function ( $order ) {
+				if ( in_array( $order->get_payment_method(), array( Paypal::GATEWAY_ID, GooglePay::GATEWAY_ID, ApplePayV2::GATEWAY_ID ) ) &&
+				strpos( $order->get_payment_method_title(), '(Express)' ) !== false ) {
+					echo '<div>Express Checkout</div>';
+				}
+			}
+		);
+	}
 
 	public function addOrderEmailData( $order ) {
 		( new OrderService() )->printPaymentInstructionsHtml( $order );
@@ -277,10 +289,11 @@ class Main {
 	public function savePaymentMethodSettingsApplePayV2(): void {
 		$dirExists = is_dir( ABSPATH . '.well-known' );
 		if ( ! $dirExists ) {
-			$dirExists = mkdir( ABSPATH . '.well-known' );
+			$dirExists = wp_mkdir_p( ABSPATH . '.well-known' );
 		}
 		$targetFile = ABSPATH . '.well-known/apple-developer-merchantid-domain-association';
 		if ( $dirExists && ! file_exists( $targetFile ) ) {
+			// phpcs:ignore PluginCheck.CodeAnalysis.WriteFile.ABSPATHDetected -- Apple Pay requires this file at /.well-known/ in the site root; the uploads directory is not an option.
 			copy( UNZER_PLUGIN_PATH . 'assets/txt/apple-developer-merchantid-domain-association', $targetFile );
 		}
 		if ( ! file_exists( $targetFile ) ) {
@@ -455,16 +468,15 @@ class Main {
 		try {
 			if ( in_array( $to, array( str_replace( 'wc-', '', get_option( 'unzer_capture_trigger_order_status' ) ) ), true ) ) {
 
-                $unzer     = ( new PaymentService() )->getUnzerManagerForOrder( $order );
-                $paymentId = $order->get_meta( self::ORDER_META_KEY_PAYMENT_ID, true );
-                $payment   = $unzer->fetchPayment( $paymentId );
-                if ( $payment->getAmount()->getCharged() == 0 ) {
-                    $order->update_meta_data( self::ORDER_CHARGE_AUTOMATICALLY_DONE, 'yes' );
-                    $order->save_meta_data();
-                    ( new PaymentService() )->performChargeOnAuthorization( $order_id );
-                }
-            }
-
+				$unzer     = ( new PaymentService() )->getUnzerManagerForOrder( $order );
+				$paymentId = $order->get_meta( self::ORDER_META_KEY_PAYMENT_ID, true );
+				$payment   = $unzer->fetchPayment( $paymentId );
+				if ( $payment->getAmount()->getCharged() == 0 ) {
+					$order->update_meta_data( self::ORDER_CHARGE_AUTOMATICALLY_DONE, 'yes' );
+					$order->save_meta_data();
+					( new PaymentService() )->performChargeOnAuthorization( $order_id );
+				}
+			}
 		} catch ( \Exception $e ) {
 			// silent
 		}

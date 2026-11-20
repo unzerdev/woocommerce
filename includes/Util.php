@@ -59,6 +59,7 @@ class Util {
 			}
 			// woocommerce nonce:
 			if ( isset( $_POST['security'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['security'] ) ), 'update-order-review' ) ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized below unless the caller asks for the raw value; the only such caller (getNonceCheckedBillingData) sanitizes after parse_str().
 				$value = wp_unslash( $_POST[ $key ] );
 				return $skipSanitize ? $value : sanitize_text_field( $value );
 			}

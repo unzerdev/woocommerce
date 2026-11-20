@@ -3,6 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- this template is included from inside an AdminController method, so its variables are local, not global.
+
 wp_enqueue_style( 'unzer_admin_css', UNZER_PLUGIN_URL . '/assets/css/admin.css', array(), UNZER_VERSION );
 ?>
 <img src="<?php echo esc_url( UNZER_PLUGIN_URL ); ?>/assets/img/logo.svg" width="150" alt="Unzer" style="margin-bottom: 10px;"/>

@@ -154,6 +154,7 @@ abstract class AbstractBlock extends AbstractPaymentMethodType {
 					return $tag;
 				}
 				// change the script tag by adding type="module" and return it.
+				// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- the script is enqueued; this filter only rewrites its tag to type="module".
 				$tag = '<script type="module" src="' . esc_url( $src ) . '"></script>';
 				return $tag;
 			},
